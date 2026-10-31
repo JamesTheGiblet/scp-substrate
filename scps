@@ -255,6 +255,11 @@ def cmd_reject(a):
     print(f"  rules: {r['rules_updated']} updated, {r['rules_new']} new")
 
 
+def cmd_talk(a):
+    from talk import repl
+    repl()
+
+
 def main():
     p = argparse.ArgumentParser(prog="scp", description="Semantic shell for the SCP substrate.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -306,6 +311,9 @@ def main():
 
     sp = sub.add_parser("reject",       help="mark a parse as wrong; update trust")
     sp.add_argument("session"); sp.set_defaults(func=cmd_reject)
+
+    sp = sub.add_parser("talk",        help="interactive REPL: parse input, respond in kind")
+    sp.set_defaults(func=cmd_talk)
 
     sp = sub.add_parser("sweep-parse",  help="delete old parse sessions")
     sp.add_argument("--older-than-hours", type=int, default=24)
