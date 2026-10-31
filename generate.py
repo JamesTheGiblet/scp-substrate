@@ -104,7 +104,7 @@ def _find_rules_producing(s, foundation, state_filter):
     return out
 
 
-def _find_lexical_entries(s, pos, features=None):
+def _find_lexical_entries(s, pos, features=None, tense_pref=None):
     """Return list of {text, pos, features, weight} for a given pos, optionally filtered by features."""
     rows = s.conn.execute("""
         SELECT id, state_json FROM capsules
@@ -128,13 +128,20 @@ def _find_lexical_entries(s, pos, features=None):
             LIMIT 1
         """, (state["text"],)).fetchone()
         weight = float(w["n0"]) if (w and w["n0"]) else 1.0
+        # Bias by tense preference (don't block; just nudge)
+        if tense_pref:
+            t = state.get("features", {}).get("tense")
+            if t == tense_pref:
+                weight *= 10.0
+            elif t is not None:
+                weight *= 0.1
         state["weight"] = weight
         state["features"] = state.get("features", {})
         out.append(state)
     return out
 
 
-def _expand(s, spec, rng, session_id, next_idx, depth=0):
+def _expand(s, spec, rng, session_id, next_idx, depth=0, tense_pref=None):
     """Expand a spec into tokens. Returns (texts, next_idx, capsule_id)."""
     if depth > 20:
         raise ExpansionError("depth limit")
@@ -150,7 +157,7 @@ def _expand(s, spec, rng, session_id, next_idx, depth=0):
         if not pos:
             raise ExpansionError("token spec missing 'pos'")
         features = spec.get("features")
-        choices = _find_lexical_entries(s, pos, features=features)
+        choices = _find_lexical_entries(s, pos, features=features, tense_pref=tense_pref)
         if not choices:
             hint = f" pos={pos!r}" + (f" features={features!r}" if features else "")
             raise ExpansionError(f"no lexical entries for{hint}")
@@ -183,7 +190,7 @@ def _expand(s, spec, rng, session_id, next_idx, depth=0):
             cur = next_idx
             children = []
             for child_spec in r["rule"]["condition"].get("match", []):
-                sub_texts, cur, cid = _expand(s, child_spec, rng, session_id, cur, depth + 1)
+                sub_texts, cur, cid = _expand(s, child_spec, rng, session_id, cur, depth + 1, tense_pref=tense_pref)
                 texts.extend(sub_texts)
                 children.append(cid)
 
@@ -263,7 +270,7 @@ _START_FOUNDATIONS = {
 }
 
 
-def generate_sentence(s, start="S", seed=None):
+def generate_sentence(s, start="S", seed=None, prefer_tense=None):
     """Generate a sentence (or sub-category) by rule expansion."""
     if start not in _START_FOUNDATIONS:
         return {"error": f"unknown start category {start!r}; use one of {list(_START_FOUNDATIONS)}"}
@@ -281,7 +288,7 @@ def generate_sentence(s, start="S", seed=None):
         try:
             texts, end, root = _expand(
                 s, {"foundation": foundation, "state": state_filter},
-                rng, session_id, 0
+                rng, session_id, 0, tense_pref=prefer_tense
             )
             break
         except ExpansionError as e:
