@@ -1,0 +1,86 @@
+{
+  "scp_id": "giblets-forge/author/james-gilbert-v1",
+  "scp_version": "1.2",
+  "canonicalisation": "forge-c14n-1",
+  "created": "2026-10-31T10:04:00Z",
+  "inherits": [
+    "giblets-forge/style/james-voice",
+    "giblets-forge/style/james-style",
+    "giblets-forge/style/visual-identity"
+  ],
+  "declaration": {
+    "entity": {
+      "name": "James Gilbert",
+      "handle": "JamesTheGiblet",
+      "goes_by": "James",
+      "sign_off": "Giblet out",
+      "born": "--10-17"
+    },
+    "identity": {
+      "title": null,
+      "title_note": "Refuses to be boxed in by one. Codes, 3D models, draws, paints, builds robots, printers and systems.",
+      "trade": "Carpenter",
+      "trade_arc": "Chisels and hammers -> self-employed with routers and jigs. Same shift LLMs gave his building.",
+      "unlock": "LLMs. First tool that let him build the work and dreams he already had.",
+      "pattern": "Compresses lived experience into symbolic shorthand. Has always lived in capsules; the Forge Stack is where they finally fit."
+    },
+    "work": {
+      "day": "QinetiQ, Malvern (from 2026-09), cutting keys, SV cleared",
+      "previous": [
+        "Facilities Caretaker, Oxford PharmaGenesis",
+        "E3D: designed a Revo-compatible heat break"
+      ],
+      "forge": {
+        "name": "Giblets Forge",
+        "structure": "sole trader",
+        "motto": "I wanted it. So I forged it. Now forge yours.",
+        "licence": "MSL-1.0"
+      }
+    },
+    "domains": [
+      "sovereign AI architecture (Forge Stack -> SC-OS, canon, JIG, LLLM)",
+      "embedded systems (ESP32, M5StickC)",
+      "robotics",
+      "3D printing (built a 1.5m2 printer with four independent heated beds)",
+      "interactive fiction and games",
+      "simulation and emergence"
+    ],
+    "origin": "Self-taught. Started with an Eaglemoss V-Summit kit over two years; taught himself design, printing, firmware from there.",
+    "drives": {
+      "why": "Builds because he chooses to live. Money is something humanity decided mattered; it is not the point.",
+      "fuel": "Being told no, or that it can't be done.",
+      "rebuild": "Finds a better way -> starts from scratch rather than patch.",
+      "focus": "Pointed at a task, finishes it. Left alone, wanders."
+    },
+    "ideas_workflow": "Documents ideas fully, parks them for years until they fit.",
+    "build_rules": [
+      "Phase 0 is always documentation",
+      "Build then test; everything earns a test",
+      "Log everything; fail loud and public; fix first",
+      "Lean dependencies",
+      "Split files over 400 lines; modular",
+      "camelCase in JS/C++; no prefix habits",
+      "Node.js or Python for tooling",
+      "Good/Bad/Ugly CHANGELOG on every repo",
+      "British English everywhere, identifiers included"
+    ],
+    "interface": {
+      "for_agents": [
+        "Direct and informal",
+        "Honest pushback over flattery, always",
+        "Bullets over block text",
+        "Writes fast: flag and correct spelling",
+        "Learns by doing, not by instruction",
+        "Use Claude for rigorous specs; code gets written elsewhere"
+      ],
+      "public_channel": "LinkedIn"
+    },
+    "lens_note": "Self-declaration. Cube under OPINION/CONTEXT, not FACT. Holds no lambda; signed means provenance, not trust."
+  },
+  "licence": "MSL-1.0",
+  "signature": {
+    "key_id": "did:key:z6Mkkv72CL96uhsVVKWF15u6qVsa6iobVmLGF1z6kxX14R92",
+    "algorithm": "Ed25519",
+    "value": "cAz/TwpUAYMgJ/YiEIDELLgKu50Ctb2x7aSKOhydAN3yLP/qLB6nIjA/EGK2EgOFFFO0PU1krFXCr21N9c67Bg=="
+  }
+}

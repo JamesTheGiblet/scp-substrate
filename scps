@@ -1,0 +1,255 @@
+#!/usr/bin/env python3
+"""scp — a semantic shell for the SCP substrate."""
+import argparse
+import json
+
+from substrate import Substrate
+from explain import explain
+from why import why_trusted, print_chain
+from queries import trust_now, verified, observations
+from rules import evaluate_rules
+from trust import compute_all, trust_from_evidence
+
+
+def cmd_explain(a):
+    print(explain(Substrate(), a.id))
+
+
+def cmd_why(a):
+    print_chain(why_trusted(Substrate(), a.id))
+
+
+def cmd_trust(a):
+    s = Substrate()
+    e = trust_from_evidence(s, a.id)
+    p = trust_now(s, a.id)
+    print(f"{a.id}")
+    if e and not e.get("error"):
+        print(f"  evidence trust:  {e['score']:.6f}")
+        for ev in e["evidence"]:
+            print(f"    • {ev['id']:12} raw={ev['raw_score']:>6}  "
+                  f"weighted={ev['weighted']:.4f}  by {ev['source']}")
+    else:
+        print(f"  evidence trust:  —")
+    if p:
+        print(f"  parameter trust: {p['score']:.6f}  "
+              f"(elapsed {p['elapsed_days']*86400:.0f}s)")
+    else:
+        print(f"  parameter trust: —")
+
+
+def cmd_verified(a):
+    rows = verified(Substrate(), a.id)
+    if not rows:
+        print(f"{a.id} has no verification records")
+        return
+    for v in rows:
+        status = "valid" if v["valid"] else f"INVALID ({v['reason']})"
+        print(f"  {status:8}  by {v['key_id']}  at {v['at']}")
+        print(f"           capsule: {v['id']}")
+
+
+def cmd_rules(a):
+    s = Substrate()
+    fired, warnings = evaluate_rules(s)
+    print(f"fires: {len(fired)}, warnings: {len(warnings)}")
+    for rule_id, src, rel, tgt in fired:
+        print(f"  FIRED [{rule_id}]: {src} => {rel} => {tgt}")
+    for w in warnings:
+        print(f"  WARN  {w}")
+
+
+def cmd_trust_compute(a):
+    print(json.dumps(compute_all(Substrate()), indent=2))
+
+
+def cmd_observations(a):
+    for o in observations(Substrate()):
+        st   = o["state"]
+        kind = st.get("kind", "observation")
+        if kind == "signature-verification":
+            subj   = st.get("subject", "?")
+            status = "valid" if st.get("valid") else "invalid"
+            print(f"  [verify]   {subj}  ({status})")
+        else:
+            target = st.get("target", o["id"])
+            score  = st.get("score", "?")
+            print(f"  {o['id']:20} → {target}  score={score}")
+
+
+def cmd_list(a):
+    s = Substrate()
+    q = "SELECT id, foundation FROM capsules WHERE is_meta=0"
+    args = []
+    if a.foundation:
+        q += " AND foundation = ?"
+        args.append(f"foundation:{a.foundation}")
+    if getattr(a, "kind", None):
+        q += " AND json_extract(state_json, '$.kind') = ?"
+        args.append(a.kind)
+    q += " ORDER BY foundation, id"
+    for r in s.conn.execute(q, args):
+        print(f"  {r['foundation']:28}  {r['id']}")
+
+
+def cmd_stats(a):
+    s = Substrate()
+    rows = [
+        ("capsules (instances)",   "SELECT COUNT(*) FROM capsules WHERE is_meta=0"),
+        ("capsules (foundations)", "SELECT COUNT(*) FROM capsules WHERE is_meta=1"),
+        ("links",                  "SELECT COUNT(*) FROM links"),
+        ("events",                 "SELECT COUNT(*) FROM events"),
+        ("trust scores",           "SELECT COUNT(*) FROM trust_scores"),
+        ("verifications",          "SELECT COUNT(*) FROM capsules WHERE id LIKE 'verification:%'"),
+    ]
+    for label, q in rows:
+        n = s.conn.execute(q).fetchone()[0]
+        print(f"  {label:25} {n}")
+
+
+def cmd_version(a):
+    from queries import latest
+    s = Substrate()
+    cur = latest(s, a.id)
+    chain = [cur]
+    current = cur
+    while True:
+        row = s.conn.execute(
+            "SELECT target FROM links WHERE source=? AND type='supersedes'",
+            (current,)
+        ).fetchone()
+        if not row:
+            break
+        current = row["target"]
+        chain.append(current)
+    chain.reverse()
+    if len(chain) == 1 and chain[0] == a.id:
+        print(f"{a.id} (no version chain — unique)")
+        return
+    print(f"{a.id} version chain (oldest → newest):")
+    for i, vid in enumerate(chain):
+        marker = "  ← latest" if vid == cur else ""
+        print(f"  v{i+1}: {vid}{marker}")
+
+
+def cmd_fused(a):
+    from trust import fused_trust
+    s = Substrate()
+    r = fused_trust(s, a.id)
+    if "error" in r:
+        print(f"{a.id}: {r['error']}")
+        return
+    print(f"{a.id}")
+    print(f"  prior:       {r['prior']:.6f}")
+    if r['evidence_score'] is not None:
+        print(f"  evidence:    {r['evidence_score']:.6f}  (raw)")
+        print(f"  likelihood:  {r['likelihood']:.6f}  (sigmoid)")
+    else:
+        print(f"  evidence:    —")
+        print(f"  likelihood:  0.500000  (uninformative)")
+    print(f"  posterior:   {r['posterior']:.6f}  (Bayesian fusion)")
+    print(f"  source:      {r['source']}")
+
+
+def cmd_parse(a):
+    from parse import parse_sentence, display_parse
+    s = Substrate()
+    result = parse_sentence(s, a.text)
+    if "error" in result:
+        print(f"error: {result['error']}")
+        print(f"session: {result['session']}  (nothing persisted)")
+        return
+    print(f"parse session: {result['session']}")
+    print(f"tokens: {result['n_tokens']}")
+    print()
+    if result.get("sentence"):
+        display_parse(s, result["sentence"])
+    else:
+        print("(no full parse — partial derivations only)")
+    print()
+    print(f"hint: scps forget-parse {result['session']}  to clean up")
+
+
+def cmd_forget_parse(a):
+    from parse import cleanup_session
+    s = Substrate()
+    cleanup_session(s, a.session)
+    print(f"forgot parse session: {a.session}")
+
+
+def cmd_generate(a):
+    from generate import generate_sentence
+    from parse import cleanup_session, display_parse
+    s = Substrate()
+    result = generate_sentence(s, start=a.start, seed=a.seed)
+    if "error" in result:
+        print(f"error: {result['error']}")
+        cleanup_session(s, result["session"])
+        print(f"seed: {result['seed']}  session: {result['session']}  (cleaned)")
+        return
+    print(f"generated: {result['text']}")
+    print(f"seed: {result['seed']}  start: {result['start']}  session: {result['session']}")
+    print()
+    display_parse(s, result["root"])
+    print()
+    print(f"hint: scps forget-parse {result['session']}  to clean up")
+
+
+def main():
+    p = argparse.ArgumentParser(prog="scp", description="Semantic shell for the SCP substrate.")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    sp = sub.add_parser("explain",     help="narrate a capsule (traverse outbound links)")
+    sp.add_argument("id"); sp.set_defaults(func=cmd_explain)
+
+    sp = sub.add_parser("why",         help="explain trust (traverse back through reasoning)")
+    sp.add_argument("id"); sp.set_defaults(func=cmd_why)
+
+    sp = sub.add_parser("trust",       help="show parameter + evidence trust for a capsule")
+    sp.add_argument("id"); sp.set_defaults(func=cmd_trust)
+
+    sp = sub.add_parser("verified",    help="show verification records for a capsule")
+    sp.add_argument("id"); sp.set_defaults(func=cmd_verified)
+
+    sp = sub.add_parser("version",     help="show version chain for a capsule")
+    sp.add_argument("id"); sp.set_defaults(func=cmd_version)
+
+    sp = sub.add_parser("fused",       help="Bayesian-fused trust (prior × evidence)")
+    sp.add_argument("id"); sp.set_defaults(func=cmd_fused)
+
+    sp = sub.add_parser("rules",       help="run the rule engine")
+    sp.set_defaults(func=cmd_rules)
+
+    sp = sub.add_parser("trust-compute", help="recompute materialised trust scores")
+    sp.set_defaults(func=cmd_trust_compute)
+
+    sp = sub.add_parser("observations",  help="list observations")
+    sp.set_defaults(func=cmd_observations)
+
+    sp = sub.add_parser("list",        help="list instance capsules")
+    sp.add_argument("-f", "--foundation", help="filter by foundation (bare name)")
+    sp.add_argument("-k", "--kind",       help="filter by state.kind (tool, skill, decision, ...)")
+    sp.set_defaults(func=cmd_list)
+
+    sp = sub.add_parser("generate",    help="generate a sentence via grammar expansion")
+    sp.add_argument("--start", default="S", choices=["S", "NP", "VP", "PP"],
+                    help="start category (default S)")
+    sp.add_argument("--seed", type=int, default=None,
+                    help="reproducibility seed (default: random)")
+    sp.set_defaults(func=cmd_generate)
+
+    sp = sub.add_parser("parse",       help="parse a sentence via grammar rules")
+    sp.add_argument("text"); sp.set_defaults(func=cmd_parse)
+
+    sp = sub.add_parser("forget-parse", help="delete a parse session's capsules")
+    sp.add_argument("session"); sp.set_defaults(func=cmd_forget_parse)
+
+    sp = sub.add_parser("stats",       help="substrate counts")
+    sp.set_defaults(func=cmd_stats)
+
+    args = p.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

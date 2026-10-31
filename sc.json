@@ -1,0 +1,151 @@
+{
+  "version": "0.1.0",
+  "foundations": [
+    {
+      "id": "foundation:foundation",
+      "state": {
+        "name": "foundation",
+        "description": "meta-meta; the type of all foundations",
+        "schema": {}
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:datacube",
+      "state": {
+        "id": "datacube",
+        "role": "foundation",
+        "meaning": {
+          "description": "Classifies claims into semantic lenses"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:entity",
+      "state": {
+        "id": "entity",
+        "role": "foundation",
+        "meaning": {
+          "description": "A thing with identity"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:event",
+      "state": {
+        "id": "event",
+        "role": "foundation",
+        "meaning": {
+          "description": "A witnessed action recorded in time"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:knowledge",
+      "state": {
+        "id": "knowledge",
+        "role": "foundation",
+        "meaning": {
+          "description": "Represents a knowledge claim"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:ledger",
+      "state": {
+        "id": "ledger",
+        "role": "foundation",
+        "meaning": {
+          "description": "Immutable chronological record of signed events"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:leighton-weight",
+      "state": {
+        "id": "leighton-weight",
+        "role": "foundation",
+        "meaning": {
+          "description": "Trust decay applied to knowledge claims"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:observation",
+      "state": {
+        "id": "observation",
+        "role": "foundation",
+        "meaning": {
+          "description": "Represents evidence about a capsule"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:person",
+      "state": {
+        "id": "person",
+        "role": "foundation",
+        "meaning": {
+          "description": "Represents a person"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:project",
+      "state": {
+        "id": "project",
+        "role": "foundation",
+        "meaning": {
+          "description": "Represents a project"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:rule",
+      "state": {
+        "id": "rule",
+        "role": "foundation",
+        "meaning": {
+          "description": "Represents a rule"
+        }
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:token",
+      "state": {
+        "name": "token",
+        "description": "A single lexical item at a specific position in a parse.",
+        "schema": {}
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:phrase",
+      "state": {
+        "name": "phrase",
+        "description": "A reduced span of tokens; a constituent.",
+        "schema": {}
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:sentence",
+      "state": {
+        "name": "sentence",
+        "description": "A completed top-level parse.",
+        "schema": {}
+      },
+      "links": []
+    }
+  ]
+}

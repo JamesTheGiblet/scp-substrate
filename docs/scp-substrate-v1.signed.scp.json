@@ -1,0 +1,66 @@
+{
+  "scp_id": "giblets-forge/project/scp-substrate-v1",
+  "scp_version": "1.0",
+  "canonicalisation": "forge-c14n-1",
+  "created": "2026-10-31T12:00:00Z",
+  "inherits": [
+    "giblets-forge/author/james-gilbert-v1",
+    "giblets-forge/style/james-style"
+  ],
+  "declaration": {
+    "entity": {
+      "name": "SCP Substrate",
+      "handle": "scps",
+      "capsule": "scp",
+      "state": "operational",
+      "started": "2026-10-25",
+      "phase": "engine consolidation"
+    },
+    "purpose": {
+      "problem": "Semantic systems accumulate implicit meaning in code. Once you've written rules about what a 'person' is, you've hardcoded it into the interpreter.",
+      "solution": "Declare foundations as data. Store instances in a queryable substrate. Let behaviour emerge from rules and trust, both consuming the same substrate without modifying it."
+    },
+    "architecture": {
+      "substrate": "sc.db — single SQLite file, fixed schema",
+      "foundations": "sc.json — versioned, projected at startup",
+      "engines": [
+        "rules.py — two condition types, idempotent",
+        "trust.py — parameter + evidence, decay-weighted",
+        "why.py — backward trust explanation",
+        "explain.py — forward narrative"
+      ],
+      "interface": "scps — argparse CLI, ten subcommands"
+    },
+    "invariants": [
+      "schema.sql unchanged since initial migration",
+      "Foundations are written via sc.json, never via scps write",
+      "Engines are consumers of the substrate, not mutators of its shape"
+    ],
+    "current_state": {
+      "engines": 4,
+      "capsules": 20,
+      "tests": 13,
+      "schema_changes_since_migration": 0,
+      "crypto": "own ed25519, RFC 8032 compliant"
+    },
+    "non_goals": [
+      "Distributed consensus",
+      "Network API",
+      "Real-time sync",
+      "General-purpose reasoning"
+    ],
+    "open_questions": [
+      "Bayesian fusion of parameter and evidence trust",
+      "Instance versioning edge cases (fork, merge)",
+      "Cross-document inheritance semantics",
+      "Evidence source weighting"
+    ],
+    "lens_note": "Project declaration. Cube under FACT for architecture, OPINION for design goals. Signed means provenance; trust is derived."
+  },
+  "licence": "MSL-1.0",
+  "signature": {
+    "key_id": "did:key:z6Mkkv72CL96uhsVVKWF15u6qVsa6iobVmLGF1z6kxX14R92",
+    "algorithm": "Ed25519",
+    "value": "PHVSUt2LYHe9dDk/4cbZuBmI4Any9Fh+Yoqh6nzKop5H7alPw+AanuOud9Z52cdssG6hO+IEFY4tL+nUtBijDQ=="
+  }
+}
