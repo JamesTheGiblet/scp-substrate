@@ -181,10 +181,15 @@ def _leaf_features(s, capsule_id):
             continue
         if c["foundation"] == "foundation:token":
             out.append({"pos": c["state"].get("pos"),
-                        "features": c["state"].get("features", {})})
+                        "features": c["state"].get("features", {}),
+                        "index": c["state"].get("index")})
         for l in s.links_from(cid):
             if l["type"] == "has-child":
                 stack.append(l["target"])
+    # Sort by token index to preserve left-to-right order. Without this,
+    # _sv_agree / _object_semantic_check / _subject_semantic_check all
+    # read the wrong "head" on compound nouns.
+    out.sort(key=lambda x: x["index"] if x.get("index") is not None else 9999)
     return out
 
 

@@ -61,8 +61,12 @@ def fresh_parse_fixture():
     LEXICON["mats"] = ("noun", {"number": "pl", "location": True})
     LEXICON["a"] = ("det", {"number": "sg"})
     # SV / object test features
-    LEXICON["sits"] = ("verb", {"transitive": False, "number": "sg"})
-    LEXICON["chased"] = ("verb", {"transitive": True, "object_must_be_animate": True})
+    LEXICON["sat"] = ("verb", {"transitive": False, "tense": "past",
+                               "subject_must_be_animate": True})
+    LEXICON["sits"] = ("verb", {"transitive": False, "number": "sg",
+                                "subject_must_be_animate": True})
+    LEXICON["chased"] = ("verb", {"transitive": True, "object_must_be_animate": True,
+                                  "subject_must_be_animate": True})
     for word, (pos, features) in LEXICON.items():
         s.write({"id": f"lex/{word}", "foundation": "foundation:knowledge",
                  "state": {"kind": "lexical-entry", "text": word, "pos": pos,
