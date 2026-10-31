@@ -212,6 +212,9 @@ def _subject_semantic_check(s, verb_cid, np_cid):
     if not nouns:
         return False
     animacy = nouns[-1]["features"].get("animacy")
+    # Permissive: missing/unknown animacy passes. Only explicit object/abstract blocks.
+    if animacy is None:
+        return True
     return animacy in ("animal", "human")
 
 
@@ -226,6 +229,9 @@ def _object_semantic_check(s, verb_cid, np_cid):
     if not nouns:
         return False
     animacy = nouns[-1]["features"].get("animacy")
+    # Permissive: missing/unknown animacy passes. Only explicit object/abstract blocks.
+    if animacy is None:
+        return True
     return animacy in ("animal", "human")
 
 

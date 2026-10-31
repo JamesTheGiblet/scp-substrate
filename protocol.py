@@ -69,9 +69,11 @@ def ack_response(classification):
 
 
 def error_response(s, text):
-    """Brief recovery. Never dump the full word list."""
+    """Brief recovery. Name the failure mode precisely."""
     words = re.findall(r"[a-z]+", text.lower())
     unknown = [w for w in words if not s.get(f"lex/{w}")]
     if unknown:
         return f"I don't know: {', '.join(unknown)}."
-    return "I didn't follow."
+    if len(words) == 1:
+        return f"I know {words[0]!r} but can't parse it on its own."
+    return "I know those words but can't parse that."

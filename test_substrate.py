@@ -67,7 +67,23 @@ def fresh_parse_fixture():
         s.write({"id": f"lex/{word}", "foundation": "foundation:knowledge",
                  "state": {"kind": "lexical-entry", "text": word, "pos": pos,
                            "features": features}})
-    for g in GRAMMAR:
+    EXTRA_RULES = [
+        {"id": "grammar/np-noun",
+         "state": {"condition": {"type": "sequence", "match": [
+             {"foundation": "token", "state": {"pos": "noun"}}]},
+                   "effect": {"foundation": "phrase", "state": {"category": "NP"}}}},
+        {"id": "grammar/np-adj-noun",
+         "state": {"condition": {"type": "sequence", "match": [
+             {"foundation": "token", "state": {"pos": "adj"}},
+             {"foundation": "token", "state": {"pos": "noun"}}]},
+                   "effect": {"foundation": "phrase", "state": {"category": "NP"}}}},
+        {"id": "grammar/np-noun-noun",
+         "state": {"condition": {"type": "sequence", "match": [
+             {"foundation": "token", "state": {"pos": "noun"}},
+             {"foundation": "token", "state": {"pos": "noun"}}]},
+                   "effect": {"foundation": "phrase", "state": {"category": "NP"}}}},
+    ]
+    for g in list(GRAMMAR) + EXTRA_RULES:
         st = dict(g["state"])
         if g["id"] == "grammar/np-det-noun":
             st = {**st, "condition": {**st["condition"], "number_agree": True}}
@@ -499,8 +515,10 @@ def test_gap_analysis_raw_span():
     assert r["gaps"], r
     first_gap = r["gaps"][0]
     a, b, seq = first_gap
-    assert (a, b) == (0, 3), f"expected gap [0-3], got [{a}-{b}]"
-    assert seq == ["det", "adj", "adj", "noun"], seq
+    # With np-adj-noun rule, "red cat" reduces to NP[2-3],
+    # leaving "the big" as the unreduced gap.
+    assert (a, b) == (0, 1), f"expected gap [0-1], got [{a}-{b}]"
+    assert seq == ["det", "adj"], seq
 
 
 def test_gap_analysis_composition_gap():
@@ -818,6 +836,48 @@ def test_wh_startswith_classifier():
     for text in ["what time is it", "who is that", "where are we", "why not"]:
         r = classify(s, text)
         assert r["layer"] == 3, f"{text!r}: expected layer 3, got {r}"
+
+
+# --- expanded NP grammar -------------------------------------------------
+def test_np_bare_noun():
+    """'cat sat' parses via NP -> noun (bare)."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    r = parse_sentence(s, "cat sat")
+    assert r.get("sentence"), r
+    cleanup_session(s, r["session"])
+
+
+def test_np_adj_noun():
+    """'big cat sat' parses via NP -> adj noun."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    r = parse_sentence(s, "big cat sat")
+    assert r.get("sentence"), r
+    cleanup_session(s, r["session"])
+
+
+def test_np_noun_noun():
+    """'house cat sat' parses via NP -> noun noun (compound)."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    r = parse_sentence(s, "house cat sat")
+    assert r.get("sentence"), r
+    cleanup_session(s, r["session"])
+
+
+def test_permissive_animacy_missing():
+    """Missing animacy feature passes the object check (permissive)."""
+    from parse import parse_sentence, cleanup_session
+    import json
+    s = fresh_parse_fixture()
+    # Add a bare noun with no features
+    s.write({"id": "lex/substrate", "foundation": "foundation:knowledge",
+             "state": {"kind": "lexical-entry", "text": "substrate",
+                       "pos": "noun", "features": {}}})
+    r = parse_sentence(s, "the cat chased substrate")
+    assert r.get("sentence"), r
+    cleanup_session(s, r["session"])
 
 
 if __name__ == "__main__":
