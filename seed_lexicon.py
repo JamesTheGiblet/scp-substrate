@@ -11,9 +11,9 @@ LEXICON = {
     "dog":    ("noun", {"physical": True, "animacy": "animal", "location": False}),
     "mat":    ("noun", {"physical": True, "animacy": "object", "location": True}),
     "house":  ("noun", {"physical": True, "animacy": "object", "location": True}),
-    "sat":    ("verb", {}),
-    "sits":   ("verb", {}),
-    "chased": ("verb", {}),
+    "sat":    ("verb", {"transitive": False}),
+    "sits":   ("verb", {"transitive": False}),
+    "chased": ("verb", {"transitive": True}),
     "on":     ("prep", {"requires_location": True}),
     "in":     ("prep", {"requires_location": True}),
 }

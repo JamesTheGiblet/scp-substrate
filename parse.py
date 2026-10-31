@@ -7,6 +7,19 @@ from substrate import Substrate
 from rules import evaluate_rules
 
 
+def _lookup_entry(s, word):
+    """Return the full lexical entry state dict, or None."""
+    row = s.conn.execute("""
+        SELECT state_json FROM capsules
+        WHERE foundation = 'foundation:knowledge'
+          AND json_extract(state_json, '$.kind') = 'lexical-entry'
+          AND json_extract(state_json, '$.text') = ?
+    """, (word,)).fetchone()
+    if not row:
+        return None
+    return json.loads(row["state_json"])
+
+
 def lookup_pos(s, word):
     row = s.conn.execute("""
         SELECT json_extract(state_json, '$.pos') AS pos
@@ -22,14 +35,19 @@ def tokenise(s, text, session_id):
     words = re.findall(r"[a-zA-Z]+", text.lower())
     token_ids = []
     for i, word in enumerate(words):
-        pos = lookup_pos(s, word)
-        if pos is None:
+        entry = _lookup_entry(s, word)
+        if entry is None:
             raise ValueError(f"unknown word: {word!r}")
         tok_id = f"parse/{session_id}/tok-{i}"
         s.write({
             "id": tok_id,
             "foundation": "foundation:token",
-            "state": {"text": word, "pos": pos, "index": i},
+            "state": {
+                "text": word,
+                "pos": entry["pos"],
+                "index": i,
+                "features": entry.get("features", {}),
+            },
         })
         token_ids.append(tok_id)
     return token_ids

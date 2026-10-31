@@ -492,13 +492,12 @@ def test_gap_analysis_raw_span():
 
 
 def test_gap_analysis_composition_gap():
-    """'the cat chased the dog' -> all covered, no full S."""
+    """'the cat sat the dog' -> sat is intransitive, can't take an object."""
     from analysis import find_gap_spans
     s = fresh_parse_fixture()
-    r = find_gap_spans(s, "the cat chased the dog")
+    r = find_gap_spans(s, "the cat sat the dog")
     assert not r.get("ok"), r
     assert not r["gaps"], f"expected no raw gap, got {r['gaps']}"
-    # Should have more than one maximal span
     assert len(r["maximal"]) >= 2, r["maximal"]
 
 
@@ -508,6 +507,36 @@ def test_gap_analysis_ok():
     s = fresh_parse_fixture()
     r = find_gap_spans(s, "the cat sat")
     assert r.get("ok") is True, r
+
+
+# --- transitivity --------------------------------------------------------
+def test_parse_transitive():
+    """'the cat chased the dog' parses via VP -> verb(transitive) NP."""
+    from parse import parse_sentence
+    s = fresh_parse_fixture()
+    r = parse_sentence(s, "the cat chased the dog")
+    assert "error" not in r, r
+    assert r["sentence"] is not None, r
+
+
+def test_parse_transitive_needs_object():
+    """'the cat chased' -> transitive verb without object doesn't produce S."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    r = parse_sentence(s, "the cat chased")
+    assert "error" not in r, r
+    assert r["sentence"] is None, f"expected no S, got {r['sentence']}"
+    cleanup_session(s, r["session"])
+
+
+def test_parse_intransitive_rejects_object():
+    """'the cat sat the dog' -> sat is intransitive, no VP -> verb NP."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    r = parse_sentence(s, "the cat sat the dog")
+    assert "error" not in r, r
+    assert r["sentence"] is None, f"expected no full S, got {r['sentence']}"
+    cleanup_session(s, r["session"])
 
 
 if __name__ == "__main__":

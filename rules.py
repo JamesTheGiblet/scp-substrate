@@ -197,8 +197,15 @@ def _eval_sequence(s, rule_id, condition, effect, scope):
         matches = []
         for r in rows:
             state = json.loads(r["state_json"])
-            if all(state.get(k) == v for k, v in state_filter.items()):
-                matches.append({"id": r["id"], "foundation": r["foundation"], "state": state})
+            if not all(state.get(k) == v for k, v in state_filter.items()):
+                continue
+            # Optional per-leaf feature filter (e.g. features: {transitive: false})
+            if "features" in pat:
+                pf = pat["features"]
+                cf = state.get("features", {})
+                if not all(cf.get(k) == v for k, v in pf.items()):
+                    continue
+            matches.append({"id": r["id"], "foundation": r["foundation"], "state": state})
         candidates.append(matches)
 
     def span(c):

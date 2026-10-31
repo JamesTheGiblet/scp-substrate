@@ -100,8 +100,8 @@ def _find_rules_producing(s, foundation, state_filter):
     return out
 
 
-def _find_lexical_entries(s, pos):
-    """Return list of {text, pos, features, weight} for a given pos."""
+def _find_lexical_entries(s, pos, features=None):
+    """Return list of {text, pos, features, weight} for a given pos, optionally filtered by features."""
     rows = s.conn.execute("""
         SELECT id, state_json FROM capsules
         WHERE foundation = 'foundation:knowledge'
@@ -111,6 +111,10 @@ def _find_lexical_entries(s, pos):
     out = []
     for r in rows:
         state = json.loads(r["state_json"])
+        if features:
+            cf = state.get("features", {})
+            if not all(cf.get(k) == v for k, v in features.items()):
+                continue
         # Weight from trust/freq/<word> if present
         w = s.conn.execute("""
             SELECT json_extract(state_json, '$.n0') AS n0
@@ -141,9 +145,11 @@ def _expand(s, spec, rng, session_id, next_idx, depth=0):
         pos = state_filter.get("pos")
         if not pos:
             raise ExpansionError("token spec missing 'pos'")
-        choices = _find_lexical_entries(s, pos)
+        features = spec.get("features")
+        choices = _find_lexical_entries(s, pos, features=features)
         if not choices:
-            raise ExpansionError(f"no lexical entries for pos={pos!r}")
+            hint = f" pos={pos!r}" + (f" features={features!r}" if features else "")
+            raise ExpansionError(f"no lexical entries for{hint}")
         weights = [c["weight"] for c in choices]
         word = rng.choices(choices, weights=weights, k=1)[0]
         tok_id = f"parse/{session_id}/tok-{next_idx}"

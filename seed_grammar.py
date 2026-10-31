@@ -30,14 +30,26 @@ GRAMMAR = [
     {"id": "grammar/vp-verb",
      "state": {
          "condition": {"type": "sequence", "match": [
-             {"foundation": "token", "state": {"pos": "verb"}},
+             {"foundation": "token", "state": {"pos": "verb"},
+              "features": {"transitive": False}},
+         ]},
+         "effect": {"foundation": "phrase", "state": {"category": "VP"}},
+     }},
+
+    {"id": "grammar/vp-verb-np",
+     "state": {
+         "condition": {"type": "sequence", "match": [
+             {"foundation": "token",  "state": {"pos": "verb"},
+              "features": {"transitive": True}},
+             {"foundation": "phrase", "state": {"category": "NP"}},
          ]},
          "effect": {"foundation": "phrase", "state": {"category": "VP"}},
      }},
     {"id": "grammar/vp-verb-pp",
      "state": {
          "condition": {"type": "sequence", "match": [
-             {"foundation": "token",  "state": {"pos": "verb"}},
+             {"foundation": "token",  "state": {"pos": "verb"},
+              "features": {"transitive": False}},
              {"foundation": "phrase", "state": {"category": "PP"}},
          ]},
          "effect": {"foundation": "phrase", "state": {"category": "VP"}},
