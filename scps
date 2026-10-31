@@ -195,6 +195,38 @@ def cmd_generate(a):
     print(f"hint: scps forget-parse {result['session']}  to clean up")
 
 
+def cmd_sweep_parse(a):
+    import json
+    from datetime import datetime, timedelta, timezone
+    s = Substrate()
+    cutoff = (datetime.now(timezone.utc) - timedelta(hours=a.older_than_hours)).strftime("%Y-%m-%d %H:%M:%S")
+    with s.conn:
+        n_caps = s.conn.execute(
+            "SELECT COUNT(*) FROM capsules WHERE id LIKE 'parse/%' AND created_at < ?",
+            (cutoff,)
+        ).fetchone()[0]
+        s.conn.execute(
+            "DELETE FROM links WHERE source LIKE 'parse/%' AND source IN "
+            "(SELECT id FROM capsules WHERE id LIKE 'parse/%' AND created_at < ?)",
+            (cutoff,)
+        )
+        s.conn.execute(
+            "DELETE FROM links WHERE target LIKE 'parse/%' AND target IN "
+            "(SELECT id FROM capsules WHERE id LIKE 'parse/%' AND created_at < ?)",
+            (cutoff,)
+        )
+        s.conn.execute(
+            "DELETE FROM capsules WHERE id LIKE 'parse/%' AND created_at < ?",
+            (cutoff,)
+        )
+        s.conn.execute(
+            "INSERT INTO events (event_type, payload) VALUES ('parse.sweep', ?)",
+            (json.dumps({"older_than_hours": a.older_than_hours, "capsules_removed": n_caps}),)
+        )
+    print(f"swept {n_caps} parse capsules older than {a.older_than_hours}h")
+    s.close()
+
+
 def main():
     p = argparse.ArgumentParser(prog="scp", description="Semantic shell for the SCP substrate.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -240,6 +272,10 @@ def main():
 
     sp = sub.add_parser("parse",       help="parse a sentence via grammar rules")
     sp.add_argument("text"); sp.set_defaults(func=cmd_parse)
+
+    sp = sub.add_parser("sweep-parse",  help="delete old parse sessions")
+    sp.add_argument("--older-than-hours", type=int, default=24)
+    sp.set_defaults(func=cmd_sweep_parse)
 
     sp = sub.add_parser("forget-parse", help="delete a parse session's capsules")
     sp.add_argument("session"); sp.set_defaults(func=cmd_forget_parse)
