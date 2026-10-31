@@ -884,6 +884,41 @@ def test_permissive_animacy_missing():
     cleanup_session(s, r["session"])
 
 
+# --- animacy feature tags ------------------------------------------------
+def test_abstract_object_blocked():
+    """Tagged-abstract noun as object of 'chased' fails."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    s.write({"id": "lex/substrate", "foundation": "foundation:knowledge",
+             "state": {"kind": "lexical-entry", "text": "substrate",
+                       "pos": "noun", "features": {"animacy": "abstract"}}})
+    r = parse_sentence(s, "the cat chased substrate")
+    assert not r.get("sentence"), r
+    cleanup_session(s, r["session"])
+
+
+def test_object_subject_blocked():
+    """Tagged-object noun as subject of 'sat' fails."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    s.write({"id": "lex/capsule", "foundation": "foundation:knowledge",
+             "state": {"kind": "lexical-entry", "text": "capsule",
+                       "pos": "noun", "features": {"animacy": "object"}}})
+    r = parse_sentence(s, "capsule sat")
+    assert not r.get("sentence"), r
+    cleanup_session(s, r["session"])
+
+
+def test_animal_subject_passes():
+    """Tagged-animal noun as subject of 'sat' passes."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    # 'cat' already has animacy: animal from fixture
+    r = parse_sentence(s, "cat sat")
+    assert r.get("sentence"), r
+    cleanup_session(s, r["session"])
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]
