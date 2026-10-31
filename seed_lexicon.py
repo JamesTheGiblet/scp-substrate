@@ -5,6 +5,7 @@ LEXICON = {
     "the":    ("det",  {}),
     "a":      ("det",  {}),
     "big":    ("adj",  {}),
+    "red":    ("adj",  {}),
     "small":  ("adj",  {}),
     "cat":    ("noun", {"physical": True, "animacy": "animal", "location": False}),
     "dog":    ("noun", {"physical": True, "animacy": "animal", "location": False}),

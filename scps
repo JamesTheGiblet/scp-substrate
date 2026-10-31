@@ -227,6 +227,21 @@ def cmd_sweep_parse(a):
     s.close()
 
 
+def cmd_analyse_corpus(a):
+    from analysis import analyse_corpus
+    from corpus import CORPUS, GAPS
+    s = Substrate()
+    if a.only == "parseable":
+        corpus = CORPUS
+    elif a.only == "gaps":
+        corpus = GAPS
+    else:
+        corpus = CORPUS + GAPS
+    print(f"analysing {len(corpus)} sentences\n")
+    analyse_corpus(s, corpus)
+    s.close()
+
+
 def main():
     p = argparse.ArgumentParser(prog="scp", description="Semantic shell for the SCP substrate.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -279,6 +294,10 @@ def main():
 
     sp = sub.add_parser("forget-parse", help="delete a parse session's capsules")
     sp.add_argument("session"); sp.set_defaults(func=cmd_forget_parse)
+
+    sp = sub.add_parser("analyse-corpus", help="parse corpus, surface grammar gaps")
+    sp.add_argument("--only", choices=["parseable", "gaps", "all"], default="all")
+    sp.set_defaults(func=cmd_analyse_corpus)
 
     sp = sub.add_parser("stats",       help="substrate counts")
     sp.set_defaults(func=cmd_stats)

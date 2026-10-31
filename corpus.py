@@ -17,3 +17,10 @@ CORPUS = [
     "the small dog sits on the big mat",
     "a cat sat on the mat",
 ]
+
+
+# Sentences the grammar cannot parse. For gap analysis demo. Not used by learning.
+GAPS = [
+    "the big red cat sat",         # needs det adj adj noun → NP
+    "the cat chased the dog",      # needs VP → verb NP
+]

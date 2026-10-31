@@ -474,6 +474,42 @@ def test_semantic_allows_object_location():
     assert found, "never generated 'on ... mat' in 60 seeds"
 
 
+# --- gap analysis --------------------------------------------------------
+def test_gap_analysis_raw_span():
+    """'the big red cat sat' -> unreduced tokens at [0-3] (det adj adj noun)."""
+    from analysis import find_gap_spans
+    s = fresh_parse_fixture()
+    s.write({"id": "lex/red", "foundation": "foundation:knowledge",
+             "state": {"kind": "lexical-entry", "text": "red", "pos": "adj",
+                       "features": {}}})
+    r = find_gap_spans(s, "the big red cat sat")
+    assert not r.get("ok"), r
+    assert r["gaps"], r
+    first_gap = r["gaps"][0]
+    a, b, seq = first_gap
+    assert (a, b) == (0, 3), f"expected gap [0-3], got [{a}-{b}]"
+    assert seq == ["det", "adj", "adj", "noun"], seq
+
+
+def test_gap_analysis_composition_gap():
+    """'the cat chased the dog' -> all covered, no full S."""
+    from analysis import find_gap_spans
+    s = fresh_parse_fixture()
+    r = find_gap_spans(s, "the cat chased the dog")
+    assert not r.get("ok"), r
+    assert not r["gaps"], f"expected no raw gap, got {r['gaps']}"
+    # Should have more than one maximal span
+    assert len(r["maximal"]) >= 2, r["maximal"]
+
+
+def test_gap_analysis_ok():
+    """A parseable sentence returns ok=True."""
+    from analysis import find_gap_spans
+    s = fresh_parse_fixture()
+    r = find_gap_spans(s, "the cat sat")
+    assert r.get("ok") is True, r
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]
