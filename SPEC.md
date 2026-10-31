@@ -258,3 +258,49 @@ The document's foundation is foundation:knowledge, because a declaration is a cl
 7. sc.db and sc.json each have a single writer
 
 Any change that breaks one of these is a design change, not a bug fix.
+
+---
+
+## 12. SymLM — the symbolic language layer
+
+The language layer is a **bounded symbolic language model** named SymLM. It sits on top of the substrate; it does not modify it.
+
+### Definition
+
+A SymLM is a language model where:
+
+- the grammar is stored as capsules (sequence rules),
+- the lexicon is stored as capsules (lexical entries with POS and features),
+- the input classifiers are stored as capsules (protocol layers, query intents),
+- changes are made by humans editing capsules, not by gradient updates,
+- every answer is a graph walk ending in a rendered response.
+
+There are no weights. There is no training loop. There is no probability distribution over tokens. Generation is rule expansion under feature constraints and corpus frequency. Parsing is rule reduction over a fixed grammar.
+
+### Bounds at v0.1
+
+| Dimension | Count | Where |
+|---|---|---|
+| Grammar rules | 12 | `grammar/*` capsules |
+| Lexicon | 441 | `lex/*` capsules |
+| Feature-tagged nouns | ~90 | `lex/*` capsules with `features.animacy` |
+| Input classifiers | 11 | `classifier/*` capsules |
+| Query intents | 10 | `intent/*` capsules |
+| Corpus sentences | 24 | `corpus/*` capsules |
+
+The system is enumerable. Every rule, every word, every classifier, every intent can be listed with `scps list -f knowledge`. Nothing is hidden in a blob.
+
+### Properties
+
+- **Symbolic** — representation is symbols (capsules), not dense vectors.
+- **Bounded** — grammar and lexicon are fixed at any given time and listed in the substrate.
+- **Local** — no network, no external model, one file.
+- **Traceable** — every parse is a tree of `has-child` links; every query is a walk.
+- **Grounded** — every answer comes from the substrate, never from statistical prior.
+- **Deliberate** — behaviour changes only when a human adds, edits, or removes a capsule.
+
+### Distinguished from a large language model
+
+A large language model produces plausible text from a distribution over tokens, with no way to trace a given output to its cause. A SymLM produces text from rules the substrate can list, and any output can be traced to the rules and capsules that produced it. A SymLM will never hallucinate; it will fail obviously when it cannot parse or generate. An LLM will produce something plausible; a SymLM will produce something *correct or nothing*.
+
+The two systems are not on the same axis. SymLM is not "smaller" — it is a different mechanism. The correct comparison is not "which is better" but "what do you need?" If you need provenance and explanation, you need a symbolic model. If you need fluency and breadth, you need a statistical one. A substrate like SCP can contain both; at v0.1 it contains one.

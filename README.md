@@ -2,6 +2,8 @@
 
 A local store of capsules and typed links, with a few small engines on top.
 
+The language layer in this repo is a **SymLM** — a Symbolic Language Model. It parses, generates, classifies, and answers queries against the substrate using rules and capsules. No gradients. No weights. Every answer is a graph walk you can trace. See [SPEC.md §12](SPEC.md) for the definition and bounds.
+
 ## The idea
 
 Everything is a capsule. The substrate only understands capsules and the

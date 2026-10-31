@@ -59,6 +59,17 @@ def _discourse_state(s, session_id):
             "tense":   row["tense"] if row else None}
 
 
+def _is_question(text):
+    """Question-shaped? ends with '?' or starts with wh-word."""
+    t = text.strip().lower()
+    if t.endswith("?"):
+        return True
+    for w in ("what", "who", "where", "when", "why", "how", "which"):
+        if t.startswith(w + " ") or t == w:
+            return True
+    return False
+
+
 def _known_words(s, text):
     words = re.findall(r"[a-z]+", text.lower())
     out = []
@@ -118,27 +129,33 @@ def respond(s, text, turn, session_id):
         # Only Layer 7 (Application) is genuine semantic content.
         response = _p.ack_response(classification)
 
-    elif layer == 7:
-        # Parse mode: resolve pronouns, parse, generate tense-matched
-        resolved = text
-        if prev["subject"]:
-            resolved = re.sub(r'\bit\b', prev["subject"], text, flags=re.IGNORECASE)
-        prefix = f"(it → {prev['subject']}) " if resolved != text else ""
-
-        r = parse_sentence(s, resolved)
-        if "error" in r or not r.get("sentence"):
-            if r.get("session"):
-                cleanup_session(s, r["session"])
-            response = prefix + _p.error_response(s, resolved)
+    elif layer == 7 or (layer == 3 and _is_question(text)):
+        # First try querying the substrate for an answer
+        from ask import answer_question, render as _ask_render
+        q = answer_question(s, text)
+        if q is not None:
+            response = _ask_render(q)
         else:
-            semantic = _extract_semantic(s, r["sentence"], r["session"])
-            cleanup_session(s, r["session"])
-            g = generate_sentence(s, prefer_tense=semantic.get("verb_tense"))
-            if "error" in g:
-                response = prefix + "I didn't follow."
+            # Fall back to grammar parse + generate (for statements)
+            resolved = text
+            if prev["subject"]:
+                resolved = re.sub(r'\bit\b', prev["subject"], text, flags=re.IGNORECASE)
+            prefix = f"(it → {prev['subject']}) " if resolved != text else ""
+
+            r = parse_sentence(s, resolved)
+            if "error" in r or not r.get("sentence"):
+                if r.get("session"):
+                    cleanup_session(s, r["session"])
+                response = prefix + _p.error_response(s, resolved)
             else:
-                response = prefix + f"So: {g['text']}."
-                cleanup_session(s, g["session"])
+                semantic = _extract_semantic(s, r["sentence"], r["session"])
+                cleanup_session(s, r["session"])
+                g = generate_sentence(s, prefer_tense=semantic.get("verb_tense"))
+                if "error" in g:
+                    response = prefix + "I didn't follow."
+                else:
+                    response = prefix + f"So: {g['text']}."
+                    cleanup_session(s, g["session"])
 
     else:
         # Error mode: brief, no word dump
@@ -214,8 +231,8 @@ def repl():
     """).fetchone()[0]
 
     print(f"SCP talk — session {session_id}")
-    print(f"Symbolic parser. {n_lex} words, {n_rules} grammar rules, {n_class} classifiers.")
-    print("Layers 2-6 ack; layer 7 parses. Not a chatbot.")
+    print(f"SymLM (Symbolic Language Model). {n_lex} words, {n_rules} grammar rules, {n_class} classifiers.")
+    print("Every answer is a graph walk. Not a chatbot.")
     print("Type 'help' for commands, 'quit' to exit.\n")
     turn = 0
     while True:

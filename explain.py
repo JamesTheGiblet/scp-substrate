@@ -43,6 +43,10 @@ def _summarise_state(state, foundation):
         layer = state.get("layer")
         kindc = state.get("kind_class") or "?"
         return f"turn {state.get('turn')} · layer {layer} ({kindc})"
+    if kind == "framework" and state.get("name") == "SymLM":
+        return f"SymLM — {state.get('expansion', 'Symbolic Language Model')}"
+    if kind == "framework":
+        return f"framework: {state.get('name', '?')}"
     if kind == "identity":
         return f"{state.get('name', '?')} — \"{state.get('motto', '?')}\""
     if kind == "project":

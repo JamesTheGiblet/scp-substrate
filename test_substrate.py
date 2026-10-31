@@ -94,6 +94,9 @@ def fresh_parse_fixture():
         if g["id"] == "grammar/s-np-vp":
             st = {**st, "condition": {**st["condition"], "subject_verb_agree": True}}
         s.write({"id": g["id"], "foundation": "foundation:rule", "state": st})
+    # Test entity for query walkers
+    s.write({"id": "alice", "foundation": "foundation:knowledge",
+             "state": {"kind": "person", "name": "alice", "role": "test entity"}})
     return s
 
 
@@ -917,6 +920,65 @@ def test_animal_subject_passes():
     r = parse_sentence(s, "cat sat")
     assert r.get("sentence"), r
     cleanup_session(s, r["session"])
+
+
+# --- natural language queries --------------------------------------------
+def _seed_intents_for_test(s):
+    from seed_intents import INTENTS
+    for it in INTENTS:
+        s.write({
+            "id": it["id"],
+            "foundation": "foundation:knowledge",
+            "state": {
+                "kind": "input-intent",
+                "walker": it["walker"],
+                "match_mode": "any_phrase",
+                "phrases": it["phrases"],
+                "requires_entity": it["requires_entity"],
+                "description": it["description"],
+            },
+        })
+
+
+def test_intent_why_trusted():
+    from ask import classify_intent
+    s = fresh_parse_fixture()
+    _seed_intents_for_test(s)
+    r = classify_intent(s, "why is scp-claim trusted")
+    assert r and r["walker"] == "why_trusted", r
+
+
+def test_intent_what_decided():
+    from ask import classify_intent
+    s = fresh_parse_fixture()
+    _seed_intents_for_test(s)
+    r = classify_intent(s, "what did i decide about sqlite")
+    assert r and r["walker"] == "what_decided", r
+
+
+def test_intent_no_match():
+    from ask import classify_intent
+    s = fresh_parse_fixture()
+    _seed_intents_for_test(s)
+    r = classify_intent(s, "the cat sat")
+    assert r is None, r
+
+
+def test_extract_entity_direct_id():
+    from ask import extract_entity
+    s = fresh_parse_fixture()
+    entity = extract_entity(s, "why is alice trusted", {"walker": "why_trusted"})
+    assert entity == "alice", entity
+
+
+def test_ask_returns_result():
+    from ask import answer_question
+    s = fresh_parse_fixture()
+    _seed_intents_for_test(s)
+    # 'who is alice' → what_is walker
+    r = answer_question(s, "who is alice")
+    assert r is not None
+    assert "alice" in r.get("summary", "").lower(), r
 
 
 if __name__ == "__main__":

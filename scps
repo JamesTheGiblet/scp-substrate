@@ -260,6 +260,21 @@ def cmd_talk(a):
     repl()
 
 
+def cmd_ask(a):
+    from ask import answer_question, render
+    s = Substrate()
+    text = " ".join(a.question)
+    result = answer_question(s, text)
+    if result is None:
+        print(f"I don't know how to answer: {text!r}")
+        print("(no intent classifier matched)")
+        print()
+        print("Try: who is X, what did I decide about X, why is X trusted,")
+        print("     what tools do I use, list all decisions, what is X")
+        return
+    print(render(result))
+
+
 def main():
     p = argparse.ArgumentParser(prog="scp", description="Semantic shell for the SCP substrate.")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -311,6 +326,10 @@ def main():
 
     sp = sub.add_parser("reject",       help="mark a parse as wrong; update trust")
     sp.add_argument("session"); sp.set_defaults(func=cmd_reject)
+
+    sp = sub.add_parser("ask",         help="natural-language query against the substrate")
+    sp.add_argument("question", nargs="+")
+    sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("talk",        help="interactive REPL: parse input, respond in kind")
     sp.set_defaults(func=cmd_talk)
