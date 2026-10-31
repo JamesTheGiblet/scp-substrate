@@ -6,7 +6,7 @@ LEXICON = {
     'big': ('adj', {}),
     'cat': ('noun', {'physical': True, 'animacy': 'animal', 'location': False, 'number': 'sg'}),
     'cats': ('noun', {'physical': True, 'animacy': 'animal', 'location': False, 'number': 'pl'}),
-    'chased': ('verb', {'transitive': True}),
+    'chased': ('verb', {'transitive': True, 'object_must_be_animate': True}),
     'dog': ('noun', {'physical': True, 'animacy': 'animal', 'location': False, 'number': 'sg'}),
     'dogs': ('noun', {'physical': True, 'animacy': 'animal', 'location': False, 'number': 'pl'}),
     'house': ('noun', {'physical': True, 'animacy': 'object', 'location': True, 'number': 'sg'}),
@@ -17,7 +17,7 @@ LEXICON = {
     'on': ('prep', {'requires_location': True}),
     'red': ('adj', {}),
     'sat': ('verb', {'transitive': False}),
-    'sits': ('verb', {'transitive': False}),
+    'sits': ('verb', {'transitive': False, 'number': 'sg'}),
     'small': ('adj', {}),
     'the': ('det', {}),
 }

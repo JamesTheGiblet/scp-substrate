@@ -166,6 +166,55 @@ def _eval_kind_and_age(s, rule_id, condition, effect):
     return fired, warnings
 
 
+def _leaf_features(s, capsule_id):
+    """Return list of {pos, features} for token leaves in a subtree."""
+    out = []
+    stack = [capsule_id]
+    seen = set()
+    while stack:
+        cid = stack.pop()
+        if cid in seen:
+            continue
+        seen.add(cid)
+        c = s.get(cid)
+        if not c:
+            continue
+        if c["foundation"] == "foundation:token":
+            out.append({"pos": c["state"].get("pos"),
+                        "features": c["state"].get("features", {})})
+        for l in s.links_from(cid):
+            if l["type"] == "has-child":
+                stack.append(l["target"])
+    return out
+
+
+def _sv_agree(s, np_cid, vp_cid):
+    """Subject-verb agreement: NP head noun's number matches VP head verb's number."""
+    nouns = [l for l in _leaf_features(s, np_cid) if l["pos"] == "noun"]
+    verbs = [l for l in _leaf_features(s, vp_cid) if l["pos"] == "verb"]
+    if not nouns or not verbs:
+        return True
+    np_num = nouns[-1]["features"].get("number")
+    vp_num = verbs[0]["features"].get("number")
+    if np_num and vp_num:
+        return np_num == vp_num
+    return True
+
+
+def _object_semantic_check(s, verb_cid, np_cid):
+    """If verb has object_must_be_animate, NP head noun must be animate."""
+    verb = s.get(verb_cid)
+    if not verb:
+        return True
+    if not verb["state"].get("features", {}).get("object_must_be_animate"):
+        return True
+    nouns = [l for l in _leaf_features(s, np_cid) if l["pos"] == "noun"]
+    if not nouns:
+        return False
+    animacy = nouns[-1]["features"].get("animacy")
+    return animacy in ("animal", "human")
+
+
 def _eval_sequence(s, rule_id, condition, effect, scope):
     """Condition: {match: [{foundation, state: {k: v}}, ...]}.
     Effect: {foundation, state: {k: v}}.
@@ -242,6 +291,21 @@ def _eval_sequence(s, rule_id, condition, effect, scope):
             nums = [h["state"].get("features", {}).get("number") for h in handle]
             nums = [n for n in nums if n]
             if len(set(nums)) > 1:
+                continue
+
+        # Subject-verb agreement (opt-in per rule)
+        if condition.get("subject_verb_agree") and len(handle) == 2:
+            if not _sv_agree(s, handle[0]["id"], handle[1]["id"]):
+                continue
+
+        # Object semantic check: verb-with-animate-req + NP at positions 0,1.
+        # Note: _object_semantic_check short-circuits if the verb has no
+        # object_must_be_animate feature, so this is cheap for other rules.
+        if (len(handle) >= 2
+                and handle[0]["foundation"] == "foundation:token"
+                and handle[1]["foundation"] == "foundation:phrase"
+                and handle[1]["state"].get("category") == "NP"):
+            if not _object_semantic_check(s, handle[0]["id"], handle[1]["id"]):
                 continue
 
         sp_first = span(handle[0])

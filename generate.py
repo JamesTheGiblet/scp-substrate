@@ -13,32 +13,11 @@ import random
 import uuid
 
 from substrate import Substrate
+from rules import _sv_agree, _object_semantic_check, _leaf_features
 
 
 class ExpansionError(Exception):
     pass
-
-
-def _leaf_features(s, capsule_id):
-    """Walk a capsule subtree; return list of {pos, features} for token leaves."""
-    out = []
-    stack = [capsule_id]
-    seen = set()
-    while stack:
-        cid = stack.pop()
-        if cid in seen:
-            continue
-        seen.add(cid)
-        c = s.get(cid)
-        if not c:
-            continue
-        if c["foundation"] == "foundation:token":
-            out.append({"pos": c["state"].get("pos"),
-                        "features": c["state"].get("features", {})})
-        for l in s.links_from(cid):
-            if l["type"] == "has-child":
-                stack.append(l["target"])
-    return out
 
 
 def _rollback_subtree(s, capsule_id, session_id):
@@ -225,6 +204,30 @@ def _expand(s, spec, rng, session_id, next_idx, depth=0):
                         _rollback_subtree(s, cid, session_id)
                     raise ExpansionError("number disagreement in NP")
 
+            # Subject-verb agreement (opt-in on rule)
+            if (foundation == "foundation:sentence"
+                    and r["rule"]["condition"].get("subject_verb_agree")
+                    and len(children) == 2):
+                if not _sv_agree(s, children[0], children[1]):
+                    for cid in children:
+                        _rollback_subtree(s, cid, session_id)
+                    raise ExpansionError("subject-verb disagreement")
+
+            # Object semantic check for VP -> verb NP
+            if (foundation == "foundation:phrase"
+                    and state_filter.get("category") == "VP"
+                    and len(children) >= 2):
+                child0 = s.get(children[0])
+                child1 = s.get(children[1])
+                if (child0 and child1
+                        and child0["foundation"] == "foundation:token"
+                        and child1["foundation"] == "foundation:phrase"
+                        and child1["state"].get("category") == "NP"):
+                    if not _object_semantic_check(s, children[0], children[1]):
+                        for cid in children:
+                            _rollback_subtree(s, cid, session_id)
+                        raise ExpansionError("object must be animate")
+
             rule_short = r["id"].split("/")[-1]
             new_id = f"parse/{session_id}/{rule_short}/{next_idx}-{cur-1}"
             new_state = dict(r["rule"]["effect"].get("state", {}))
@@ -270,13 +273,27 @@ def generate_sentence(s, start="S", seed=None):
     session_id = uuid.uuid4().hex[:8]
     foundation, state_filter = _START_FOUNDATIONS[start]
 
-    try:
-        texts, end, root = _expand(
-            s, {"foundation": foundation, "state": state_filter},
-            rng, session_id, 0
-        )
-    except ExpansionError as e:
-        return {"error": str(e), "session": session_id, "seed": seed}
+    # Retry: SV/object checks may reject the first pick; different random choices
+    # on retry often succeed. Preserves determinism (same rng state → same result).
+    last_err = None
+    texts = end = root = None
+    for _attempt in range(8):
+        try:
+            texts, end, root = _expand(
+                s, {"foundation": foundation, "state": state_filter},
+                rng, session_id, 0
+            )
+            break
+        except ExpansionError as e:
+            last_err = e
+            # Clear any leftover partial capsules from failed attempts
+            from parse import cleanup_session
+            cleanup_session(s, session_id)
+            continue
+
+    if texts is None:
+        return {"error": str(last_err or "expansion failed"),
+                "session": session_id, "seed": seed}
 
     return {
         "session": session_id,

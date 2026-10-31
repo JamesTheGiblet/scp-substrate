@@ -60,6 +60,9 @@ def fresh_parse_fixture():
     LEXICON["cats"] = ("noun", {"number": "pl", "location": False})
     LEXICON["mats"] = ("noun", {"number": "pl", "location": True})
     LEXICON["a"] = ("det", {"number": "sg"})
+    # SV / object test features
+    LEXICON["sits"] = ("verb", {"transitive": False, "number": "sg"})
+    LEXICON["chased"] = ("verb", {"transitive": True, "object_must_be_animate": True})
     for word, (pos, features) in LEXICON.items():
         s.write({"id": f"lex/{word}", "foundation": "foundation:knowledge",
                  "state": {"kind": "lexical-entry", "text": word, "pos": pos,
@@ -68,6 +71,8 @@ def fresh_parse_fixture():
         st = dict(g["state"])
         if g["id"] == "grammar/np-det-noun":
             st = {**st, "condition": {**st["condition"], "number_agree": True}}
+        if g["id"] == "grammar/s-np-vp":
+            st = {**st, "condition": {**st["condition"], "subject_verb_agree": True}}
         s.write({"id": g["id"], "foundation": "foundation:rule", "state": st})
     return s
 
@@ -616,6 +621,40 @@ def test_feedback_reject_lowers():
           AND json_extract(state_json, '$.word') = 'the'
     """).fetchone()
     assert row["n0"] == confirmed - 1, f"expected {confirmed - 1}, got {row['n0']}"
+
+
+# --- SV agreement & object semantics ------------------------------------
+def test_sv_agreement():
+    """Plural subject with 3sg verb must fail; past tense passes (no number)."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    cases = [
+        ("the cats sits", False),   # pl subject, sg verb → fail
+        ("the cats sat", True),     # pl subject, past verb (no number) → pass
+        ("the cat sits", True),     # sg subject, sg verb → pass
+    ]
+    for text, expect_ok in cases:
+        r = parse_sentence(s, text)
+        got = r.get("sentence") is not None
+        assert got == expect_ok, f"{text!r}: expected {expect_ok}, got {got}"
+        if r.get("session"):
+            cleanup_session(s, r["session"])
+
+
+def test_object_must_be_animate():
+    """'chased' requires an animate object; mat fails, dog passes."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    cases = [
+        ("the cat chased the mat", False),   # mat not animate → fail
+        ("the cat chased the dog", True),    # dog animate → pass
+    ]
+    for text, expect_ok in cases:
+        r = parse_sentence(s, text)
+        got = r.get("sentence") is not None
+        assert got == expect_ok, f"{text!r}: expected {expect_ok}, got {got}"
+        if r.get("session"):
+            cleanup_session(s, r["session"])
 
 
 if __name__ == "__main__":
