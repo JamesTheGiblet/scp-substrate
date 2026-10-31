@@ -8,16 +8,18 @@ from rules import evaluate_rules
 
 
 def _lookup_entry(s, word):
-    """Return the full lexical entry state dict, or None."""
-    row = s.conn.execute("""
-        SELECT state_json FROM capsules
-        WHERE foundation = 'foundation:knowledge'
-          AND json_extract(state_json, '$.kind') = 'lexical-entry'
-          AND json_extract(state_json, '$.text') = ?
-    """, (word,)).fetchone()
-    if not row:
-        return None
-    return json.loads(row["state_json"])
+    """Return lexical entry state; falls back to alias/ or typo/."""
+    for kind in ("lexical-entry", "alias", "typo"):
+        row = s.conn.execute("""
+            SELECT state_json FROM capsules
+            WHERE foundation = 'foundation:knowledge'
+              AND json_extract(state_json, '$.kind') = ?
+              AND json_extract(state_json, '$.text') = ?
+            LIMIT 1
+        """, (kind, word)).fetchone()
+        if row:
+            return json.loads(row["state_json"])
+    return None
 
 
 def lookup_pos(s, word):

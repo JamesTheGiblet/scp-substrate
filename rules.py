@@ -201,6 +201,20 @@ def _sv_agree(s, np_cid, vp_cid):
     return True
 
 
+def _subject_semantic_check(s, verb_cid, np_cid):
+    """If verb has subject_must_be_animate, NP head noun must be animate."""
+    verb = s.get(verb_cid)
+    if not verb:
+        return True
+    if not verb["state"].get("features", {}).get("subject_must_be_animate"):
+        return True
+    nouns = [l for l in _leaf_features(s, np_cid) if l["pos"] == "noun"]
+    if not nouns:
+        return False
+    animacy = nouns[-1]["features"].get("animacy")
+    return animacy in ("animal", "human")
+
+
 def _object_semantic_check(s, verb_cid, np_cid):
     """If verb has object_must_be_animate, NP head noun must be animate."""
     verb = s.get(verb_cid)
@@ -297,6 +311,20 @@ def _eval_sequence(s, rule_id, condition, effect, scope):
         if condition.get("subject_verb_agree") and len(handle) == 2:
             if not _sv_agree(s, handle[0]["id"], handle[1]["id"]):
                 continue
+
+        # Subject animacy: subject (handle[0] = NP) must satisfy VP's verb requirements
+        if condition.get("subject_verb_agree") and len(handle) == 2:
+            vp_children = s.conn.execute(
+                "SELECT target FROM links WHERE source=? AND type='has-child' "
+                "ORDER BY json_extract(metadata, '$.position')",
+                (handle[1]["id"],)
+            ).fetchall()
+            if vp_children:
+                verb_cid = vp_children[0]["target"]
+                verb = s.get(verb_cid)
+                if (verb and verb["foundation"] == "foundation:token"
+                        and not _subject_semantic_check(s, verb_cid, handle[0]["id"])):
+                    continue
 
         # Object semantic check: verb-with-animate-req + NP at positions 0,1.
         # Note: _object_semantic_check short-circuits if the verb has no

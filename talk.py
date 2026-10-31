@@ -11,7 +11,7 @@ from generate import generate_sentence
 
 def _extract_semantic(s, root_id, session_id):
     """Extract subject, verb, verb_tense, object from a parse tree."""
-    tokens = s.conn.execute("""
+    rows = s.conn.execute("""
         SELECT json_extract(state_json, '$.text') AS text,
                json_extract(state_json, '$.pos') AS pos,
                json_extract(state_json, '$.features') AS features,
@@ -21,10 +21,12 @@ def _extract_semantic(s, root_id, session_id):
         ORDER BY json_extract(state_json, '$.index')
     """, (f"parse/{session_id}/tok-%",)).fetchall()
 
+    tokens = [dict(r) for r in rows]  # Row -> dict so .get() works
+
     nouns = [t for t in tokens if t["pos"] == "noun"]
     verbs = [t for t in tokens if t["pos"] == "verb"]
-
     verb = verbs[0] if verbs else None
+
     verb_features = {}
     if verb and verb.get("features"):
         f = verb["features"]
@@ -32,7 +34,7 @@ def _extract_semantic(s, root_id, session_id):
             try:
                 verb_features = json.loads(f)
             except Exception:
-                verb_features = {}
+                pass
         elif isinstance(f, dict):
             verb_features = f
 
@@ -69,7 +71,7 @@ def _known_words(s, text):
     return out
 
 
-def _log_turn(s, session_id, turn, user_text, response, parsed, semantic=None):
+def _log_turn(s, session_id, turn, user_text, response, parsed, semantic=None, classification=None):
     cid = f"conversation/{session_id}/{turn:03d}"
     state = {
         "kind": "conversation-turn",
@@ -86,6 +88,11 @@ def _log_turn(s, session_id, turn, user_text, response, parsed, semantic=None):
             "verb_tense": semantic.get("verb_tense"),
             "object":     semantic.get("object"),
         })
+    if classification:
+        state.update({
+            "layer":      classification.get("layer"),
+            "kind_class": classification.get("kind"),
+        })
     with s.conn:
         s.write({
             "id": cid,
@@ -96,51 +103,64 @@ def _log_turn(s, session_id, turn, user_text, response, parsed, semantic=None):
 
 
 def respond(s, text, turn, session_id):
-    parts = []
-    parsed = False
+    """Classify input, respond at matched layer."""
+    import protocol as _p
+
+    prev = _discourse_state(s, session_id)
+    classification = _p.classify(s, text)
+    layer = classification["layer"]
+
+    response = ""
     semantic = {}
 
-    # 0. Discourse state from previous turn
-    prev = _discourse_state(s, session_id)
+    if 2 <= layer <= 6:
+        # Ack mode: any non-semantic layer (2-6) gets a Layer-matched response.
+        # Only Layer 7 (Application) is genuine semantic content.
+        response = _p.ack_response(classification)
 
-    # 0b. Pronoun resolution: 'it' → previous subject
-    resolved = text
-    if prev["subject"]:
-        import re as _re
-        resolved = _re.sub(r'\bit\b', prev["subject"], text, flags=_re.IGNORECASE)
-        if resolved != text:
-            parts.append(f"(resolved 'it' → {prev['subject']})")
+    elif layer == 7:
+        # Parse mode: resolve pronouns, parse, generate tense-matched
+        resolved = text
+        if prev["subject"]:
+            resolved = re.sub(r'\bit\b', prev["subject"], text, flags=re.IGNORECASE)
+        prefix = f"(it → {prev['subject']}) " if resolved != text else ""
 
-    # 1. Try to parse (using resolved text if it changed)
-    r = parse_sentence(s, resolved)
-    if "error" in r:
-        parts.append(f"I don't know: {r['error']}")
-    else:
-        parsed = r.get("sentence") is not None
-        if parsed:
-            parts.append("I understand.")
-            semantic = _extract_semantic(s, r["sentence"], r["session"])
+        r = parse_sentence(s, resolved)
+        if "error" in r or not r.get("sentence"):
+            if r.get("session"):
+                cleanup_session(s, r["session"])
+            response = prefix + _p.error_response(s, resolved)
         else:
-            parts.append("I can't parse that.")
-        cleanup_session(s, r["session"])
+            semantic = _extract_semantic(s, r["sentence"], r["session"])
+            cleanup_session(s, r["session"])
+            g = generate_sentence(s, prefer_tense=semantic.get("verb_tense"))
+            if "error" in g:
+                response = prefix + "I didn't follow."
+            else:
+                response = prefix + f"So: {g['text']}."
+                cleanup_session(s, g["session"])
 
-    # 2. Which words do I recognise?
-    known = _known_words(s, resolved)
-    if known:
-        words = ", ".join(f"{k['word']} ({k['pos']})" for k in known)
-        parts.append(f"Words I know: {words}.")
-    elif not parts:
-        parts.append("I don't recognise any of those words.")
+    else:
+        # Error mode: brief, no word dump
+        response = _p.error_response(s, text)
+        # Log unparsed for later grammar induction
+        import uuid as _uuid
+        uid = _uuid.uuid4().hex[:8]
+        s.write({
+            "id": f"unparsed/{session_id}/{turn:03d}-{uid}",
+            "foundation": "foundation:observation",
+            "state": {
+                "kind": "unparsed-input",
+                "session": session_id,
+                "turn": turn,
+                "text": text,
+            },
+        })
 
-    # 3. If parsed, respond in same tense
-    if parsed:
-        g = generate_sentence(s, prefer_tense=semantic.get("verb_tense"))
-        if "error" not in g:
-            parts.append(f"So: {g['text']}.")
-            cleanup_session(s, g["session"])
-
-    response = " ".join(parts)
-    _log_turn(s, session_id, turn, text, response, parsed, semantic)
+    _log_turn(s, session_id, turn, text, response,
+              parsed=(layer == 7),
+              semantic=semantic,
+              classification=classification)
     return response
 
 
@@ -176,7 +196,26 @@ def cmd_words(s):
 def repl():
     s = Substrate()
     session_id = uuid.uuid4().hex[:8]
+    # Banner reads live counts from the substrate
+    n_lex = s.conn.execute("""
+        SELECT COUNT(*) FROM capsules
+        WHERE foundation = 'foundation:knowledge'
+          AND json_extract(state_json, '$.kind') IN ('lexical-entry', 'alias', 'typo')
+    """).fetchone()[0]
+    n_rules = s.conn.execute("""
+        SELECT COUNT(*) FROM capsules
+        WHERE foundation = 'foundation:rule'
+          AND json_extract(state_json, '$.condition.type') = 'sequence'
+    """).fetchone()[0]
+    n_class = s.conn.execute("""
+        SELECT COUNT(*) FROM capsules
+        WHERE foundation = 'foundation:knowledge'
+          AND json_extract(state_json, '$.kind') = 'input-classifier'
+    """).fetchone()[0]
+
     print(f"SCP talk — session {session_id}")
+    print(f"Symbolic parser. {n_lex} words, {n_rules} grammar rules, {n_class} classifiers.")
+    print("Layers 2-6 ack; layer 7 parses. Not a chatbot.")
     print("Type 'help' for commands, 'quit' to exit.\n")
     turn = 0
     while True:

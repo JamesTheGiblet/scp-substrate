@@ -13,7 +13,7 @@ import random
 import uuid
 
 from substrate import Substrate
-from rules import _sv_agree, _object_semantic_check, _leaf_features
+from rules import _sv_agree, _object_semantic_check, _subject_semantic_check, _leaf_features
 
 
 class ExpansionError(Exception):
@@ -219,6 +219,21 @@ def _expand(s, spec, rng, session_id, next_idx, depth=0, tense_pref=None):
                     for cid in children:
                         _rollback_subtree(s, cid, session_id)
                     raise ExpansionError("subject-verb disagreement")
+
+                # Subject animacy
+                vp_children = s.conn.execute(
+                    "SELECT target FROM links WHERE source=? AND type='has-child' "
+                    "ORDER BY json_extract(metadata, '$.position')",
+                    (children[1],)
+                ).fetchall()
+                if vp_children:
+                    verb_cid = vp_children[0]["target"]
+                    verb = s.get(verb_cid)
+                    if (verb and verb["foundation"] == "foundation:token"
+                            and not _subject_semantic_check(s, verb_cid, children[0])):
+                        for cid in children:
+                            _rollback_subtree(s, cid, session_id)
+                        raise ExpansionError("subject must be animate")
 
             # Object semantic check for VP -> verb NP
             if (foundation == "foundation:phrase"

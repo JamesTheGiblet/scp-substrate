@@ -657,6 +657,169 @@ def test_object_must_be_animate():
             cleanup_session(s, r["session"])
 
 
+# --- protocol classification -------------------------------------------
+def _seed_classifiers_for_test(s):
+    """Add the 4 classifier capsules to a fixture."""
+    import json as _j
+    classifiers = [
+        {"id": "classifier/01-wellbeing", "state": {
+            "kind": "input-classifier", "layer": 2, "name": "wellbeing-question",
+            "match_mode": "contains",
+            "patterns": ["how are you", "how's it going"],
+            "response_templates": ["good thanks", "not bad"]}},
+        {"id": "classifier/02-greeting", "state": {
+            "kind": "input-classifier", "layer": 2, "name": "greeting",
+            "match_mode": "exact",
+            "patterns": ["hi", "hello", "hey", "morning"],
+            "response_templates": ["hi", "hello", "morning"]}},
+        {"id": "classifier/03-smalltalk", "state": {
+            "kind": "input-classifier", "layer": 4, "name": "smalltalk",
+            "match_mode": "contains",
+            "patterns": ["weather", "cold"],
+            "response_templates": ["mm", "yeah"]}},
+        {"id": "classifier/04-semantic", "state": {
+            "kind": "input-classifier", "layer": 7, "name": "semantic",
+            "match_mode": "parses", "response_templates": []}},
+    ]
+    for c in classifiers:
+        s.write({"id": c["id"], "foundation": "foundation:knowledge", "state": c["state"]})
+
+
+def test_classify_greeting():
+    from protocol import classify
+    s = fresh_parse_fixture()
+    _seed_classifiers_for_test(s)
+    r = classify(s, "hi")
+    assert r["layer"] == 2 and r["kind"] == "greeting", r
+
+
+def test_classify_wellbeing():
+    from protocol import classify
+    s = fresh_parse_fixture()
+    _seed_classifiers_for_test(s)
+    r = classify(s, "how are you")
+    assert r["layer"] == 2 and r["kind"] == "wellbeing-question", r
+
+
+def test_classify_semantic():
+    from protocol import classify
+    s = fresh_parse_fixture()
+    _seed_classifiers_for_test(s)
+    r = classify(s, "the cat sat")
+    assert r["layer"] == 7 and r["kind"] == "semantic", r
+
+
+def test_classify_unknown():
+    from protocol import classify
+    s = fresh_parse_fixture()
+    _seed_classifiers_for_test(s)
+    r = classify(s, "flibbertigibbet")
+    assert r["layer"] == 0 and r["kind"] == "unknown", r
+
+
+def test_respond_ack_mode():
+    """'hi' returns a template, not a word dump."""
+    from talk import respond
+    s = fresh_parse_fixture()
+    _seed_classifiers_for_test(s)
+    out = respond(s, "hi", 1, "sess-t1")
+    assert "Words I know" not in out, out
+    assert len(out) < 40, out
+
+
+def test_respond_layer7_concise():
+    """'the cat sat' produces a generated sentence, no word dump."""
+    from talk import respond
+    s = fresh_parse_fixture()
+    _seed_classifiers_for_test(s)
+    out = respond(s, "the cat sat", 1, "sess-t2")
+    assert "Words I know" not in out, out
+    assert "So:" in out, out
+
+
+# --- expansion ----------------------------------------------------------
+def test_endswith_classifier():
+    from protocol import classify
+    s = fresh_parse_fixture()
+    # Seed a minimal endswith classifier
+    s.write({"id": "classifier/09-question-mark",
+             "foundation": "foundation:knowledge",
+             "state": {"kind": "input-classifier", "layer": 3, "name": "question-mark",
+                       "match_mode": "endswith", "patterns": ["?"],
+                       "response_templates": ["dunno"]}})
+    r = classify(s, "what time is it?")
+    assert r["layer"] == 3 and r["kind"] == "question-mark", r
+
+
+def test_alias_lookup():
+    from substrate import Substrate
+    from parse import _lookup_entry
+    s = fresh_parse_fixture()
+    s.write({"id": "alias/an", "foundation": "foundation:knowledge",
+             "state": {"kind": "alias", "alias_for": "a", "text": "an",
+                       "pos": "det", "features": {}}})
+    e = _lookup_entry(s, "an")
+    assert e and e["pos"] == "det", e
+
+
+def test_typo_lookup():
+    from substrate import Substrate
+    from parse import _lookup_entry
+    s = fresh_parse_fixture()
+    s.write({"id": "typo/teh", "foundation": "foundation:knowledge",
+             "state": {"kind": "typo", "alias_for": "the", "text": "teh",
+                       "pos": "det", "features": {}}})
+    e = _lookup_entry(s, "teh")
+    assert e and e["pos"] == "det", e
+
+
+def test_subject_must_be_animate():
+    from parse import parse_sentence, cleanup_session
+    import json
+    s = fresh_parse_fixture()
+    # Tag sat
+    c = s.get("lex/sat")
+    f = dict(c["state"].get("features", {})); f["subject_must_be_animate"] = True
+    st = dict(c["state"]); st["features"] = f
+    with s.conn:
+        s.conn.execute("UPDATE capsules SET state_json=? WHERE id='lex/sat'",
+                       (json.dumps(st),))
+    # S rule needs subject_verb_agree to fire the check
+    c = s.get("grammar/s-np-vp")
+    ns = dict(c["state"]); ns["condition"] = {**ns["condition"], "subject_verb_agree": True}
+    with s.conn:
+        s.conn.execute("UPDATE capsules SET state_json=? WHERE id='grammar/s-np-vp'",
+                       (json.dumps(ns),))
+
+    cases = [
+        ("the cat sat", True),
+        ("the mat sat", False),
+    ]
+    for text, expect_ok in cases:
+        r = parse_sentence(s, text)
+        got = r.get("sentence") is not None
+        assert got == expect_ok, f"{text!r}: expected {expect_ok}, got {got}"
+        if r.get("session"):
+            cleanup_session(s, r["session"])
+
+
+# --- wh-startswith classifier --------------------------------------------
+def test_wh_startswith_classifier():
+    from protocol import classify
+    s = fresh_parse_fixture()
+    s.write({
+        "id": "classifier/11-wh-question",
+        "foundation": "foundation:knowledge",
+        "state": {"kind": "input-classifier", "layer": 3, "name": "wh-question",
+                  "match_mode": "startswith",
+                  "patterns": ["what", "who", "where", "when", "why", "how"],
+                  "response_templates": ["dunno"]},
+    })
+    for text in ["what time is it", "who is that", "where are we", "why not"]:
+        r = classify(s, text)
+        assert r["layer"] == 3, f"{text!r}: expected layer 3, got {r}"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]

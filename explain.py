@@ -39,6 +39,22 @@ def _summarise_state(state, foundation):
         return state.get("role") or state.get("name") or "person"
     if foundation == "foundation:project":
         return f"project ({state.get('status', '?')})"
+    if kind == "conversation-turn":
+        layer = state.get("layer")
+        kindc = state.get("kind_class") or "?"
+        return f"turn {state.get('turn')} · layer {layer} ({kindc})"
+    if kind == "identity":
+        return f"{state.get('name', '?')} — \"{state.get('motto', '?')}\""
+    if kind == "project":
+        return f"project {state.get('name', '?')} ({state.get('status', '?')})"
+    if kind == "parked-idea":
+        return f"parked: {state.get('name', '?')}"
+    if kind == "alias":
+        return f"alias: {state.get('text')} → {state.get('alias_for')}"
+    if kind == "typo":
+        return f"typo: {state.get('text')} → {state.get('alias_for')}"
+    if kind == "unparsed-input":
+        return f"unparsed: {state.get('text', '?')!r}"
     if kind == "tool":
         return f"{state.get('name', '?')} — {state.get('use', '?')}"
     if kind == "skill":
