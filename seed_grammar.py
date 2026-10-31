@@ -1,66 +1,135 @@
-"""Seed grammar rules. Idempotent."""
+"""Seed grammar rules. Create-only (capsules authoritative)."""
 from substrate import Substrate
 
 GRAMMAR = [
-    {"id": "grammar/np-det-noun",
+    {"id": 'grammar/np-det-adj-noun',
      "state": {
-         "condition": {"type": "sequence", "match": [
-             {"foundation": "token", "state": {"pos": "det"}},
-             {"foundation": "token", "state": {"pos": "noun"}},
-         ]},
-         "effect": {"foundation": "phrase", "state": {"category": "NP"}},
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'det'}},
+                 {"foundation": 'token', "state": {'pos': 'adj'}},
+                 {"foundation": 'token', "state": {'pos': 'noun'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'NP'},
+         },
      }},
-    {"id": "grammar/np-det-adj-noun",
+    {"id": 'grammar/np-det-noun',
      "state": {
-         "condition": {"type": "sequence", "match": [
-             {"foundation": "token", "state": {"pos": "det"}},
-             {"foundation": "token", "state": {"pos": "adj"}},
-             {"foundation": "token", "state": {"pos": "noun"}},
-         ]},
-         "effect": {"foundation": "phrase", "state": {"category": "NP"}},
+         "condition": {
+             "type": 'sequence',
+             "number_agree": True,
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'det'}},
+                 {"foundation": 'token', "state": {'pos': 'noun'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'NP'},
+         },
      }},
-    {"id": "grammar/pp-prep-np",
+    {"id": 'grammar/pp-prep-np',
      "state": {
-         "condition": {"type": "sequence", "match": [
-             {"foundation": "token",  "state": {"pos": "prep"}},
-             {"foundation": "phrase", "state": {"category": "NP"}},
-         ]},
-         "effect": {"foundation": "phrase", "state": {"category": "PP"}},
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'prep'}},
+                 {"foundation": 'phrase', "state": {'category': 'NP'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'PP'},
+         },
      }},
-    {"id": "grammar/vp-verb",
+    {"id": 'grammar/s-np-vp',
      "state": {
-         "condition": {"type": "sequence", "match": [
-             {"foundation": "token", "state": {"pos": "verb"},
-              "features": {"transitive": False}},
-         ]},
-         "effect": {"foundation": "phrase", "state": {"category": "VP"}},
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'phrase', "state": {'category': 'NP'}},
+                 {"foundation": 'phrase', "state": {'category': 'VP'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'sentence',
+             "state": {'category': 'S'},
+         },
      }},
-
-    {"id": "grammar/vp-verb-np",
+    {"id": 'grammar/vp-verb',
      "state": {
-         "condition": {"type": "sequence", "match": [
-             {"foundation": "token",  "state": {"pos": "verb"},
-              "features": {"transitive": True}},
-             {"foundation": "phrase", "state": {"category": "NP"}},
-         ]},
-         "effect": {"foundation": "phrase", "state": {"category": "VP"}},
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'verb'}, "features": {'transitive': False}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'VP'},
+         },
      }},
-    {"id": "grammar/vp-verb-pp",
+    {"id": 'grammar/vp-verb-np',
      "state": {
-         "condition": {"type": "sequence", "match": [
-             {"foundation": "token",  "state": {"pos": "verb"},
-              "features": {"transitive": False}},
-             {"foundation": "phrase", "state": {"category": "PP"}},
-         ]},
-         "effect": {"foundation": "phrase", "state": {"category": "VP"}},
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'verb'}, "features": {'transitive': True}},
+                 {"foundation": 'phrase', "state": {'category': 'NP'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'VP'},
+         },
      }},
-    {"id": "grammar/s-np-vp",
+    {"id": 'grammar/vp-verb-np-pp',
      "state": {
-         "condition": {"type": "sequence", "match": [
-             {"foundation": "phrase", "state": {"category": "NP"}},
-             {"foundation": "phrase", "state": {"category": "VP"}},
-         ]},
-         "effect": {"foundation": "sentence", "state": {"category": "S"}},
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'verb'}, "features": {'transitive': True}},
+                 {"foundation": 'phrase', "state": {'category': 'NP'}},
+                 {"foundation": 'phrase', "state": {'category': 'PP'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'VP'},
+         },
+     }},
+    {"id": 'grammar/vp-verb-pp',
+     "state": {
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'verb'}, "features": {'transitive': False}},
+                 {"foundation": 'phrase', "state": {'category': 'PP'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'VP'},
+         },
+     }},
+    {"id": 'grammar/vp-verb-pp-pp',
+     "state": {
+         "condition": {
+             "type": 'sequence',
+             "match": [
+                 {"foundation": 'token', "state": {'pos': 'verb'}, "features": {'transitive': False}},
+                 {"foundation": 'phrase', "state": {'category': 'PP'}},
+                 {"foundation": 'phrase', "state": {'category': 'PP'}},
+             ],
+         },
+         "effect": {
+             "foundation": 'phrase',
+             "state": {'category': 'VP'},
+         },
      }},
 ]
 
@@ -79,3 +148,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

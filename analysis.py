@@ -97,7 +97,8 @@ def propose_rule_for_gap(gap):
 def analyse_corpus(s, corpus):
     """Run gap analysis over a corpus. Prints a report. Returns summary dict."""
     ok, failed_unknown, failed_gap = 0, 0, 0
-    for text in corpus:
+    for item in corpus:
+        text = item["text"] if isinstance(item, dict) else item
         r = find_gap_spans(s, text)
         if "error" in r:
             print(f"  [error] {text!r}")

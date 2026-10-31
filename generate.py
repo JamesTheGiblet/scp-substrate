@@ -79,6 +79,31 @@ def _semantic_check_pp(s, prep_cid, np_cid):
     return all(n["features"].get("location") for n in nouns)
 
 
+def _number_agree(s, children):
+    """All leaves with a `number` feature must agree."""
+    nums = set()
+    for cid in children:
+        for leaf in _leaf_features(s, cid):
+            n = leaf.get("features", {}).get("number")
+            if n:
+                nums.add(n)
+    return len(nums) <= 1
+
+
+def _rule_weight(s, rule_id):
+    """Trust weight for a rule (default 1 if no feedback yet)."""
+    row = s.conn.execute("""
+        SELECT json_extract(state_json, '$.n0') AS n0
+        FROM capsules
+        WHERE foundation = 'foundation:leighton-weight'
+          AND json_extract(state_json, '$.rule') = ?
+        LIMIT 1
+    """, (rule_id,)).fetchone()
+    if row and row["n0"]:
+        return max(0.1, float(row["n0"]))
+    return 1.0
+
+
 def _find_rules_producing(s, foundation, state_filter):
     rows = s.conn.execute("""
         SELECT id, state_json FROM capsules
@@ -167,7 +192,10 @@ def _expand(s, spec, rng, session_id, next_idx, depth=0):
     rules = _find_rules_producing(s, foundation, state_filter)
     if not rules:
         raise ExpansionError(f"no rules producing {foundation} {state_filter}")
-    rng.shuffle(rules)
+    # Weighted by rule trust (feedback-informed)
+    rule_weights = [_rule_weight(s, r["id"]) for r in rules]
+    chosen = rng.choices(rules, weights=rule_weights, k=1)[0]
+    rules = [chosen] + [r for r in rules if r is not chosen]
 
     last_err = None
     for r in rules:
@@ -188,6 +216,14 @@ def _expand(s, spec, rng, session_id, next_idx, depth=0):
                     for cid in children:
                         _rollback_subtree(s, cid, session_id)
                     raise ExpansionError("semantic: requires location")
+
+            # Number agreement for NP
+            if (foundation == "foundation:phrase"
+                    and state_filter.get("category") == "NP"):
+                if not _number_agree(s, children):
+                    for cid in children:
+                        _rollback_subtree(s, cid, session_id)
+                    raise ExpansionError("number disagreement in NP")
 
             rule_short = r["id"].split("/")[-1]
             new_id = f"parse/{session_id}/{rule_short}/{next_idx}-{cur-1}"

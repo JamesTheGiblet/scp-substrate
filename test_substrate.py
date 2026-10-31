@@ -56,12 +56,19 @@ def fresh_parse_fixture():
                 "INSERT INTO capsules (id, foundation, state_json, is_meta) "
                 "VALUES (?, 'foundation:foundation', '{}', 1)", (fid,)
             )
+    # Plurals for number tests
+    LEXICON["cats"] = ("noun", {"number": "pl", "location": False})
+    LEXICON["mats"] = ("noun", {"number": "pl", "location": True})
+    LEXICON["a"] = ("det", {"number": "sg"})
     for word, (pos, features) in LEXICON.items():
         s.write({"id": f"lex/{word}", "foundation": "foundation:knowledge",
                  "state": {"kind": "lexical-entry", "text": word, "pos": pos,
                            "features": features}})
     for g in GRAMMAR:
-        s.write({"id": g["id"], "foundation": "foundation:rule", "state": g["state"]})
+        st = dict(g["state"])
+        if g["id"] == "grammar/np-det-noun":
+            st = {**st, "condition": {**st["condition"], "number_agree": True}}
+        s.write({"id": g["id"], "foundation": "foundation:rule", "state": st})
     return s
 
 
@@ -382,7 +389,7 @@ def test_generate_then_parse():
 def test_weighted_choice_prefers_common():
     """Corpus learning biases generation toward frequent words."""
     from substrate import Substrate
-    from corpus import CORPUS
+    from seed_corpus import CORPUS_SENTENCES as CORPUS
     from learn_frequencies import main as learn  # not used; do it inline
     from generate import generate_sentence
     from parse import parse_sentence, cleanup_session
@@ -537,6 +544,78 @@ def test_parse_intransitive_rejects_object():
     assert "error" not in r, r
     assert r["sentence"] is None, f"expected no full S, got {r['sentence']}"
     cleanup_session(s, r["session"])
+
+
+# --- number agreement ----------------------------------------------------
+def test_number_agreement():
+    """'a cats' must fail; 'the cats' must parse."""
+    from parse import parse_sentence, cleanup_session
+    s = fresh_parse_fixture()
+    for text, expect_ok in [
+        ("a cat sat", True),
+        ("a cats sat", False),
+        ("the cats sat", True),
+        ("the cat sat", True),
+    ]:
+        r = parse_sentence(s, text)
+        got = r.get("sentence") is not None
+        assert got == expect_ok, f"{text!r}: expected {expect_ok}, got {got}"
+        if r.get("session"):
+            cleanup_session(s, r["session"])
+
+
+# --- feedback ------------------------------------------------------------
+def test_feedback_confirm():
+    """Confirming a session raises trust for its words and rules."""
+    from parse import parse_sentence, cleanup_session
+    from feedback import apply_feedback
+    s = fresh_parse_fixture()
+    r = parse_sentence(s, "the cat sat")
+    sess = r["session"]
+
+    before = s.conn.execute("SELECT COUNT(*) FROM capsules WHERE id LIKE 'trust/%'").fetchone()[0]
+    result = apply_feedback(s, sess, positive=True)
+    after = s.conn.execute("SELECT COUNT(*) FROM capsules WHERE id LIKE 'trust/%'").fetchone()[0]
+    assert after > before, f"no trust written: {result}"
+
+    row = s.conn.execute("""
+        SELECT json_extract(state_json, '$.n0') AS n0 FROM capsules
+        WHERE foundation = 'foundation:leighton-weight'
+          AND json_extract(state_json, '$.word') = 'the'
+    """).fetchone()
+    assert row and row["n0"] >= 1
+    cleanup_session(s, sess)
+
+
+def test_feedback_reject_lowers():
+    """Confirm twice, reject once → trust net +1."""
+    from parse import parse_sentence, cleanup_session
+    from feedback import apply_feedback
+    s = fresh_parse_fixture()
+
+    for _ in range(2):
+        r = parse_sentence(s, "the cat sat")
+        apply_feedback(s, r["session"], positive=True)
+        cleanup_session(s, r["session"])
+
+    row = s.conn.execute("""
+        SELECT json_extract(state_json, '$.n0') AS n0 FROM capsules
+        WHERE foundation = 'foundation:leighton-weight'
+          AND json_extract(state_json, '$.word') = 'the'
+    """).fetchone()
+    confirmed = row["n0"]
+    assert confirmed >= 2
+
+    r = parse_sentence(s, "the cat sat")
+    apply_feedback(s, r["session"], positive=False)
+    cleanup_session(s, r["session"])
+
+    row = s.conn.execute("""
+        SELECT json_extract(state_json, '$.n0') AS n0 FROM capsules
+        WHERE foundation = 'foundation:leighton-weight'
+          AND json_extract(state_json, '$.word') = 'the'
+    """).fetchone()
+    assert row["n0"] == confirmed - 1, f"expected {confirmed - 1}, got {row['n0']}"
 
 
 if __name__ == "__main__":

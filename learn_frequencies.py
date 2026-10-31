@@ -4,7 +4,7 @@ from collections import Counter
 
 from substrate import Substrate
 from parse import parse_sentence, cleanup_session
-from corpus import CORPUS
+from corpus import load_corpus
 
 
 def main():
@@ -12,7 +12,9 @@ def main():
     word_counts = Counter()
     failed = []
 
-    for text in CORPUS:
+    corpus = load_corpus(s)
+    for item in corpus:
+        text = item["text"]
         r = parse_sentence(s, text)
         if "error" in r:
             failed.append((text, r["error"]))
@@ -46,7 +48,7 @@ def main():
         for text, err in failed:
             print(f"  {text!r}: {err}")
 
-    print(f"corpus: {len(CORPUS) - len(failed)}/{len(CORPUS)} parsed")
+    print(f"corpus: {len(corpus) - len(failed)}/{len(corpus)} parsed")
     print(f"words observed: {sum(word_counts.values())}, vocabulary: {len(word_counts)}")
 
     # Write trust instance per word

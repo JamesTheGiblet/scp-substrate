@@ -229,17 +229,30 @@ def cmd_sweep_parse(a):
 
 def cmd_analyse_corpus(a):
     from analysis import analyse_corpus
-    from corpus import CORPUS, GAPS
+    from corpus import load_corpus
     s = Substrate()
-    if a.only == "parseable":
-        corpus = CORPUS
-    elif a.only == "gaps":
-        corpus = GAPS
-    else:
-        corpus = CORPUS + GAPS
+    corpus = load_corpus(s)
     print(f"analysing {len(corpus)} sentences\n")
     analyse_corpus(s, corpus)
     s.close()
+
+
+def cmd_confirm(a):
+    from feedback import apply_feedback
+    s = Substrate()
+    r = apply_feedback(s, a.session, positive=True)
+    print(f"confirmed: {r['session']}")
+    print(f"  words: {r['words_updated']} updated, {r['words_new']} new")
+    print(f"  rules: {r['rules_updated']} updated, {r['rules_new']} new")
+
+
+def cmd_reject(a):
+    from feedback import apply_feedback
+    s = Substrate()
+    r = apply_feedback(s, a.session, positive=False)
+    print(f"rejected: {r['session']}")
+    print(f"  words: {r['words_updated']} updated, {r['words_new']} new")
+    print(f"  rules: {r['rules_updated']} updated, {r['rules_new']} new")
 
 
 def main():
@@ -287,6 +300,12 @@ def main():
 
     sp = sub.add_parser("parse",       help="parse a sentence via grammar rules")
     sp.add_argument("text"); sp.set_defaults(func=cmd_parse)
+
+    sp = sub.add_parser("confirm",      help="mark a parse as correct; update trust")
+    sp.add_argument("session"); sp.set_defaults(func=cmd_confirm)
+
+    sp = sub.add_parser("reject",       help="mark a parse as wrong; update trust")
+    sp.add_argument("session"); sp.set_defaults(func=cmd_reject)
 
     sp = sub.add_parser("sweep-parse",  help="delete old parse sessions")
     sp.add_argument("--older-than-hours", type=int, default=24)

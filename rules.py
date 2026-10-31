@@ -235,7 +235,15 @@ def _eval_sequence(s, rule_id, condition, effect, scope):
     walk(0, [], None)
 
     fired, warnings = [], []
+    agree_mode = condition.get("number_agree")
+
     for handle in handles:
+        if agree_mode:
+            nums = [h["state"].get("features", {}).get("number") for h in handle]
+            nums = [n for n in nums if n]
+            if len(set(nums)) > 1:
+                continue
+
         sp_first = span(handle[0])
         sp_last = span(handle[-1])
         new_start, new_end = sp_first[0], sp_last[1]
