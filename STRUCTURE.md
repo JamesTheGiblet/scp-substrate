@@ -45,6 +45,15 @@ Directory
 ├── test_substrate.py      21 tests, in-memory fixtures
 │
 ├── docs/                  SCP source documents (*.scp.json)
+├── keystone-gate/         Keystone Gate - sibling app, shares sc.db
+│   ├── kg                 CLI entry point
+│   ├── kg_stats.py        count KG capsules
+│   ├── kg_router.py       neighbour listing
+│   ├── kg_agent.py        cube-as-agent (stub)
+│   ├── kg_gate.py         gate: rules, checks, refusal
+│   ├── kg_hal.py          HAL: ask substrate, gate the answer
+│   ├── seed_sc.py         seed sc capsules
+│   └── test_kg.py         boundary + gate tests
 └── legacy/                pre-SQLite JSON archive (excluded from git)
 ```
 

@@ -449,3 +449,68 @@ Layer-2 through layer-6 classifiers are capsules (`classifier/*`), not code. Add
 **Can** — anything expressible as a walk over existing graph structure: why is X trusted, is X signed, what did I decide about Y, what files in repo Z, where is function W, list all decisions/principles/repos, what happened in session Q.
 
 **Cannot** — open-ended semantic queries ("what does this code do?"), cross-file content search (grep on disk is better), multi-hop reasoning beyond one or two link types per walker. Those remain future work: a new walker is a new capability, and each is bounded.
+
+
+---
+
+## 15. Gate pattern - the anti-drift mechanism
+
+The substrate stores facts. It does not enforce what an LLM may say about them. That's a different problem, and it has a substrate-level pattern: **the gate**.
+
+An `sc` capsule defines a contract that a gated function must honour. A gate checks proposed answers against that contract and refuses any answer that violates it. The gate does not judge reasoning - only references.
+
+### The `sc` capsule
+
+```
+
+sc/<name>
+foundation: knowledge
+state:
+kind: sc
+name: <name>
+purpose: <description>
+must:        [{rule, description}, ...]
+must_not:    [{rule, description}, ...]
+test_cases:  [{input, expect_pass, reason}, ...]
+boundary:    <description of what the gate checks and doesn't>
+version:     <semver>
+
+```
+
+An `sc` capsule is data. It contains no executable logic. It describes what a gated function may produce. Adding a rule means adding a `must` entry and a matching checker in the gate implementation.
+
+The first seeded contract is `sc/symlm-answerer`, with two `must` rules:
+- `no_invented_ids` - every capsule ID mentioned in an answer must exist in the substrate
+- `no_hallucinated_trust` - every numeric trust score must match `trust_now(id).score` or `fused_trust(id).posterior` within tolerance
+
+### The gate check
+
+The gate is a function `check(substrate, {input, result}, sc) -> {ok, violations[]}`. Where `result` is the output of `ask.answer_question` (or of any LLM, later).
+
+For each `must` entry in the `sc` capsule, a checker function runs. If any checker produces violations, `ok = false` and the answer is refused. If no checker exists for a rule name, the gate fails closed - an unknown rule is a violation, never a pass.
+
+### The pattern, generalised
+
+The gate is not Keystone-Gate-specific. Any application that produces language from substrate facts can adopt the same shape:
+
+- Define an `sc` capsule naming the contract
+- Write checkers for each `must` rule
+- Route all output through the gate before rendering
+
+The pattern makes four guarantees:
+
+1. **Structure is enforced, not hoped for.** Answers that reference imaginary IDs are refused, not cautioned.
+2. **Contracts are data.** A new rule is a capsule edit plus a function. No configuration file, no framework.
+3. **Refusal is complete.** A rejected answer is withheld, not shown with a warning. The gate cannot be ignored by the client.
+4. **The substrate stays untouched.** Gates live in applications, not in `substrate.py`. The substrate absorbs them as data plus a client.
+
+### Implementation reference
+
+Keystone Gate is the first implementation of this pattern:
+
+- `keystone-gate/seed_sc.py` - seeds `sc/symlm-answerer`
+- `keystone-gate/kg_gate.py` - `check()`, `_check_no_invented_ids`, `_check_no_hallucinated_trust`
+- `keystone-gate/kg_hal.py` - `ask_gated()` - asks substrate, gates answer, returns pass or reject
+- `keystone-gate/kg gate test` - runs the sc capsule's own test cases against the live substrate
+
+The substrate does not need to know the gate exists. The gate does not need to know how the substrate works internally - only that it can query for capsule existence and trust values. That asymmetry is what makes the boundary work.

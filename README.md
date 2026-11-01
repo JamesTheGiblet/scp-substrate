@@ -22,7 +22,7 @@ Instances live in `sc.db`. They are the actual things — `james`, `scp`, `obs-0
 | File | Purpose |
 |---|---|
 | `schema.sql` | DDL for `capsules`, `links`, `events`, `trust_scores`, `schema_version` |
-| `sc.json` | 14 foundations. Versioned, reviewed, single source of truth |
+| `sc.json` | 18 foundations. Versioned, reviewed, single source of truth |
 | `sc.db` | The world: instances, links, events, trust scores |
 | `bootstrap.py` | Projects `sc.json` into `sc.db` |
 | `substrate.py` | `Substrate` class — SQLite access, `decay_weight()` UDF, `write`, `link`, `supersede` |
@@ -47,6 +47,17 @@ Instances live in `sc.db`. They are the actual things — `james`, `scp`, `obs-0
 | `feedback.py` | `confirm`/`reject` → trust updates on words and rules |
 | `talk.py` | REPL with layer dispatch, discourse state, pronoun resolution |
 | `ask.py` | Natural language queries via intent classification + walkers |
+
+### Keystone Gate (sibling application)
+| Path | Purpose |
+|---|---|
+| `keystone-gate/kg` | CLI - stats, route, ask, gate check, gate test |
+| `keystone-gate/kg_gate.py` | The gate - rules, checks, refusal |
+| `keystone-gate/kg_hal.py` | HAL - asks substrate, gates answer |
+| `keystone-gate/seed_sc.py` | Seeds `sc/*` capsules |
+| `keystone-gate/test_kg.py` | 11 boundary + gate tests |
+
+Keystone Gate shares `sc.db` with the substrate but does not modify it. See `keystone-gate/README.md` for the gate pattern and `SPEC.md §15` for the general specification.
 
 ### Crypto
 | File | Purpose |
