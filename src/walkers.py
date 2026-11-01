@@ -331,7 +331,13 @@ def _walk_what_is(s, entity_id, text):
             "detail": "\n".join(lines)}
 
 
+def _walk_what_believe(s, entity_id, text):
+    from walk_cubes import walk_what_believe
+    return walk_what_believe(s, entity_id, text)
+
+
 WALKERS = {
+    "what_believe": _walk_what_believe,
     "why_trusted": _walk_why_trusted,
     "verified": _walk_verified,
     "what_decided": _walk_what_decided,

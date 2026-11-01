@@ -292,7 +292,7 @@ There are no weights. There is no training loop. There is no probability distrib
 | Lexicon | 478 | `lex/*` capsules |
 | Feature-tagged nouns | 97 | `lex/*` capsules with `features.animacy` |
 | Input classifiers | 11 | `classifier/*` capsules |
-| Query intents | 12 | `intent/*` capsules |
+| Query intents | 13 | `intent/*` capsules |
 | Corpus sentences | 24 | `corpus/*` capsules |
 
 The system is enumerable. Every rule, every word, every classifier, every intent can be listed with `scps list -f knowledge`. Nothing is hidden in a blob.
@@ -406,6 +406,7 @@ Intents are capsules of `kind: input-intent` under `foundation:knowledge`:
 intent/why-trusted       → walker=why_trusted    (backward reasoning)
 intent/verified          → walker=verified       (signature records)
 intent/what-decided      → walker=what_decided   (decisions + rationale)
+intent/what-believe      → walker=what_believe   (cubes, your view, the case against)
 intent/what-uses         → walker=what_uses      (tools)
 intent/what-building     → walker=what_building  (projects)
 intent/what-supports     → walker=what_supports  (evidence)

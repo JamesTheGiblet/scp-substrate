@@ -5,6 +5,10 @@ from substrate import Substrate
 
 def _summarise_state(state, foundation):
     kind = state.get("kind")
+    if kind == "cube":
+        return f"claim: \"{state.get('content', '?')}\""
+    if kind == "cube-face":
+        return f"{state.get('lens', '?')}: {state.get('content') or state.get('note') or '?'}"
     if kind == "style":
         if "voice" in state:
             v = state["voice"]

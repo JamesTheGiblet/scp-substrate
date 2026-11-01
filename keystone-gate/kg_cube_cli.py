@@ -67,7 +67,7 @@ def cmd_cube_review(args):
     from kg_review import review
     s = Substrate()
     try:
-        seen = review(s, args.by, cube_id=args.cube_id)
+        seen = review(s, args.by, cube_id=args.cube_id, tag=args.tag)
     except (EOFError, KeyboardInterrupt):
         seen = None
     s.close()

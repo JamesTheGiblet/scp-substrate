@@ -53,9 +53,11 @@ def _validate_and_attest(s, cube_id, by, ask):
             attest(s, cube_id, by)
 
 
-def review(s, by, cube_id=None, ask=input, show=print):
+def review(s, by, cube_id=None, tag=None, ask=input, show=print):
     """Review cubes that still need a person. Returns how many were looked at."""
     cubes = [c["id"] for c in list_cubes(s) if cube_id in (None, c["id"])]
+    if tag:
+        cubes = [c for c in cubes if tag in (s.get(c)["state"].get("tags") or [])]
     seen = 0
     for cid in cubes:
         data = show_cube(s, cid)

@@ -235,10 +235,10 @@ CUBES = [
 LENSES = ("FACT", "COUNTER", "FICTION", "CONTEXT")
 
 
-def main():
-    s = Substrate()
+def seed(s, cubes):
+    """Create cubes and propose their lenses. Safe to re-run."""
     created = 0
-    for cube in CUBES:
+    for cube in cubes:
         existing = s.get(cube["id"])
         if existing:
             # Keep unreviewed drafts current. Accepted and rejected work is left alone.
@@ -254,7 +254,12 @@ def main():
         for lens in LENSES:
             propose_face(s, cube["id"], lens, cube[lens], proposed_by=DRAFTED_BY,
                          rationale=f"drafted from {cube['source']}")
-    print(f"cubes: {created} new, {len(CUBES) - created} already present")
+    print(f"cubes: {created} new, {len(cubes) - created} already present")
+
+
+def main():
+    s = Substrate()
+    seed(s, CUBES)
     s.close()
 
 

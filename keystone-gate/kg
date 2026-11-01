@@ -213,6 +213,7 @@ def main():
     sp_rev = sp_sub.add_parser("review", help="walk through proposals, lenses, validation, attestation")
     sp_rev.add_argument("cube_id", nargs="?", default=None)
     sp_rev.add_argument("--by", required=True)
+    sp_rev.add_argument("--tag", default=None, help="only cubes with this tag")
     sp_rev.set_defaults(func=cmd_cube_review)
 
     sp_show = sp_sub.add_parser("show", help="show cube state")

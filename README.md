@@ -138,6 +138,8 @@ Ask examples
 ```sh
 ./scps ask "who is james"
 ./scps ask "what did I decide about sqlite"
+./scps ask "what do I believe about signing"
+./scps ask "what do I trust"
 ./scps ask "what tools do I use"
 ./scps ask "why is scp-claim trusted"
 ./scps ask "is james-gilbert-v1 signed"

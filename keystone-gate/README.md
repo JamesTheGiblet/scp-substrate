@@ -95,7 +95,8 @@ keystone-gate/
 ├── kg_hal.py          HAL - asks the substrate, gates the answer
 ├── kg_review.py       guided review of cubes for a person
 ├── seed_sc.py         seed sc capsules (create-or-update)
-├── seed_cubes.py      real claims as cubes, lenses as proposals (create-only)
+├── seed_cubes.py      real claims as cubes, lenses as proposals
+├── seed_cubes_pca9685.py  cubes from Adafruit's PCA9685 guide
 └── test_kg_N.py       boundary, gate, cube and proposal tests
 
 ```
@@ -114,7 +115,7 @@ kg cube new "<content>"             # create a cube (--source, --tag)
 kg cube fill <id> <lens> "<text>"   # fill one lens face
 kg cube validate <id> --by <name>   # record human validation
 kg cube attest <id> --by <name>     # vouch for a complete cube; adds trust evidence
-kg cube review --by <name>          # walk through everything that needs a person
+kg cube review --by <name> [--tag t] # walk through everything that needs a person
 kg cube show <id>                   # faces, validation, completeness
 kg cube list                        # all cubes with scores
 kg cube contradicts <id> <other>    # flag a contradiction
@@ -169,7 +170,7 @@ Boundary proven. Four foundations in sc.json, projected into sc.db. kg stats and
 
 Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (4/4 pass). All tests pass with python tests/run.py.
 
-Cubes working. There are 24 cubes in the substrate. 3 are complete. The other 21 are drafts awaiting review, with OPINION, validation and attestation left to a human. Completeness is computed and decides attestation eligibility. Changing a face after validation marks the validation stale, so the cube drops out of eligibility until a human validates it again.
+Cubes working. Cubes hold project claims and hardware notes. Drafts arrive as proposals, with OPINION, validation and attestation left to a human. Completeness is computed and decides attestation eligibility. Changing a face after validation marks the validation stale, so the cube drops out of eligibility until a human validates it again.
 
 Attestation working. kg cube attest writes an observation of the cube, so fused_trust counts it as evidence. It needs a complete cube, and changing a face retracts it. None of the 3 cubes is attested yet: that is a human's call.
 
