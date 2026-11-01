@@ -1,0 +1,71 @@
+{
+  "sc_version": "1.2",
+  "id": "circadian.weekend",
+  "title": "Weekend routine (Fri evening - Sun)",
+  "owner": "James Gilbert",
+  "status": "provisional",
+  "applies": {
+    "starts": "FR after arriving home (~16:30)",
+    "ends": "SU night (handover to Monday 05:00 wake)"
+  },
+  "phases": {
+    "free_for_all": {
+      "window": "Friday night to Saturday night",
+      "structure": "none",
+      "bedtime": "none",
+      "desc": "Build, break, stay up late - movies, code, games, the lot"
+    },
+    "sunday": {
+      "window": "Sunday",
+      "structure": "day fun, evening not",
+      "desc": "Daytime is free time; evening is the work/reset half",
+      "blocks": {
+        "day": {
+          "mode": "fun"
+        },
+        "evening": {
+          "mode": "not_fun",
+          "desc": "Work half - contents not yet captured"
+        }
+      },
+      "unresolved": [
+        "What the Sunday evening 'work' half consists of (week prep, chores, project work?)",
+        "Does Sunday evening follow the weekday 21:00 winddown / ~22:00 bed?"
+      ]
+    }
+  },
+  "branches": {
+    "tammi_home": {
+      "condition": "Tammi is home",
+      "true": {
+        "mode": "together",
+        "desc": "Chill with Tammi - movies and talking",
+        "excludes": [
+          "code",
+          "build"
+        ]
+      },
+      "false": {
+        "mode": "solo",
+        "desc": "Free-for-all activity per phase",
+        "allows": [
+          "build",
+          "break",
+          "code",
+          "movies",
+          "games",
+          "late_night"
+        ]
+      }
+    }
+  },
+  "rules": [
+    "Same override as weekdays: Tammi home beats everything.",
+    "No bedtime enforcement Friday or Saturday night."
+  ],
+  "signature": {
+    "key_id": "did:key:z6Mkkv72CL96uhsVVKWF15u6qVsa6iobVmLGF1z6kxX14R92",
+    "algorithm": "Ed25519",
+    "value": "PrczF5IHYgsHAQ9GCAbz7Vh7TqN+t2j9XOv4HiNHAwWHevMnM/7QKpMsCj9EgUPr3VfS2d9a9K3253Gs5OqsDA=="
+  }
+}

@@ -43,6 +43,11 @@ def _summarise_state(state, foundation):
         layer = state.get("layer")
         kindc = state.get("kind_class") or "?"
         return f"turn {state.get('turn')} · layer {layer} ({kindc})"
+    if kind == "symbol":
+        sk = state.get("symbol_kind", "?")
+        f = state.get("file", "?")
+        ln = state.get("line", "?")
+        return f"{sk} in {f}:{ln}"
     if kind == "repo":
         bits = [state.get("name") or state.get("full_name", "?")]
         if state.get("description"):

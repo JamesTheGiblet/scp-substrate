@@ -1,126 +1,180 @@
 # SCP Substrate
 
-A local store of capsules and typed links, with a few small engines on top.
-
-The language layer in this repo is a **SymLM** — a Symbolic Language Model. It parses, generates, classifies, and answers queries against the substrate using rules and capsules. No gradients. No weights. Every answer is a graph walk you can trace. See [SPEC.md §12](SPEC.md) for the definition and bounds.
+A local store of capsules and typed links, with a few small engines on top, and a bounded symbolic language model (SymLM) that queries it in natural language.
 
 ## The idea
 
-Everything is a capsule. The substrate only understands capsules and the
-links between them. The kinds of capsules that can exist are defined by
-foundations. What a capsule *means* is defined by the foundation it
-belongs to and the links it carries.
+Everything is a capsule. The substrate only understands capsules and the links between them. The kinds of capsules that can exist are defined by foundations. What a capsule *means* is defined by the foundation it belongs to and the links it carries.
 
 ## The two-layer rule
 
-Foundations live in `sc.json`. The substrate loads them at startup. They
-define what kinds of capsules can exist — `person`, `project`, `rule`,
-`observation`, `knowledge`, `leighton-weight`, and so on. Adding one is
-a versioned edit to a single file.
+Foundations live in `sc.json`. The substrate loads them at startup. They define what kinds of capsules can exist — `person`, `project`, `rule`, `observation`, `knowledge`, `leighton-weight`, `token`, `phrase`, `sentence`, and so on. Adding one is a versioned edit to a single file.
 
-Instances live in `sc.db`. They are the actual things — `james`, `scp`,
-`obs-001`, the SCP document, the verification record. They change
-constantly.
+Instances live in `sc.db`. They are the actual things — `james`, `scp`, `obs-001`, SCP documents, verification records, repos, source files, symbols, conversation turns. They change constantly.
 
-`schema.sql` describes the shape of both layers. It has not changed
-since the initial migration from JSON files to SQLite.
+`bootstrap.py` copies `sc.json` into `sc.db` at startup. The DB is a projection of the file plus the instances that have accumulated on top.
 
-`bootstrap.py` copies `sc.json` into `sc.db` at startup. The DB is a
-projection of the file plus the instances that have accumulated on top.
+`schema.sql` describes the shape of both layers. **One schema change since migration**: the never-populated `rules` table was dropped, logged as a `schema.migration` event. Everything else has been additive in `state_json`.
 
 ## What's in this directory
 
+### Substrate
 | File | Purpose |
 |---|---|
-| `schema.sql` | DDL for `capsules`, `links`, `events`, `rules`, `trust_scores`. Hasn't moved. |
-| `sc.json` | 11 foundation definitions. Versioned, reviewed, single source of truth. |
-| `sc.db` | The world: instance capsules, links, events, trust scores. |
-| `bootstrap.py` | Projects `sc.json` into `sc.db`. Also imports any legacy `capsules/*.json`. |
-| `substrate.py` | The `Substrate` class — SQLite access, `decay_weight()` UDF. |
-| `rules.py` | Rule engine. Two condition types: `pair` (source → target), `trust_above` (score > threshold). |
-| `trust.py` | Trust computation. Two formulas: parameter-based (`n0 * e^(-k*t)`) and evidence-based (sum of decayed observation scores). |
-| `queries.py` | Read-only queries: `trust_now`, `verified`, `observations`, `what_supports`, `support_tree`. |
-| `why.py` | `why_trusted(id)` — walks back through reasoning. |
-| `explain.py` | `explain(id)` — walks out through structure and narrates. |
-| `ed25519.py` | Pure-Python Ed25519 (RFC 8032). Tested against RFC §7.1 vectors. |
-| `signing.py` | `sign`, `verify`, `canonicalise`, `did:key` encoding. |
-| `keygen.py` | Generate an Ed25519 keypair under `~/.config/scp/keys/`. |
-| `sign_doc.py` | Sign an SCP document. |
-| `import_scp.py` | Import a `giblets-scp` v1.x document into `sc.db`. |
-| `fill_styles.py` | Promote `inherits` placeholders to real content. |
-| `scps` | The CLI. Nine subcommands. |
+| `schema.sql` | DDL for `capsules`, `links`, `events`, `trust_scores`, `schema_version` |
+| `sc.json` | 14 foundations. Versioned, reviewed, single source of truth |
+| `sc.db` | The world: instances, links, events, trust scores |
+| `bootstrap.py` | Projects `sc.json` into `sc.db` |
+| `substrate.py` | `Substrate` class — SQLite access, `decay_weight()` UDF, `write`, `link`, `supersede` |
+
+### Engines
+| File | Purpose |
+|---|---|
+| `rules.py` | Rule engine — 4 condition types: `pair`, `trust_above`, `kind_and_age`, `sequence` |
+| `trust.py` | Trust — parameter (`n0 * e^(-k*t)`), evidence (observations + verifications), Bayesian fusion (`sigmoid`, `fuse`, `fused_trust`) |
+| `queries.py` | Read-only queries: `trust_now`, `verified`, `latest`, `observations`, `what_supports`, `support_tree` |
+| `why.py` | `why_trusted(id)` — walks backward through reasoning |
+| `explain.py` | `explain(id)` — walks outward through structure and narrates |
+
+### SymLM (language layer)
+| File | Purpose |
+|---|---|
+| `parse.py` | Tokenise, reduce via grammar rules; alias/typo fallback |
+| `generate.py` | Top-down expansion with feature filtering, retries, tense bias |
+| `corpus.py` | Load corpus sentences from `corpus/*` capsules |
+| `analysis.py` | Gap analysis — unreduced spans + composition gaps |
+| `protocol.py` | Input classifier (layer 0–7); ack + error responses |
+| `feedback.py` | `confirm`/`reject` → trust updates on words and rules |
+| `talk.py` | REPL with layer dispatch, discourse state, pronoun resolution |
+| `ask.py` | Natural language queries via intent classification + walkers |
+
+### Crypto
+| File | Purpose |
+|---|---|
+| `ed25519.py` | Pure-Python Ed25519 (RFC 8032). Tested against RFC §7.1 vectors |
+| `signing.py` | `sign`, `verify`, `canonicalise`, `did:key` encoding |
+| `keygen.py` | Generate a keypair under `~/.config/scp/keys/` |
+| `sign_doc.py` | Sign an SCP document |
+
+### Ingestion
+| File | Purpose |
+|---|---|
+| `import_scp.py` | Import a `giblets-scp` v1.x document |
+| `absorb_repo.py` | Index a local repo — files + Python/JS symbols |
+| `absorb_github.py` | Index a GitHub repo — metadata + tree (no content) |
+| `fill_styles.py` | Promote `inherits` placeholders to real content |
+
+### Seeds (create-only, capsules are authoritative after first run)
+`seed_lexicon.py`, `seed_grammar.py`, `seed_corpus.py`, `seed_capsules.py`, `seed_protocol.py`, `seed_expansion.py`, `seed_features.py`, `seed_intents.py`, `learn_frequencies.py`, `extract_vocab.py`, `reconcile_seeds.py`
+
+### Interface & tests
+| File | Purpose |
+|---|---|
+| `scps` | CLI — see `./scps --help` |
+| `test_substrate.py` | 68 tests, in-memory fixtures, no `sc.db` dependency |
+
+### Docs
+`SPEC.md` (substrate spec), `STRUCTURE.md` (file map, schema, extension points), `REASONING.md` (how rules/trust/why/explain work). `docs/` holds SCP source documents. `legacy/` holds pre-SQLite JSON.
 
 ## Quick start
 
 ```sh
 cd ~/scp-substrate
-python bootstrap.py        # project sc.json into sc.db, import legacy capsules
-./scps stats               # see what's in the substrate
-```
-
-Expected:
-
-```
-capsules (instances)      20
-capsules (foundations)    11
-links                     29
-events                    65
-trust scores              1
-verifications             1
+python bootstrap.py         # project sc.json into sc.db
+python test_substrate.py    # confirm 68 tests pass
+./scps stats                # what's in the substrate
 ```
 
 CLI
 
 ```
-scps stats                                # substrate counts
-scps list [-f foundation]                 # list instances, optionally by foundation
-scps observations                         # list observation capsules
-scps rules                                # run the rule engine, report fires and warnings
-scps trust-compute                        # recompute materialised trust scores
-scps trust <id>                           # parameter + evidence trust for a capsule
-scps why <id>                             # why is it trusted (backward through reasoning)
-scps explain <id>                         # narrate a capsule (outward through structure)
-scps verified <id>                        # verification records for a capsule
+scps stats                     # substrate counts
+scps list [-f foundation] [-k kind]   # list instances
+scps observations              # list observation capsules
+scps rules                     # run the rule engine, report fires and warnings
+scps trust-compute             # recompute materialised trust scores
+scps trust <id>                # parameter + evidence trust
+scps fused <id>                # Bayesian-fused trust (prior × evidence)
+scps why <id>                  # why is it trusted (backward)
+scps explain <id>              # narrate a capsule (outward)
+scps verified <id>             # verification records
+scps version <id>              # version chain via supersedes
+
+scps ask "<question>"          # natural language query
+scps talk                      # interactive REPL
+
+scps parse "<sentence>"        # grammar parse, print tree
+scps generate [--seed N] [--start S|NP|VP|PP]   # generate from grammar
+scps sweep-parse [--older-than-hours N]         # delete old parse sessions
+scps forget-parse <session>                     # delete one parse session
+scps analyse-corpus [--only parseable|gaps|all] # gap analysis
+
+scps confirm <session>         # mark parse as correct → trust up
+scps reject  <session>         # mark parse as wrong → trust down
 ```
 
-Note: the binary is scps, not scp. scp is OpenSSH's secure copy.
+The binary is scps, not scp. scp is OpenSSH's secure copy.
+
+Ask examples
+
+```sh
+./scps ask "who is james"
+./scps ask "what did I decide about sqlite"
+./scps ask "what tools do I use"
+./scps ask "why is scp-claim trusted"
+./scps ask "is james-gilbert-v1 signed"
+./scps ask "list all repos"
+./scps ask "where is parse_sentence"
+./scps ask "what files in repo/scp-substrate"
+./scps ask "what is repo/jamesthegiblet/blockforge-platform"
+```
 
 Signing an SCP document
 
 ```sh
-python keygen.py default
-# → ~/.config/scp/keys/default.json (mode 0600)
-
+python keygen.py default                    # → ~/.config/scp/keys/default.json (mode 0600)
 python sign_doc.py my-doc.scp.json -o my-doc.signed.scp.json
-
 python import_scp.py my-doc.signed.scp.json
 ```
 
-import_scp.py verifies the signature and writes a verification:*
-capsule with a verifies link back to the document. Signing does not
-modify trust. Provenance and trust are separate.
+import_scp.py verifies the signature and writes a verification:* capsule with a verifies link. Signing does not modify trust. Provenance and trust are separate.
+
+Absorbing repos
+
+```sh
+python absorb_repo.py  /path/to/repo --dry-run    # local
+python absorb_repo.py  /path/to/repo --write
+
+python absorb_github.py owner/repo --dry-run      # GitHub (no token needed for public)
+python absorb_github.py owner/repo --write
+```
+
+Local absorption reads contents: file hashes, line counts, imports, function/class symbols (Python via ast, JS via regex). GitHub absorption reads metadata + tree only (no content, no symbols).
 
 What it does not do
 
-· No network. No HTTP server, no API, no distributed store. A single SQLite file. One writer at a time.
-· No AI, no ML. "Reasoning" here means graph traversal and SQL aggregates. The substrate counts and sums; it doesn't infer.
-· Two rule condition types only. pair and trust_above. A third requires an _eval_X() function in rules.py and a branch in evaluate_rules().
-· Parameter trust and evidence trust do not combine. They're two independent numbers, both true, neither overriding the other. Bayesian fusion is not implemented.
+· No network, no server. One SQLite file, one writer. absorb_github.py is the only outbound call and only when invoked manually.
+· No neural components. SymLM is symbolic: grammar rules, features, intents. It parses and classifies; it does not generate from weights.
+· No content indexing. Repos store file metadata (sha, size, language) and symbol names, not file bytes. grep on disk remains better for content search.
+· No cross-session conversation memory. Each scps talk starts fresh. Conversation turns are logged as capsules but not read back as context.
+· ~350 untagged nouns. The lexicon has 441 words; only ~90 have animacy features. Untagged nouns pass semantic checks by default, which occasionally produces grammatically valid but semantically odd sentences.
 · Ed25519 is pure-Python. Not constant-time. Fine for signing your own documents on your own device. Not for adversarial contexts or signing on behalf of others.
-· Canonicalisation is a local convention. Sorted keys, no whitespace, signature.value blanked. Matches no external standard (not JCS / RFC 8785). If you exchange signed documents with another system, both sides must canonicalise identically.
-· import_scp.py handles giblets-scp v1.x only. Other SCP formats need a new importer.
-· No instance versioning. If you overwrite a capsule, the previous state is in events, but there's no supersedes link convention. james-gilbert-v2 would be unrelated to james-gilbert-v1 unless you wire it.
+· Canonicalisation is a local convention. Sorted keys, no whitespace, signature.value blanked. Matches no external standard (not JCS / RFC 8785). Interop requires agreement on both sides.
+· import_scp.py handles giblets-scp v1.x only. Other formats need a new importer.
+· SymLM has 4 rule condition types, not arbitrary rules. A new condition requires an _eval_X() function in rules.py and a branch in evaluate_rules().
+· Crypto and trust are separate systems. A valid signature does not raise trust; it adds evidence. The two combine only through fused_trust.
 
 Extension points
 
 · Add a foundation — edit sc.json, run bootstrap.py. No DDL change.
-· Add a rule condition type — add _eval_X() to rules.py, branch in evaluate_rules().
-· Add a query — add a function to queries.py.
-· Add a CLI subcommand — add cmd_X() and a subparser in scps.
-· Read a new SCP field — json_extract(state_json, '$.path.to.field') in a query. No migration.
+· Add a rule condition type — _eval_X() in rules.py, branch in evaluate_rules(), one rule capsule.
+· Add a query — a function in queries.py, a walker in ask.py's WALKERS dict, an intent capsule.
+· Add a CLI subcommand — cmd_X() and a subparser in scps.
+· Add an SCP field — json_extract(state_json, '$.path.to.field'). No migration.
+· Add a lexical entry — Substrate.write() with kind: lexical-entry. Or run seed_lexicon.py after editing it (create-only).
 
 What has held up
 
-Adding rules, trust, composition, SCP import, signing, verification, and the shell — none of that touched schema.sql after the initial migration. The substrate has been constant through seven layers of stuff on top of it.
+Bootstrap, rules, trust, fusion, crypto, signing, verification, SCP import, SymLM (parser, generator, classifier, intents, feedback, REPL, NL queries), repo absorption, symbol extraction, and the shell — all added without further schema changes after the rules table was dropped. The substrate has been constant through ~15 distinct capability layers.
 
 That was the point.

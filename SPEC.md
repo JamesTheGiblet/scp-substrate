@@ -54,7 +54,7 @@ A foundation is a capsule with:
 · foundation = "foundation:foundation" (self-hosting)
 · state containing at least name; optionally description, schema, allowed_links
 
-The 11 foundations loaded at v0.1.0:
+The 14 foundations loaded at v0.1.0:
 
 ```
 foundation:foundation
@@ -68,6 +68,9 @@ foundation:observation
 foundation:person
 foundation:project
 foundation:rule
+foundation:token
+foundation:phrase
+foundation:sentence
 ```
 
 Foundations are the invariant of the system. Adding one is a versioned edit to sc.json; removing one soft-deprecates it (state.deprecated = true) but does not delete it, since instances may still reference it.
@@ -284,8 +287,8 @@ There are no weights. There is no training loop. There is no probability distrib
 | Grammar rules | 12 | `grammar/*` capsules |
 | Lexicon | 441 | `lex/*` capsules |
 | Feature-tagged nouns | ~90 | `lex/*` capsules with `features.animacy` |
-| Input classifiers | 11 | `classifier/*` capsules |
-| Query intents | 10 | `intent/*` capsules |
+| Input classifiers | 12 | `classifier/*` capsules |
+| Query intents | 12 | `intent/*` capsules |
 | Corpus sentences | 24 | `corpus/*` capsules |
 
 The system is enumerable. Every rule, every word, every classifier, every intent can be listed with `scps list -f knowledge`. Nothing is hidden in a blob.
@@ -304,3 +307,145 @@ The system is enumerable. Every rule, every word, every classifier, every intent
 A large language model produces plausible text from a distribution over tokens, with no way to trace a given output to its cause. A SymLM produces text from rules the substrate can list, and any output can be traced to the rules and capsules that produced it. A SymLM will never hallucinate; it will fail obviously when it cannot parse or generate. An LLM will produce something plausible; a SymLM will produce something *correct or nothing*.
 
 The two systems are not on the same axis. SymLM is not "smaller" — it is a different mechanism. The correct comparison is not "which is better" but "what do you need?" If you need provenance and explanation, you need a symbolic model. If you need fluency and breadth, you need a statistical one. A substrate like SCP can contain both; at v0.1 it contains one.
+
+---
+
+## 13. Repos and symbols
+
+The substrate holds a small inventory of local and remote repositories, plus symbol extraction over source files. This is data — no new tables.
+
+### Repo capsule
+
+repo/<owner>/<repo>      (GitHub-absorbed)
+repo/<repo>              (locally-absorbed)
+foundation: knowledge
+state:
+kind: repo
+source: github | local
+full_name, owner, name, description
+default_branch, tree_sha, git_branch, git_head
+language, languages, primary_language
+file_count, size_bytes, total_size_bytes
+stars, forks, open_issues, license, topics
+html_url, clone_url
+created_at, updated_at, pushed_at, last_absorbed
+
+```
+
+### File capsule
+
+```
+
+file/<owner>/<repo>/<rel-path>   (GitHub)
+file/<repo>/<rel-path>           (local)
+foundation: knowledge
+state:
+kind: source-file
+source, repo, repo_id, path, abs_path (local only)
+language, size_bytes, sha (github) or sha256 (local)
+lines (local only — content read)
+imports (local, Python/JS only)
+last_modified, last_absorbed
+
+```
+
+Repos link to their files via `contains`. One repo → many files. On re-absorption, the file is updated only if its hash changed; unchanged files are skipped.
+
+### Symbol capsule
+
+```
+
+symbol/<repo>/<path-slug>/<name>
+foundation: knowledge
+state:
+kind: symbol
+name, symbol_kind (function | class | method)
+line, docstring
+repo, file, file_id, language
+
+```
+
+Each file with symbols links to its symbols via `defines`. Symbol extraction is content-based for local absorption:
+
+- **Python**: `ast.parse`, top-level `FunctionDef`/`AsyncFunctionDef`/`ClassDef`, class methods as `<Class>.<method>`, imports from `Import`/`ImportFrom`
+- **JavaScript / TypeScript**: regex on function declarations, class declarations, `const x = () => {}` patterns, `import ... from '...'`
+
+Symbols are **not** extracted for GitHub-absorbed repos. The GitHub API gives tree SHAs, not file contents. To get symbols, clone the repo locally and run `absorb_repo.py`.
+
+### Idempotence
+
+Both `absorb_repo.py` and `absorb_github.py` are idempotent:
+- File capsule updated only if hash changed
+- Symbol capsule created only if absent (path + name + file is the identity)
+- Imports updated in place if changed
+
+---
+
+## 14. Natural language query interface
+
+`scps ask "<question>"` and `scps talk` (REPL) route natural language to the substrate via intent classification. Same substrate, no new tables.
+
+### Flow
+
+```
+
+question → intent classification → entity extraction → walker → render → answer
+
+```
+
+### Intents
+
+Intents are capsules of `kind: input-intent` under `foundation:knowledge`:
+
+```
+
+intent/why-trusted       → walker=why_trusted    (backward reasoning)
+intent/verified          → walker=verified       (signature records)
+intent/what-decided      → walker=what_decided   (decisions + rationale)
+intent/what-uses         → walker=what_uses      (tools)
+intent/what-building     → walker=what_building  (projects)
+intent/what-supports     → walker=what_supports  (evidence)
+intent/list-kind         → walker=list_kind      (filter by state.kind)
+intent/what-happened     → walker=what_happened  (sessions)
+intent/who-is            → walker=who_is
+intent/what-is           → walker=what_is
+intent/where-is          → walker=where_is       (symbols/files by name)
+intent/what-files        → walker=what_files     (files in a repo)
+
+```
+
+Each intent has a `phrases` list. Classification does substring matching (`any_phrase` mode). Order matters: intents are sorted by id, and earlier ids win on ambiguity.
+
+### Entity extraction
+
+`extract_entity` finds the substrate ID the question is *about*:
+1. Direct ID match: any token that contains `/` and exists in the substrate (`repo/owner/name`, `file/owner/name/path`)
+2. 3-, 2-, 1-word compound slugs scanning left-to-right
+3. `state.text` or `state.name` match across lexical entries
+4. Intent-specific fallback (`james` for `what_uses`, `james` for `what_building`, `None` for `what_decided` and `list_kind`)
+
+Vocabulary capsules (`lex/`, `typo/`, `alias/`, `corpus/`) are skipped during entity extraction — they're lexical, not entities.
+
+### Walkers
+
+Each walker is a function in `ask.py`'s `WALKERS` dict. A walker takes `(substrate, entity_id, text)` and returns `{ok, summary, detail}`.
+
+Walkers compose existing queries: `_walk_why_trusted` calls `why.why_trusted`, `_walk_verified` calls `queries.verified`, `_walk_what_supports` calls `queries.what_supports`, `_walk_what_is` calls `explain.explain`. A new walker that answers a new question is one function + one intent capsule + one test.
+
+### Talk layer dispatch
+
+`scps talk` is a REPL that classifies input into protocol layers before dispatching:
+
+- **Layer 0 (unknown)**: brief error, no word dump, logs `unparsed-input`
+- **Layer 2–6 (ack)**: greeting, wellbeing, farewell, thanks, apology, request, smalltalk, question-mark, wh-question, ack — respond with a matched ack template
+- **Layer 7 (application)**: parse, generate, or (for questions) route to `ask`
+
+Questions (anything ending `?` or starting with wh-word) are tried against the substrate first via `ask.answer_question`. If the question matches an intent, the walker result is the response. Otherwise the layer-7 branch falls back to grammar parse + generate.
+
+Layer-2 through layer-6 classifiers are capsules (`classifier/*`), not code. Adding a new greeting or farewell is a capsule edit, not a code change. Classifier match modes: `exact`, `contains` (word-boundary), `endswith`, `startswith`, `parses`.
+
+### What it can and cannot answer
+
+**Can** — anything expressible as a walk over existing graph structure: why is X trusted, is X signed, what did I decide about Y, what files in repo Z, where is function W, list all decisions/principles/repos, what happened in session Q.
+
+**Cannot** — open-ended semantic queries ("what does this code do?"), cross-file content search (grep on disk is better), multi-hop reasoning beyond one or two link types per walker. Those remain future work: a new walker is a new capability, and each is bounded.

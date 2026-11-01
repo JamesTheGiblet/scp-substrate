@@ -35,15 +35,6 @@ CREATE TABLE events (
 CREATE INDEX idx_events_capsule ON events(capsule_id, occurred_at);
 CREATE INDEX idx_events_type    ON events(event_type, occurred_at);
 
-CREATE TABLE rules (
-    id         TEXT PRIMARY KEY REFERENCES capsules(id) ON DELETE CASCADE,
-    trigger_on TEXT NOT NULL,
-    condition  TEXT NOT NULL,
-    action     TEXT NOT NULL,
-    enabled    INTEGER NOT NULL DEFAULT 1
-);
-CREATE INDEX idx_rules_trigger ON rules(trigger_on) WHERE enabled = 1;
-
 CREATE TABLE trust_scores (
     capsule_id  TEXT NOT NULL REFERENCES capsules(id) ON DELETE CASCADE,
     model_id    TEXT NOT NULL REFERENCES capsules(id),

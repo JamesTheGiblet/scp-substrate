@@ -1,0 +1,198 @@
+{
+  "sc_version": "1.2",
+  "id": "person.james-gilbert",
+  "title": "James Gilbert - person capsule",
+  "tags": [
+    "#neurodivergent",
+    "person",
+    "self"
+  ],
+  "owner": "James Gilbert",
+  "status": "provisional",
+  "extends": [
+    "person-generic",
+    "person-neurodivergent"
+  ],
+  "evidence_rule": "stated > observed > inferred. Inferred entries are Claude's read from conversation, unconfirmed, and must never override a stated entry. Store stated needs, not labels.",
+  "core": {
+    "statement": "To build is to be free, is to be me. To not is... nothing. The end of me.",
+    "override": {
+      "statement": "Chooses to override building to be with Tammi in the moment. Time together is short - she works shifts.",
+      "nature": "Deliberate choice, not a constraint. The one thing he values above building is scarce time with Tammi.",
+      "evidence": "stated"
+    },
+    "evidence": "stated"
+  },
+  "identity": {
+    "name": "James Gilbert",
+    "goes_by": "James",
+    "handle": "JamesTheGiblet",
+    "sign_off": "Giblet out",
+    "brand": "Giblets Forge (sole trader)",
+    "motto": "I wanted it. So I forged it. Now forge yours.",
+    "evidence": "stated"
+  },
+  "self_description": [
+    {
+      "claim": "Polymath builder - code, 3D modelling, drawing, painting, robotics, 3D printers, systems of all kinds. Doesn't want to be boxed in by a title.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Carpenter by trade - chisels and hammers to routers and jigs. Uses that shift as the analogy for what AI tooling did for his building.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Self-taught - started with an Eaglemoss V-Summit kit over two years; went on to design, print, firmware, and a custom 1.5m2 four-bed printer.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Builds for the love of building. Money is something humanity decided mattered; he builds because he chooses to live.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Has always defined his life in capsules - only now, with SCP, do the capsules fit him.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Reached genuine self-acceptance around 36 after decades of navigating neurotypical social patterns.",
+      "evidence": "stated"
+    }
+  ],
+  "neurodivergence": {
+    "stated": [
+      {
+        "item": "Dyslexic",
+        "need": "Writes fast; wants spelling errors flagged and corrected, not ignored",
+        "evidence": "stated"
+      },
+      {
+        "item": "ADHD",
+        "need": "No built-in scheduler - external structure (capsules) tells him what's next so mornings aren't lost to inertia",
+        "evidence": "stated (own build-in-public post)"
+      },
+      {
+        "item": "Misophonia",
+        "need": "Has its own capsule in his personal set - specifics not yet captured",
+        "evidence": "stated (own build-in-public post)"
+      }
+    ],
+    "rule": "Do not infer further diagnoses. Add only what James states."
+  },
+  "how_he_works": [
+    {
+      "claim": "Pointed at a task, he finishes it. Left to his own devices, he wanders.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Adversity fuels him - being told no or 'it can't be done' is what makes him do it.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Not scared to scrap and restart from scratch when he finds a better way, rather than patch.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Dreams about what he's stuck on and often wakes with the solution.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Documents ideas fully, then parks them - sometimes for years - until they fit.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Uses Claude to develop rigorous specs; writes the code elsewhere.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Learns through direct experience, not instruction.",
+      "evidence": "stated"
+    }
+  ],
+  "communication_needs": [
+    {
+      "need": "Direct, informal tone",
+      "evidence": "stated"
+    },
+    {
+      "need": "Honest pushback over flattery",
+      "evidence": "stated"
+    },
+    {
+      "need": "Bullets over blocks of text; short prose",
+      "evidence": "stated"
+    },
+    {
+      "need": "Flag spelling errors",
+      "evidence": "stated"
+    }
+  ],
+  "regulation": [
+    {
+      "claim": "Familiar comfort cartoons (Bob's Burgers, Family Guy, South Park, American Dad) soothe him - whatever series is his current thing.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Smoking is part of his routine at transitions; he understands its place.",
+      "evidence": "stated"
+    },
+    {
+      "claim": "Strict rules backfire - the harder a rule (e.g. bedtime) is enforced, the harder it is to keep. Needs soft targets.",
+      "evidence": "stated"
+    }
+  ],
+  "priorities": [
+    {
+      "rank": 1,
+      "item": "Tammi (wife) - hard override on all solo time, code and build included",
+      "evidence": "stated"
+    },
+    {
+      "rank": 2,
+      "item": "The Plumberz (rescue dog)",
+      "evidence": "stated"
+    },
+    {
+      "rank": 3,
+      "item": "Building",
+      "evidence": "inferred from routine"
+    }
+  ],
+  "routine_links": [
+    "circadian.morning.weekday",
+    "circadian.evening.weekday",
+    "circadian.weekend"
+  ],
+  "inferred_unconfirmed": [
+    {
+      "claim": "Transitions between modes are costly; his routine is built from decompress buffers around each switch.",
+      "evidence": "inferred",
+      "confidence": "0.70"
+    },
+    {
+      "claim": "Comfort cartoons act as a mode-switch signal, bookending the day morning, after work, and before bed.",
+      "evidence": "inferred",
+      "confidence": "0.70"
+    },
+    {
+      "claim": "Needs structure that feels chosen, not imposed.",
+      "evidence": "inferred",
+      "confidence": "0.65"
+    },
+    {
+      "claim": "Weekday build capacity is small (~15 min mornings + solo evenings); real build time lives Friday night to Saturday night.",
+      "evidence": "inferred from stated routine",
+      "confidence": "0.80"
+    }
+  ],
+  "open_items": [
+    "Misophonia triggers and what helps",
+    "Sensory needs beyond sound (light, crowds, textures)",
+    "What overload/shutdown looks like for him and what helps",
+    "Confirm or reject the inferred_unconfirmed entries"
+  ],
+  "signature": {
+    "key_id": "did:key:z6Mkkv72CL96uhsVVKWF15u6qVsa6iobVmLGF1z6kxX14R92",
+    "algorithm": "Ed25519",
+    "value": "sEOeuJEe5mlZBTyvDzdmjA8GLM8jumO9Hznt3nGwyR42Z9dup0cXzjvrmV4Np6CY+4woXjIZM6SCV+ikdbOEBQ=="
+  }
+}

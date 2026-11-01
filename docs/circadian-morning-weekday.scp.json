@@ -1,0 +1,51 @@
+{
+  "sc_version": "1.2",
+  "id": "circadian.morning.weekday",
+  "title": "Weekday morning routine (Mon-Fri)",
+  "owner": "James Gilbert",
+  "status": "provisional",
+  "applies": { "days": ["MO", "TU", "WE", "TH", "FR"] },
+  "anchors": {
+    "wake": { "options": ["05:00", "05:30"], "note": "varies day to day" },
+    "home_block_end": "07:00",
+    "leave": "07:20",
+    "arrive": "07:45",
+    "walk_in": "07:55"
+  },
+  "flex_rule": {
+    "flex_block": "tv",
+    "rule": "All home blocks except TV are fixed length. TV absorbs the difference so home_block_end stays 07:00.",
+    "formula": "tv_minutes = 60 - minutes_after_0500(wake)",
+    "resolved": {
+      "wake_0500": { "tv_minutes": 60 },
+      "wake_0530": { "tv_minutes": 30 }
+    }
+  },
+  "sequence": [
+    { "id": "smoke",     "minutes": 30, "fixed": true,  "desc": "Smoke, chill" },
+    { "id": "tv",        "minutes": "flex", "fixed": false, "desc": "Current comfort series (Bob's Burgers / Family Guy / South Park - whatever the latest thing is). Soothing, not entertainment for its own sake." },
+    { "id": "cod",       "minutes": 15, "fixed": true,  "desc": "Call of Duty on phone" },
+    { "id": "code",      "minutes": 15, "fixed": true,  "desc": "Code on phone or laptop", "ends_at": "07:00" },
+    { "id": "get_ready", "start": "07:00", "end": "07:20", "desc": "Get ready for work" },
+    { "id": "commute",   "start": "07:20", "end": "07:45", "desc": "Drive to work" },
+    { "id": "arrival",   "start": "07:45", "end": "07:55", "desc": "Fag, message Tammi" },
+    { "id": "walk_in",   "at": "07:55", "desc": "Parked, walking into work - routine ends" }
+  ],
+  "resolved_timelines": {
+    "wake_0500": [
+      "05:00-05:30 smoke", "05:30-06:30 tv", "06:30-06:45 cod",
+      "06:45-07:00 code", "07:00-07:20 get ready", "07:20 leave",
+      "07:45 arrive, fag, message Tammi", "07:55 walk in"
+    ],
+    "wake_0530": [
+      "05:30-06:00 smoke", "06:00-06:30 tv", "06:30-06:45 cod",
+      "06:45-07:00 code", "07:00-07:20 get ready", "07:20 leave",
+      "07:45 arrive, fag, message Tammi", "07:55 walk in"
+    ]
+  },
+  "open_items": [
+    "Weekend morning routine not yet captured",
+    "Rest of weekday (work, evening, winddown) not yet captured"
+  ],
+  "signature": "PLACEHOLDER - sign locally"
+}

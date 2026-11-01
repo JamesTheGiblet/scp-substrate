@@ -2,7 +2,7 @@
 """Sign an SCP document with an Ed25519 key from ~/.config/scp/keys/."""
 import argparse, json
 from pathlib import Path
-from signing import sign
+from signing import sign, normalise_signature
 
 KEYS_DIR = Path.home() / ".config" / "scp" / "keys"
 
@@ -27,7 +27,7 @@ def main():
     doc = json.loads(doc_path.read_text())
     kp  = json.loads(key_path.read_text())
 
-    signed = sign(doc, kp["private_b64"])
+    signed = sign(normalise_signature(doc), kp["private_b64"])
 
     out = Path(args.out) if args.out else doc_path.with_suffix(".signed.json")
     out.write_text(json.dumps(signed, indent=2, ensure_ascii=False))

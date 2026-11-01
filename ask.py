@@ -309,6 +309,91 @@ def _render_session(s, session_id, state):
             "detail": "\n".join(lines)}
 
 
+def _walk_where_is(s, entity_id, text):
+    """Find symbols or files matching the name in the query."""
+    import re as _re
+    skip = {"where", "is", "find", "function", "class", "locate",
+            "the", "a", "an", "show", "me"}
+    tokens = [t for t in _re.findall(r"[a-zA-Z0-9_]+", text.lower())
+              if len(t) >= 2 and t not in skip]
+    if not tokens:
+        return {"ok": False, "summary": "No name given to search for.",
+                "detail": None}
+
+    results = []
+    for token in tokens:
+        rows = s.conn.execute("""
+            SELECT id, state_json FROM capsules
+            WHERE json_extract(state_json, '$.kind') = 'symbol'
+              AND lower(json_extract(state_json, '$.name')) LIKE ?
+            LIMIT 20
+        """, (f"%{token}%",)).fetchall()
+        for r in rows:
+            st = json.loads(r["state_json"])
+            results.append((st.get("file", "?"),
+                            st.get("line", "?"),
+                            st.get("name", "?"),
+                            st.get("symbol_kind", "?")))
+
+    seen = set()
+    unique = []
+    for r in results:
+        if r not in seen:
+            seen.add(r)
+            unique.append(r)
+
+    if not unique:
+        # Fall back to file path search
+        rows = s.conn.execute("""
+            SELECT json_extract(state_json, '$.path') AS path,
+                   json_extract(state_json, '$.language') AS lang
+            FROM capsules
+            WHERE json_extract(state_json, '$.kind') = 'source-file'
+        """).fetchall()
+        for r in rows:
+            if r["path"] and any(t in r["path"].lower() for t in tokens):
+                unique.append((r["path"], None, None, r["lang"]))
+        if not unique:
+            return {"ok": True,
+                    "summary": f"Nothing matching {tokens} in symbols or files.",
+                    "detail": None}
+        lines = [f"  {f[0]}  ({f[3]})" for f in unique[:20]]
+        return {"ok": True,
+                "summary": f"{len(unique)} file(s) match:",
+                "detail": chr(10).join(lines)}
+
+    lines = []
+    for path, line, name, kind in unique[:20]:
+        loc = f"{path}:{line}" if line is not None else path
+        n = f" [{kind}] {name}" if name else ""
+        lines.append(f"  {loc}{n}")
+    return {"ok": True,
+            "summary": f"{len(unique)} match(es):",
+            "detail": chr(10).join(lines)}
+
+
+def _walk_what_files(s, entity_id, text):
+    """List files contained in a repo."""
+    if not entity_id:
+        return {"ok": False, "summary": "No repo specified.", "detail": None}
+    c = s.get(entity_id)
+    if not c or c["state"].get("kind") != "repo":
+        return {"ok": True,
+                "summary": f"{entity_id} is not a repo.",
+                "detail": None}
+    links = [l for l in s.links_from(entity_id) if l["type"] == "contains"]
+    if not links:
+        return {"ok": True,
+                "summary": f"{entity_id} contains no recorded files.",
+                "detail": None}
+    lines = [f"  {l['target']}" for l in links[:25]]
+    if len(links) > 25:
+        lines.append(f"  ... and {len(links) - 25} more")
+    return {"ok": True,
+            "summary": f"{len(links)} file(s) in {entity_id}:",
+            "detail": chr(10).join(lines)}
+
+
 def _walk_who_is(s, entity_id, text):
     return _walk_what_is(s, entity_id, text)
 
@@ -339,6 +424,8 @@ WALKERS = {
     "list_kind": _walk_list_kind,
     "what_happened": _walk_what_happened,
     "who_is": _walk_who_is,
+    "where_is": _walk_where_is,
+    "what_files": _walk_what_files,
     "what_is": _walk_what_is,
 }
 

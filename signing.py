@@ -48,6 +48,22 @@ def public_from_did_key(did_key: str) -> bytes:
     return raw[2:]
 
 
+def normalise_signature(doc):
+    """Coerce `signature` into {key_id, algorithm, value} form.
+
+    Some documents use a bare string placeholder ("PLACEHOLDER - sign locally").
+    This converts it to the standard object form so canonicalise/sign work.
+    """
+    sig = doc.get("signature")
+    if isinstance(sig, dict):
+        return doc
+    return {**doc, "signature": {
+        "key_id": None,
+        "algorithm": "Ed25519",
+        "value": sig if isinstance(sig, str) and sig and sig != "PLACEHOLDER - sign locally" else None,
+    }}
+
+
 def canonicalise(doc: dict) -> bytes:
     d = json.loads(json.dumps(doc))
     if isinstance(d.get("signature"), dict):

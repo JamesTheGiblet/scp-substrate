@@ -8,6 +8,8 @@ Usage:
   python absorb_repo.py <path>               # dry-run is default
 """
 import argparse
+import re
+import ast
 import hashlib
 import json
 import os
@@ -120,6 +122,85 @@ def _count_lines(path):
         return None
 
 
+def _extract_python_symbols(path):
+    """Top-level functions, classes, and class methods via ast."""
+    try:
+        tree = ast.parse(Path(path).read_text(errors="replace"))
+    except (SyntaxError, OSError):
+        return [], []
+
+    symbols = []
+    imports = []
+    for node in tree.body:
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imports.append(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.module:
+                imports.append(node.module)
+        elif isinstance(node, ast.FunctionDef) or isinstance(node, ast.AsyncFunctionDef):
+            symbols.append({
+                "name": node.name,
+                "kind": "function",
+                "line": node.lineno,
+                "docstring": (ast.get_docstring(node) or "")[:200],
+            })
+        elif isinstance(node, ast.ClassDef):
+            symbols.append({
+                "name": node.name,
+                "kind": "class",
+                "line": node.lineno,
+                "docstring": (ast.get_docstring(node) or "")[:200],
+            })
+            for sub in node.body:
+                if isinstance(sub, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    symbols.append({
+                        "name": f"{node.name}.{sub.name}",
+                        "kind": "method",
+                        "line": sub.lineno,
+                        "docstring": (ast.get_docstring(sub) or "")[:200],
+                    })
+    return symbols, imports
+
+
+_JS_FUNC_RE = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?function\s+(\w+)", re.MULTILINE)
+_JS_CLASS_RE = re.compile(r"^\s*(?:export\s+)?class\s+(\w+)", re.MULTILINE)
+_JS_CONST_FN_RE = re.compile(r"^\s*(?:export\s+)?const\s+(\w+)\s*=\s*(?:async\s*)?\(", re.MULTILINE)
+_JS_IMPORT_RE = re.compile(r"^\s*import\s+(?:.*?)\s+from\s+['\"]([^'\"]+)['\"]", re.MULTILINE)
+
+
+def _extract_js_symbols(path):
+    """Regex-based function/class/const-fn extraction for JavaScript."""
+    try:
+        text = Path(path).read_text(errors="replace")
+    except OSError:
+        return [], []
+    symbols = []
+    for m in _JS_FUNC_RE.finditer(text):
+        line = text[:m.start()].count("\n") + 1
+        symbols.append({"name": m.group(1), "kind": "function", "line": line, "docstring": ""})
+    for m in _JS_CLASS_RE.finditer(text):
+        line = text[:m.start()].count("\n") + 1
+        symbols.append({"name": m.group(1), "kind": "class", "line": line, "docstring": ""})
+    for m in _JS_CONST_FN_RE.finditer(text):
+        line = text[:m.start()].count("\n") + 1
+        symbols.append({"name": m.group(1), "kind": "function", "line": line, "docstring": ""})
+    imports = [m.group(1) for m in _JS_IMPORT_RE.finditer(text)]
+    return symbols, imports
+
+
+def _symbol_slug_from_path(rel_path):
+    return rel_path.replace("/", "_").rsplit(".", 1)[0].replace(".", "-")
+
+
+def _extract_symbols_for(lang, abs_path):
+    if lang == "python":
+        return _extract_python_symbols(abs_path)
+    if lang in ("javascript", "typescript"):
+        return _extract_js_symbols(abs_path)
+    return [], []
+
+
 def walk_repo(root):
     """Yield (rel_path, abs_path, size, language) for files we want to absorb."""
     root = root.resolve()
@@ -146,7 +227,6 @@ def walk_repo(root):
 
 
 def _slug(text):
-    import re
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
@@ -273,15 +353,63 @@ def absorb(s, root, write=False):
             s.link(repo_id, "contains", fid)
             created += 1
 
+    # --- Symbol capsules ---
+    sym_created = sym_skipped = 0
+    for rel, abs_p, size, lang in files:
+        symbols, imports = _extract_symbols_for(lang, abs_p)
+        if not symbols and not imports:
+            continue
+        fid = f"file/{_slug(repo_name)}/{rel}"
+        path_slug = _symbol_slug_from_path(rel)
+
+        # Store imports on the file capsule
+        if imports:
+            cur = s.get(fid)
+            if cur:
+                cur_state = dict(cur["state"])
+                if cur_state.get("imports") != imports:
+                    cur_state["imports"] = imports
+                    with s_conn:
+                        s_conn.execute(
+                            "UPDATE capsules SET state_json=? WHERE id=?",
+                            (json.dumps(cur_state), fid),
+                        )
+
+        for sym in symbols:
+            sid = f"symbol/{_slug(repo_name)}/{path_slug}/{sym['name']}"
+            existing_sym = s.get(sid)
+            if existing_sym:
+                sym_skipped += 1
+                continue
+            s.write({
+                "id": sid,
+                "foundation": "foundation:knowledge",
+                "state": {
+                    "kind": "symbol",
+                    "name": sym["name"],
+                    "symbol_kind": sym["kind"],
+                    "line": sym["line"],
+                    "docstring": sym["docstring"],
+                    "repo": repo_name,
+                    "file": rel,
+                    "file_id": fid,
+                    "language": lang,
+                },
+            })
+            s.link(fid, "defines", sid)
+            sym_created += 1
+
     print()
     print(f"Repo: {repo_id}")
     print(f"  files: {created} new, {updated} updated, {skipped} unchanged")
+    print(f"  symbols: {sym_created} new, {sym_skipped} already present")
     return {
         "repo_id": repo_id,
         "files": len(files),
         "created": created,
         "updated": updated,
         "skipped": skipped,
+        "symbols_created": sym_created,
         "dry_run": False,
     }
 
