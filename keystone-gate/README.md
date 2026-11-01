@@ -143,7 +143,7 @@ Status
 
 Boundary proven. Four foundations in sc.json, projected into sc.db. kg stats and kg route list cross the boundary cleanly.
 
-Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (4/4 pass). 57 KG tests pass. 70 substrate tests pass - untouched.
+Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (4/4 pass). 57 KG tests pass. 72 substrate tests pass - untouched.
 
 Cubes working. There are 3 cubes in the substrate, all complete. Completeness is computed and decides attestation eligibility. Changing a face after validation marks the validation stale, so the cube drops out of eligibility until a human validates it again. Nothing consumes eligibility yet.
 

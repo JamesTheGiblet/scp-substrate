@@ -127,7 +127,7 @@ def _count_lines(path):
 def _extract_python_symbols(path):
     """Top-level functions, classes, and class methods via ast."""
     try:
-        tree = ast.parse(Path(path).read_text(errors="replace"))
+        tree = ast.parse(Path(path).read_text(encoding="utf-8", errors="replace"))
     except (SyntaxError, OSError):
         return [], []
 
@@ -174,7 +174,7 @@ _JS_IMPORT_RE = re.compile(r"^\s*import\s+(?:.*?)\s+from\s+['\"]([^'\"]+)['\"]",
 def _extract_js_symbols(path):
     """Regex-based function/class/const-fn extraction for JavaScript."""
     try:
-        text = Path(path).read_text(errors="replace")
+        text = Path(path).read_text(encoding="utf-8", errors="replace")
     except OSError:
         return [], []
     symbols = []
@@ -221,7 +221,7 @@ def walk_repo(root):
                 continue
             rel = abs_p.relative_to(root)
             lang = LANG_BY_EXT.get(abs_p.suffix.lower(), "unknown")
-            yield (str(rel), abs_p, size, lang)
+            yield (rel.as_posix(), abs_p, size, lang)
             count += 1
             if count >= MAX_FILES_HARD:
                 print(f"  warning: hit MAX_FILES_HARD={MAX_FILES_HARD}; stopping")
@@ -232,7 +232,24 @@ def _slug(text):
     return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
 
 
-def absorb(s, root, write=False):
+def prune(s, repo_slug, keep):
+    """Delete this repo's file and symbol capsules that are not in `keep`."""
+    stale = [r["id"] for r in s.conn.execute(
+        "SELECT id FROM capsules WHERE substr(id, 1, ?) = ? OR substr(id, 1, ?) = ?",
+        (len(repo_slug) + 6, f"file/{repo_slug}/", len(repo_slug) + 8, f"symbol/{repo_slug}/"),
+    ) if r["id"] not in keep]
+    with s.conn:
+        for cid in stale:
+            s.conn.execute("DELETE FROM capsules WHERE id=?", (cid,))
+            s.conn.execute(
+                "INSERT INTO events (event_type, capsule_id, payload) "
+                "VALUES ('capsule.deleted', ?, ?)",
+                (cid, json.dumps({"reason": "gone from repo on re-absorb"})),
+            )
+    return len(stale)
+
+
+def absorb(s, root, write=False, prune_stale=False):
     root = root.resolve()
     if not root.exists():
         return {"error": f"not found: {root}"}
@@ -317,8 +334,10 @@ def absorb(s, root, write=False):
 
     # --- File capsules ---
     created = updated = skipped = 0
+    keep = set()
     for rel, abs_p, size, lang in files:
         fid = f"file/{_slug(repo_name)}/{rel}"
+        keep.add(fid)
         try:
             sha = _sha256(abs_p)
         except OSError:
@@ -379,32 +398,38 @@ def absorb(s, root, write=False):
 
         for sym in symbols:
             sid = f"symbol/{_slug(repo_name)}/{path_slug}/{sym['name']}"
+            keep.add(sid)
+            sym_state = {
+                "kind": "symbol",
+                "name": sym["name"],
+                "symbol_kind": sym["kind"],
+                "line": sym["line"],
+                "docstring": sym["docstring"],
+                "repo": repo_name,
+                "file": rel,
+                "file_id": fid,
+                "language": lang,
+            }
             existing_sym = s.get(sid)
-            if existing_sym:
+            if existing_sym and existing_sym["state"] == sym_state:
                 sym_skipped += 1
                 continue
             s.write({
                 "id": sid,
                 "foundation": "foundation:knowledge",
-                "state": {
-                    "kind": "symbol",
-                    "name": sym["name"],
-                    "symbol_kind": sym["kind"],
-                    "line": sym["line"],
-                    "docstring": sym["docstring"],
-                    "repo": repo_name,
-                    "file": rel,
-                    "file_id": fid,
-                    "language": lang,
-                },
+                "state": sym_state,
             })
             s.link(fid, "defines", sid)
             sym_created += 1
 
+    pruned = prune(s, _slug(repo_name), keep) if prune_stale else 0
+
     print()
     print(f"Repo: {repo_id}")
     print(f"  files: {created} new, {updated} updated, {skipped} unchanged")
-    print(f"  symbols: {sym_created} new, {sym_skipped} already present")
+    print(f"  symbols: {sym_created} new or changed, {sym_skipped} unchanged")
+    if prune_stale:
+        print(f"  pruned: {pruned} capsules no longer in the repo")
     return {
         "repo_id": repo_id,
         "files": len(files),
@@ -412,6 +437,7 @@ def absorb(s, root, write=False):
         "updated": updated,
         "skipped": skipped,
         "symbols_created": sym_created,
+        "pruned": pruned,
         "dry_run": False,
     }
 
@@ -423,11 +449,13 @@ def main():
                     help="actually write (default is dry-run)")
     ap.add_argument("--dry-run", action="store_true",
                     help="dry-run (default)")
+    ap.add_argument("--prune", action="store_true",
+                    help="with --write, delete capsules for files and symbols now gone")
     args = ap.parse_args()
 
     root = Path(args.path)
     s = Substrate()
-    result = absorb(s, root, write=args.write and not args.dry_run)
+    result = absorb(s, root, write=args.write and not args.dry_run, prune_stale=args.prune)
     s.close()
 
     if "error" in result:

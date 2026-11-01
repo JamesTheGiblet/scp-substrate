@@ -88,7 +88,7 @@ Keystone Gate shares `sc.db` with the substrate and writes its own capsules thro
 | File | Purpose |
 |---|---|
 | `scps` | CLI — see `./scps --help` |
-| `test_substrate.py` | 70 tests, in-memory fixtures, no `sc.db` dependency |
+| `test_substrate.py` | 72 tests, in-memory fixtures, no `sc.db` dependency |
 
 ### Docs
 `docs/SPEC.md` (substrate spec), `docs/STRUCTURE.md` (file map, schema, extension points), `docs/REASONING.md` (how rules/trust/why/explain work). `docs/` also holds SCP source documents. `legacy/` holds pre-SQLite JSON.
@@ -98,7 +98,7 @@ Keystone Gate shares `sc.db` with the substrate and writes its own capsules thro
 ```sh
 cd ~/scp-substrate
 python scripts/bootstrap.py         # project sc.json into sc.db
-python tests/test_substrate.py    # confirm 70 tests pass
+python tests/test_substrate.py    # confirm 72 tests pass
 ./scps stats                # what's in the substrate
 ```
 
@@ -161,6 +161,7 @@ Absorbing repos
 ```sh
 python scripts/absorb_repo.py  /path/to/repo --dry-run    # local
 python scripts/absorb_repo.py  /path/to/repo --write
+python scripts/absorb_repo.py  /path/to/repo --write --prune    # also delete capsules for removed files
 
 python scripts/absorb_github.py owner/repo --dry-run      # GitHub (no token needed for public)
 python scripts/absorb_github.py owner/repo --write

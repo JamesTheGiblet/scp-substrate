@@ -26,8 +26,8 @@ def main():
     if not key_path.exists():
         raise SystemExit(f"key not found: {args.key}")
 
-    doc = json.loads(doc_path.read_text())
-    kp  = json.loads(key_path.read_text())
+    doc = json.loads(doc_path.read_text(encoding="utf-8"))
+    kp  = json.loads(key_path.read_text(encoding="utf-8"))
 
     signed = sign(normalise_signature(doc), kp["private_b64"])
 

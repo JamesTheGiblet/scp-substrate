@@ -190,7 +190,7 @@ def main():
     if not p.exists():
         sys.exit(f"not found: {p}")
 
-    doc = json.loads(p.read_text())
+    doc = json.loads(p.read_text(encoding="utf-8"))
     if not doc.get("id", "").startswith("person."):
         sys.exit("not a person document (id must start with 'person.')")
 

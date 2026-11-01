@@ -35,7 +35,7 @@ Directory
 │   └── fill_styles.py, extract_vocab.py, learn_frequencies.py
 │
 ├── seeds/                 create-only capsule seeds, reconcile_seeds.py
-├── tests/                 test_substrate.py, 70 tests, in-memory fixtures
+├── tests/                 test_substrate.py, 72 tests, in-memory fixtures
 │
 ├── docs/                  SPEC, STRUCTURE, REASONING, SCP documents (*.scp.json)
 ├── keystone-gate/         Keystone Gate - sibling app, shares sc.db
@@ -95,7 +95,7 @@ keygen.py CLI: generate keypair signing
 sign_doc.py CLI: sign a document signing
 bootstrap.py CLI: project sc.json into sc.db stdlib
 scps CLI all of the above
-test_substrate.py 70 tests all of the above
+test_substrate.py 72 tests all of the above
 
 ---
 
@@ -181,7 +181,7 @@ A schema change — the hard one. Requires a numbered migration script, updating
 
 Test coverage
 
-test_substrate.py runs 70 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 57 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
+test_substrate.py runs 72 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 57 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
 
 ```
 foundation:foundation

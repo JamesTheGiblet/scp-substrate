@@ -1001,6 +1001,62 @@ def test_python_symbols():
     os.unlink(path)
 
 
+def _absorb_fixture():
+    s = Substrate(":memory:")
+    s.conn.executescript((ROOT / "schema.sql").read_text())
+    with s.conn:
+        for fid in ("foundation:foundation", "foundation:knowledge"):
+            s.conn.execute(
+                "INSERT INTO capsules (id, foundation, state_json, is_meta) "
+                "VALUES (?, 'foundation:foundation', '{}', 1)", (fid,))
+    return s
+
+
+def test_absorb_uses_forward_slashes_and_prunes_renames():
+    import shutil, tempfile
+    from absorb_repo import absorb
+    s = _absorb_fixture()
+    tmp = Path(tempfile.mkdtemp()) / "demo"
+    try:
+        (tmp / "sub").mkdir(parents=True)
+        (tmp / "sub" / "a.py").write_text("def alpha():\n    pass\n")
+        absorb(s, tmp, write=True)
+        assert s.get("file/demo/sub/a.py")
+        assert s.get("symbol/demo/sub_a/alpha")["state"]["file"] == "sub/a.py"
+
+        # Move the file: the old capsules must go, the new ones must exist
+        (tmp / "sub" / "a.py").rename(tmp / "b.py")
+        r = absorb(s, tmp, write=True, prune_stale=True)
+        assert r["pruned"] == 2, r
+        assert s.get("file/demo/sub/a.py") is None
+        assert s.get("symbol/demo/sub_a/alpha") is None
+        assert s.get("symbol/demo/b/alpha")["state"]["file"] == "b.py"
+        assert s.conn.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type='capsule.deleted'"
+        ).fetchone()[0] == 2
+        assert s.conn.execute("PRAGMA foreign_key_check").fetchall() == []
+    finally:
+        s.close()
+        shutil.rmtree(tmp.parent, ignore_errors=True)
+
+
+def test_absorb_refreshes_symbol_lines():
+    import shutil, tempfile
+    from absorb_repo import absorb
+    s = _absorb_fixture()
+    tmp = Path(tempfile.mkdtemp()) / "demo"
+    try:
+        tmp.mkdir()
+        (tmp / "a.py").write_text("def alpha():\n    pass\n")
+        absorb(s, tmp, write=True)
+        (tmp / "a.py").write_text("\n\n\ndef alpha():\n    pass\n")
+        absorb(s, tmp, write=True)
+        assert s.get("symbol/demo/a/alpha")["state"]["line"] == 4
+    finally:
+        s.close()
+        shutil.rmtree(tmp.parent, ignore_errors=True)
+
+
 def test_js_symbols():
     from absorb_repo import _extract_js_symbols
     import tempfile, os

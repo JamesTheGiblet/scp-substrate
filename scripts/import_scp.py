@@ -75,13 +75,17 @@ def import_scp(s: Substrate, doc: dict, *, source_path: str = None) -> dict:
 
 
 def main():
+    usage = "usage: python scripts/import_scp.py <file.scp.json>"
     if len(sys.argv) < 2:
-        sys.exit("usage: python scripts/import_scp.py <file.scp.json>")
+        sys.exit(usage)
+    if sys.argv[1] in ("-h", "--help"):
+        print(usage)
+        return
     path = Path(sys.argv[1])
     if not path.exists():
         sys.exit(f"file not found: {path}")
 
-    doc = json.loads(path.read_text())
+    doc = json.loads(path.read_text(encoding="utf-8"))
     if "scp_id" not in doc or "declaration" not in doc:
         sys.exit("not an SCP document (missing scp_id or declaration)")
 

@@ -258,7 +258,7 @@ def main():
     if not p.exists():
         sys.exit(f"not found: {p}")
 
-    doc = json.loads(p.read_text())
+    doc = json.loads(p.read_text(encoding="utf-8"))
     if doc.get("sc_version") is None and doc.get("id", "").startswith("circadian") is False:
         sys.exit("not a circadian sc_version document (missing sc_version or id)")
 
