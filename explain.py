@@ -43,6 +43,34 @@ def _summarise_state(state, foundation):
         layer = state.get("layer")
         kindc = state.get("kind_class") or "?"
         return f"turn {state.get('turn')} · layer {layer} ({kindc})"
+    if kind == "repo":
+        bits = [state.get("name") or state.get("full_name", "?")]
+        if state.get("description"):
+            d = state["description"]
+            if len(d) > 60:
+                d = d[:57] + "..."
+            bits.append(f'"{d}"')
+        if state.get("language"):
+            bits.append(state["language"])
+        if state.get("file_count"):
+            bits.append(f"{state['file_count']} files")
+        if state.get("size_bytes"):
+            mb = state["size_bytes"] / (1024 * 1024)
+            if mb >= 1:
+                bits.append(f"{mb:.1f} MB")
+            else:
+                bits.append(f"{state['size_bytes']/1024:.0f} KB")
+        if state.get("license"):
+            bits.append(f"({state['license']})")
+        if state.get("stars"):
+            bits.append(f"*{state['stars']}")
+        return " - ".join(bits)
+    if kind == "source-file":
+        lang = state.get("language", "?")
+        size = state.get("size_bytes")
+        if size is not None:
+            return f"{lang} - {size:,} bytes"
+        return lang
     if kind == "framework" and state.get("name") == "SymLM":
         return f"SymLM — {state.get('expansion', 'Symbolic Language Model')}"
     if kind == "framework":
@@ -168,9 +196,17 @@ def explain(s: Substrate, capsule_id: str) -> str:
     skip = {"inherits", "declares"}
     others = [l for l in s.links_from(c["id"]) if l["type"] not in skip]
     if others:
-        out.append("Relationships:")
+        # Group by type, cap each at 10
+        by_type = {}
         for l in others:
-            out.append(f"  → {l['type']:15} → {l['target']}")
+            by_type.setdefault(l["type"], []).append(l)
+        out.append("Relationships:")
+        for lt in sorted(by_type.keys()):
+            items = by_type[lt]
+            for l in items[:10]:
+                out.append(f"  -> {lt:15} -> {l['target']}")
+            if len(items) > 10:
+                out.append(f"  -> {lt:15}    ... and {len(items) - 10} more")
         out.append("")
 
     return "\n".join(out).rstrip()
