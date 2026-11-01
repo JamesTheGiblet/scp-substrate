@@ -24,13 +24,15 @@ def cmd_stats(args):
 
 def cmd_route_list(args):
     from kg_router import route_list
-    neighbours = route_list()
-    if not neighbours:
-        print("No neighbours yet (empty foundation:neighbour).")
-        print("This is expected — boundary is proven, logic not yet built.")
-    else:
-        for n in neighbours:
-            print(f"  {n}")
+    rows = route_list()
+    if not rows:
+        print("No neighbours yet.")
+        print("Cubes have no neighbour links.")
+        return
+    for r in rows:
+        print(f"  {r['cube']}")
+        for n in r["neighbours"]:
+            print(f"    -> {n}")
 
 
 def cmd_ask(args):
@@ -267,6 +269,35 @@ def cmd_cube_contradicts(args):
     print(f"{result['cube_id']} contradicts {result['contradicts']}")
 
 
+def cmd_neighbour_link(args):
+    from kg_agent import link_neighbour
+    s = Substrate()
+    result = link_neighbour(s, args.cube_a, args.cube_b, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Linked: {result['cube_a']} <-> {result['cube_b']}")
+    if args.note:
+        print(f"  note: {args.note}")
+
+
+def cmd_neighbour_list(args):
+    from kg_agent import list_neighbours
+    s = Substrate()
+    result = list_neighbours(s, args.cube_id)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    if not result["neighbours"]:
+        print(f"{result['cube']} has no neighbours.")
+    else:
+        print(f"{result['cube']} neighbours:")
+        for n in result["neighbours"]:
+            print(f"  -> {n}")
+
+
 def main():
     ap = argparse.ArgumentParser(prog="kg", description="Keystone Gate CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -327,6 +358,19 @@ def main():
     sp_con.add_argument("other_id")
     sp_con.add_argument("--note", default=None)
     sp_con.set_defaults(func=cmd_cube_contradicts)
+
+    sp = sub.add_parser("neighbour", help="neighbour operations")
+    sp_sub = sp.add_subparsers(dest="neighbour_cmd", required=True)
+
+    sp_n_link = sp_sub.add_parser("link", help="link two cubes as neighbours")
+    sp_n_link.add_argument("cube_a")
+    sp_n_link.add_argument("cube_b")
+    sp_n_link.add_argument("--note", default=None)
+    sp_n_link.set_defaults(func=cmd_neighbour_link)
+
+    sp_n_list = sp_sub.add_parser("list", help="list neighbours of a cube")
+    sp_n_list.add_argument("cube_id")
+    sp_n_list.set_defaults(func=cmd_neighbour_list)
 
     args = ap.parse_args()
     args.func(args)

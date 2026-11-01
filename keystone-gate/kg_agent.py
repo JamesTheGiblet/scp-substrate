@@ -240,3 +240,40 @@ def list_cubes(s):
             "complete": comp.get("complete", False),
         })
     return out
+
+
+def link_neighbour(s, cube_a, cube_b, note=None):
+    """Create a bidirectional neighbour relationship between two cubes.
+
+    Neighbours know only IDs; they query the ledger for detail. That's why
+    we only link — we don't copy state. The relationship is stored as
+    two directed `neighbour` links (a->b and b->a) so traversal works
+    from either end without special-casing direction.
+    """
+    for cid in (cube_a, cube_b):
+        if not s.get(cid):
+            return {"error": f"cube {cid} not found"}
+
+    if cube_a == cube_b:
+        return {"error": "cannot link a cube to itself"}
+
+    for src, tgt in ((cube_a, cube_b), (cube_b, cube_a)):
+        existing = s.conn.execute(
+            "SELECT 1 FROM links WHERE source=? AND type='neighbour' AND target=?",
+            (src, tgt),
+        ).fetchone()
+        if not existing:
+            s.link(src, "neighbour", tgt)
+
+    return {"cube_a": cube_a, "cube_b": cube_b, "note": note}
+
+
+def list_neighbours(s, cube_id):
+    """Return cube IDs directly neighboured to a cube."""
+    if not s.get(cube_id):
+        return {"error": f"cube {cube_id} not found"}
+    rows = s.conn.execute(
+        "SELECT target FROM links WHERE source=? AND type='neighbour' ORDER BY target",
+        (cube_id,),
+    ).fetchall()
+    return {"cube": cube_id, "neighbours": [r["target"] for r in rows]}

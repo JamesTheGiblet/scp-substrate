@@ -291,6 +291,55 @@ def test_cube_contradicts():
         s.close()
 
 
+# --- neighbour tests -----------------------------------------------------
+def test_neighbour_link_bidirectional():
+    from kg_agent import create_cube, link_neighbour
+    s = _fresh_kg_substrate()
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        b = create_cube(s, "cube b")["cube_id"]
+        r = link_neighbour(s, a, b, note="related")
+        assert "error" not in r
+        # Both directions exist
+        forward = s.conn.execute(
+            "SELECT 1 FROM links WHERE source=? AND type='neighbour' AND target=?",
+            (a, b),
+        ).fetchone()
+        backward = s.conn.execute(
+            "SELECT 1 FROM links WHERE source=? AND type='neighbour' AND target=?",
+            (b, a),
+        ).fetchone()
+        assert forward and backward
+    finally:
+        s.close()
+
+
+def test_neighbour_link_missing_cube():
+    from kg_agent import create_cube, link_neighbour
+    s = _fresh_kg_substrate()
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        r = link_neighbour(s, a, "cube/does-not-exist")
+        assert "error" in r
+    finally:
+        s.close()
+
+
+def test_neighbour_list():
+    from kg_agent import create_cube, link_neighbour, list_neighbours
+    s = _fresh_kg_substrate()
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        b = create_cube(s, "cube b")["cube_id"]
+        link_neighbour(s, a, b)
+        r = list_neighbours(s, a)
+        assert b in r["neighbours"], r
+        r2 = list_neighbours(s, b)
+        assert a in r2["neighbours"], r2
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]
