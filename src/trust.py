@@ -21,6 +21,9 @@ def _load_weight_capsules(s):
         "SELECT id, state_json, created_at FROM capsules WHERE foundation = ?",
         (FOUNDATION,)
     ):
+        # Word and rule tallies share the foundation but are counts, not trust
+        if r["id"].startswith("trust/freq/"):
+            continue
         state = json.loads(r["state_json"])
         if _is_number(state.get("n0")) and _is_number(state.get("k")):
             instances.append({"id": r["id"], "state": state, "created_at": r["created_at"]})

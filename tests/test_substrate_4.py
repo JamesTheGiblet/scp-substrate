@@ -117,5 +117,26 @@ def test_import_circadian_phases():
     assert s.get("circadian/test-weekend/phase/p2/open/1")
 
 
+def test_frequency_tallies_are_not_trust():
+    """A word seen 33 times is not 33 times trusted."""
+    from rules import evaluate_rules
+    s = fresh_substrate()
+    try:
+        s.write({"id": "lex/the", "foundation": "foundation:knowledge", "state": {}})
+        s.write({"id": "trust/freq/the", "foundation": "foundation:leighton-weight",
+                 "state": {"n0": 33, "k": 0, "count": 33, "word": "the"}})
+        s.link("trust/freq/the", "about", "lex/the")
+        s.write({"id": "trusted-rule", "foundation": "foundation:rule",
+                 "state": {"condition": {"type": "trust_above", "threshold": 0.5},
+                           "effect": {"relationship": "trusted", "derive_from": "about"}}})
+        compute_all(s)
+        evaluate_rules(s)
+        assert s.conn.execute("SELECT COUNT(*) FROM trust_scores").fetchone()[0] == 0
+        assert s.conn.execute(
+            "SELECT COUNT(*) FROM links WHERE type='trusted'").fetchone()[0] == 0
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())
