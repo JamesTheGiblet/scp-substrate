@@ -94,6 +94,110 @@ def test_review_can_filter_by_tag():
         s.close()
 
 
+def test_view_collects_every_cube_with_six_sides():
+    from kg_view import collect
+    s = Substrate()
+    try:
+        cubes = collect(s)
+        count = s.conn.execute(
+            "SELECT COUNT(*) FROM capsules WHERE foundation='foundation:cube'").fetchone()[0]
+        assert len(cubes) == count
+        assert all(set(c["faces"]) == {"FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"}
+                   for c in cubes)
+        assert {c["status"] for c in cubes} >= {"attested", "draft"}
+        assert any(f and f["unread"] for c in cubes for f in c["faces"].values())
+    finally:
+        s.close()
+
+
+def test_view_stored_text_cannot_break_out_of_the_script():
+    from kg_view import render
+    page = render([{"content": "</script><script>alert(1)</script>"}])
+    assert "alert(1)</script>" not in page, page[-300:]
+    assert "/*CUBES*/" not in page
+
+
+def test_view_needs_no_network():
+    from kg_view import render
+    page = render([])
+    for marker in ("http://", "https://", "<link", " src="):
+        assert marker not in page, marker
+
+
+def test_view_has_a_screenshot_button():
+    from kg_view import render
+    page = render([])
+    assert 'id="snap"' in page and "cubeField.snapshot()" in page
+    assert "snapshot()" in page.split("window.cubeField")[1]
+
+
+def _lens_cube(cid, **faces):
+    return {"id": cid, "faces": {k: {"content": v} for k, v in faces.items()}}
+
+
+def test_shared_counter_links_cubes_across_topics():
+    from kg_lens_links import cluster
+    cubes = [_lens_cube("a", COUNTER="voltage sag under stall load"),
+             _lens_cube("b", COUNTER="stall voltage sag at the far joint"),
+             _lens_cube("c", COUNTER="keys leaked through backups")]
+    result = cluster(cubes, ("COUNTER",))
+    assert [(l["a"], l["b"], l["lens"]) for l in result["links"]] == [("a", "b", "COUNTER")]
+    names = {tuple(g["members"]) for g in result["clusters"]}
+    assert ("a", "b") in names and ("c",) in names, names
+
+
+def test_clustering_is_repeatable_across_runs():
+    import subprocess
+    code = (
+        "import sys, json\n"
+        "sys.path[:0] = [r'%s', r'%s']\n"
+        "from kg_lens_links import cluster\n"
+        "cubes = [{'id': c, 'faces': {'COUNTER': {'content': 'voltage sag stall wiring supply ' + c}}} for c in 'abcdef']\n"
+        "print(json.dumps(cluster(cubes, ('COUNTER',)), sort_keys=True))\n"
+    ) % (str(_here.parent / "src"), str(_here))
+    runs = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
+                           env={**os.environ, "PYTHONHASHSEED": seed}).stdout for seed in ("1", "2", "3")}
+    assert len(runs) == 1 and runs != {""}, runs
+
+
+def test_cluster_names_are_real_words():
+    from kg_lens_links import cluster
+    cubes = [_lens_cube("a", COUNTER="wiring refused supplies"), _lens_cube("b", COUNTER="wiring refused supplies")]
+    name = cluster(cubes, ("COUNTER",))["clusters"][0]["name"]
+    assert "wir " not in name + " " and "refus " not in name + " ", name
+
+
+def test_same_word_on_different_lenses_does_not_link():
+    from kg_lens_links import cluster
+    cubes = [_lens_cube("a", FACT="voltage sag under stall load"),
+             _lens_cube("b", COUNTER="voltage sag under stall load")]
+    assert cluster(cubes, ("FACT", "COUNTER"))["links"] == []
+
+
+def test_every_cube_lands_in_exactly_one_cluster():
+    from kg_lens_links import all_modes
+    from kg_view import collect
+    s = Substrate()
+    try:
+        cubes = collect(s)
+        for mode, data in all_modes(cubes).items():
+            members = [m for g in data["clusters"] for m in g["members"]]
+            assert sorted(members) == sorted(c["id"] for c in cubes), mode
+    finally:
+        s.close()
+
+
+def test_pending_drafts_are_not_filled_faces():
+    from kg_view import collect
+    s = Substrate()
+    try:
+        cube = next(c for c in collect(s) if c["id"] == "cube/esp32-logic-is-3v3")
+        assert cube["faces"]["COUNTER"]["pending"] is True
+        assert cube["score"] == 0.0
+    finally:
+        s.close()
+
+
 def test_what_is_shows_the_claim():
     r = _ask("what is cube/british-english-everywhere")
     assert "British English everywhere" in r["answer"], r

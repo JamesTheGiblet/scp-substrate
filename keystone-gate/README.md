@@ -1,185 +1,180 @@
 # Keystone Gate
 
-A knowledge system built on top of the SCP substrate. Sibling to Replicant, sharing the same Forge tools.
+Tools built on the SCP substrate for examining claims and checking answers. It shares `sc.db` with the substrate. Sibling to Replicant, using the same Forge tools.
 
-The LLM is the interface only. It handles language, never truth. A rule-based layer defines what the LLM may produce, and a gate enforces it.
+It has four parts:
 
-## Boundary
+- **Cubes:** one claim examined through five lenses, then validated and attested by a person.
+- **Gate:** checks an answer against a contract, and withholds it if it fails.
+- **Claude layer:** optional. Claude rewords answers the substrate has already found.
+- **Page:** a 3D view of the cubes, with editing when run through the local server.
 
-This directory and the substrate share **one database** (`../sc.db`). It does **not** add code to `src/substrate.py`, `src/rules.py`, `src/trust.py`, `src/queries.py`, or `schema.sql`. It calls `from substrate import Substrate` and writes via `Substrate.write()` and `Substrate.link()`.
+The rule behind the gate and the Claude layer is that an LLM handles wording, not facts.
 
-**Substrate provides:**
-- Four foundations: `foundation:cube`, `foundation:lens`, `foundation:cube-face`, `foundation:neighbour`
-- `default-cube` capsule with the corrected 5-lens shape (16% per lens, 20% human validation = 100%)
-- The `Substrate` class, event log, trust engine, crypto, everything the substrate already had
+## Boundary with the substrate
 
-**Keystone Gate provides:**
-- `sc` capsules defining gate contracts (`sc/symlm-answerer`)
-- A gate that refuses answers violating a contract (`kg_gate.py`, `kg_hal.py`)
-- A CLI (`kg`) that runs the gate end-to-end
-- Statistics and listing for KG content (`kg_stats.py`, `kg_router.py`)
-- Cubes: lens faces, human validation, weighted completeness, neighbours (`kg_agent.py`)
-- Rules that propose face fills and neighbour links for a human to accept or reject (`kg_rules.py`)
-- Attestation: a human vouching for a complete cube, which reaches trust as evidence
-- Claude as the language layer, behind its own contract (`kg_llm.py`)
+Keystone Gate adds no code to `src/substrate.py`, `src/rules.py`, `src/queries.py` or `schema.sql`, and its capsules are written through `Substrate.write()` and `Substrate.link()`.
 
-**Not yet built** (see "Status" below):
-- Neighbourhood-router (beyond listing)
+The substrate side knows about cubes in three places: four foundations in `sc.json` (`cube`, `lens`, `cube-face`, `neighbour`), a `default-cube` capsule holding the weights, and read-only cube support in `src/walk_cubes.py` and `src/explain.py`.
+
+Removing Keystone Gate would mean deleting this folder, those foundations, `walk_cubes.py` with its walker and intent, and the cube capsules.
+
+## Cubes
+
+A cube holds a claim. Each of its five lenses is a face, worth 16%, and human validation is worth 20%. The weights come from `default-cube`.
+
+| Lens | Holds |
+|---|---|
+| FACT | What is recorded or known |
+| COUNTER | The case against, or where it fails |
+| OPINION | Your own view |
+| FICTION | A what-if |
+| CONTEXT | Where it came from and why it matters |
+
+The usual path:
+
+1. Lenses arrive as proposals, from rules (`kg cube tick`) or seed files. A proposal changes nothing until a person accepts it. A rejected proposal stays rejected unless its content or rationale changes.
+2. A person writes OPINION.
+3. A person validates the cube. `default-cube` sets a minimum of 2 lenses for this.
+4. At 100%, a person can attest it. This writes an observation of the cube, so `fused_trust` counts it as evidence, moving the score from 0.50 to about 0.73.
+
+Changing a face marks the validation stale and retracts the attestation, until a person validates and attests again.
+
+Bulk accepted faces are recorded as `james (bulk accept, not read line by line)`, and the page shows them dimmed.
 
 ## The gate
 
-The core idea: an LLM cannot be trusted with facts. It handles language only. The gate defines what it may produce - in an `sc` capsule - and refuses any answer that violates the contract.
+An `sc` capsule is a contract: a list of rule names, stored as data. `kg_gate.py` holds a checker function for each name. A rule with no checker counts as a violation, so an unknown rule refuses the answer.
 
-An `sc` capsule is a data-defined contract:
+`sc/symlm-answerer` checks walker answers:
 
-```
+| Rule | Check |
+|---|---|
+| `no_invented_ids` | Slashed IDs and paths must be capsules or appear in stored content |
+| `no_hallucinated_trust` | Trust numbers must match the capsule's real value, within 0.02 |
+| `no_hallucinated_entities` | Hyphenated slugs and multi-word names must be capsules or appear in stored content |
+| `no_llm_prior` | An affirmative answer must carry the real intent that produced it |
 
-sc/symlm-answerer
-kind: sc
-must:
-- no_invented_ids:      every slashed ID or path must be a capsule or in stored content
-- no_hallucinated_trust: every numeric trust score must match trust_now, fused_trust or the stored score
-must_not:
-- no_llm_prior:         an affirmative answer must carry the real intent that produced it
-- no_hallucinated_entities: slugs and multi-word names must be capsules or in stored content
-test_cases:
-- {input: "who is james", expect_pass: true}
-- {input: "who is santa claus", expect_pass: true}
-- {input: "why is scp-claim trusted", expect_pass: true}
-- {input: "where is parse_sentence", expect_pass: true}
+"Stored content" excludes logged chat, so typing a name does not make it pass.
 
-```
+`kg ask` shows an answer only if it passes; otherwise it prints the violations. `scps ask` does not use the gate, and neither does anything else that calls `ask.answer_question` directly.
 
-The gate checks the contract. Every answer that comes through `kg ask "..."` is:
+The gate checks references, not reasoning. A passing answer can still be wrong. It cannot catch a single invented word such as "bigfoot", and `no_llm_prior` shows where an answer came from, not that its words follow from the walk.
 
-1. Produced by the substrate's walker (`ask.answer_question`) or, later, by any LLM
-2. Checked against `sc/symlm-answerer`'s `must` and `must_not` rules
-3. **Shown only if compliance passes** - otherwise withheld and the violations printed
-
-The gate is structure-only by design. It checks that any references in the answer are real. It does not judge whether the reasoning is correct - that's the human's job (the 20% validation in the DataCube model). The gate is the mechanism that makes the human's judgment *trustworthy by construction*: if the gate passed, you know the answer isn't hallucinating references.
-
-What it cannot catch: a bare single invented word ("bigfoot") looks like English, and `no_llm_prior` proves an answer came from a real intent, not that the words follow from the walk. A rule in the contract with no checker fails closed.
-
-Adding a rule = adding a `must` or `must_not` entry to the sc capsule + a checker function in `kg_gate.py`'s `_RULES` dict. Removing a rule = removing both. There's no configuration file, no plugin system. The contract is data; the enforcement is a function.
+To add a rule, add an entry to the `sc` capsule and a checker to `_RULES` in `kg_gate.py`.
 
 ## Claude
 
-`kg ask --claude "<question>"` keeps the rule above: Claude handles language, never truth.
+`kg ask --claude "<question>"` is opt-in, because it sends the question and the walker's answer to the Anthropic API.
 
-1. The walker answers first, and that answer must pass the gate. With no facts, Claude is never called.
-2. Claude rewords the answer. Every claim must quote the exact evidence it rests on.
-3. The gate checks that against `sc/claude-answerer`: quotes must be verbatim, and numbers and capitalised words must come from the evidence or the question.
-4. Any failure or refusal shows the walker's own answer and says why.
+1. The walker answers, and the answer must pass the gate. With no facts, Claude is not called.
+2. Claude rewords it. Each claim must quote the exact evidence it rests on.
+3. `sc/claude-answerer` checks the result: quotes must be verbatim, and numbers and capitalised words must come from the evidence or the question.
+4. Any failure or refusal shows the walker's answer and says why.
 
-It sends the question and the walker's answer to the Anthropic API, so it only runs when asked. Setup: `pip install -r keystone-gate/requirements.txt`, then set `ANTHROPIC_API_KEY`. It uses Claude Opus 5.5 at low effort, with server-side refusal fallback on.
+Setup:
 
-What it cannot catch: a paraphrase that misstates its quote, or a new lowercase word. The gate proves a claim is anchored, not that it means the same thing.
-
-## Layout
-
+```sh
+pip install -r keystone-gate/requirements.txt
 ```
 
-keystone-gate/
-├── README.md          this file
-├── kg                 CLI entry point (executable)
-├── kg_stats.py        count KG capsules in substrate
-├── kg_router.py       list neighbours (no routing logic yet)
-├── kg_agent.py        public face of kg_cube.py and kg_proposals.py
-├── kg_cube.py         cubes: faces, validation, attestation, neighbours
-├── kg_proposals.py    proposals: rules suggest, humans decide
-├── kg_cube_cli.py     kg cube and kg neighbour commands
-├── kg_rules.py        rules that propose fills and neighbours
-├── kg_gate.py         the gate - rules, checks, refusal
-├── kg_llm.py          Claude rewords answers, gated, falls back to the walker
-├── requirements.txt   anthropic SDK, for --claude only
-├── kg_hal.py          HAL - asks the substrate, gates the answer
-├── kg_review.py       guided review of cubes for a person
-├── seed_sc.py         seed sc capsules (create-or-update)
-├── seed_cubes.py      real claims as cubes, lenses as proposals
-├── seed_cubes_pca9685.py  cubes from Adafruit's PCA9685 guide
-└── test_kg_N.py       boundary, gate, cube and proposal tests
+Then set `ANTHROPIC_API_KEY`. It uses Claude Opus 5.5 at low effort, with server-side refusal fallback on, and each call costs a small amount.
 
+This has been tested with a fake client and a mock server, not against the live API. The gate shows that a claim is anchored to a quote, not that the sentence means the same as the quote, and a new lowercase word can still pass.
+
+## The page
+
+```sh
+python keystone-gate/kg cube serve --by james      # edit and add cubes
+python keystone-gate/kg cube view                  # read-only file, build/cubes.html
 ```
 
-## CLI
+Cubes appear as 3D nodes grouped in clusters inside a large cube. Click a cluster to enter it, and a cube to open it. Drag to orbit, scroll to zoom, and press Esc to go back. A grid view lists the same cubes.
+
+**Cluster by** regroups the cubes by tag or by lens. Lens clustering compares each lens only with the same lens on other cubes, and links two cubes that share at least two uncommon words. Thread colour shows which lens. This measures shared vocabulary, so some links are coincidences. Group names are taken from the highest-scoring words and vary in quality, and a single edit can move other cubes between groups.
+
+Under `serve` you can add cubes, write and edit faces, accept or reject drafts, validate and attest. These run the same functions as the CLI. Pending drafts appear hollow and count for nothing, but their text is used for clustering.
+
+The server listens on 127.0.0.1 only. Writes need a token issued when the server starts, and requests naming another host or origin are refused. Do not expose it on a network.
+
+`build/` is ignored by git because the page contains your opinions. The page is a snapshot under `view`, so run the command again to refresh it. The Screenshot button saves the 3D view only, not the text panel.
+
+## Commands
 
 ```
+kg stats                            count cubes, lenses, faces, neighbour pairs
+kg route list                       list all neighbours
+kg ask "<question>"                 gated answer
+kg ask --claude "<question>"        reworded by Claude; uses the Anthropic API
+kg gate check "<question>"          show the rules and the result
+kg gate test                        run the contract's test cases
 
-kg stats                            # count cubes, lenses, cube-faces, neighbour pairs
-kg route list                       # list all neighbours
-kg ask "<question>"                 # ask substrate, gated - refuses if compliance fails
-kg ask --claude "<question>"        # have Claude reword it; uses the Anthropic API
-kg gate check "<question>"          # show rules + pass/reject with violations
-kg gate test                        # run sc capsule's own test_cases
-kg cube new "<content>"             # create a cube (--source, --tag)
-kg cube fill <id> <lens> "<text>"   # fill one lens face
-kg cube validate <id> --by <name>   # record human validation
-kg cube attest <id> --by <name>     # vouch for a complete cube; adds trust evidence
-kg cube review --by <name> [--tag t] # walk through everything that needs a person
-kg cube show <id>                   # faces, validation, completeness
-kg cube list                        # all cubes with scores
-kg cube contradicts <id> <other>    # flag a contradiction
-kg cube tick [id]                   # run rules, creating proposals
-kg cube proposals [id]              # list proposals (--status)
-kg cube accept <proposal> --by <n>  # apply a proposal
-kg cube reject <proposal> --by <n>  # reject it; sticks unless the content or rationale changes
-kg neighbour link <a> <b>           # link two cubes both ways
-kg neighbour list <id>              # list a cube's neighbours
+kg cube new "<content>"             create a cube (--source, --tag)
+kg cube fill <id> <lens> "<text>"   fill one face
+kg cube validate <id> --by <name>   record validation (--note)
+kg cube attest <id> --by <name>     vouch for a complete cube
+kg cube review --by <name>          work through cubes at the terminal (--tag)
+kg cube show <id>                   faces, validation, completeness
+kg cube list                        all cubes with scores
+kg cube view                        write and open the read-only page
+kg cube serve --by <name>           run the editable page (--port, --no-open)
+kg cube contradicts <id> <other>    flag a contradiction
+kg cube tick [id]                   run rules, creating proposals
+kg cube proposals [id]              list proposals (--status)
+kg cube accept <proposal> --by <n>  apply a proposal
+kg cube reject <proposal> --by <n>  reject a proposal (--reason)
 
+kg neighbour link <a> <b>           link two cubes both ways
+kg neighbour list <id>              list a cube's neighbours
 ```
 
-## Usage
+Run these as `python keystone-gate/kg ...`.
 
-```bash
-cd ~/scp-substrate
+## Files
 
-# See the boundary works
-./keystone-gate/kg stats
-./keystone-gate/kg route list
+| File | Purpose |
+|---|---|
+| `kg` | CLI entry point |
+| `kg_cube_cli.py` | `kg cube` and `kg neighbour` commands |
+| `kg_agent.py` | Imports `kg_cube.py` and `kg_proposals.py` as one module |
+| `kg_cube.py` | Cubes, faces, validation, attestation, neighbours |
+| `kg_proposals.py` | Proposals |
+| `kg_rules.py` | Rules that create proposals |
+| `kg_review.py` | Terminal review |
+| `kg_gate.py` | Gate rules and checkers |
+| `kg_hal.py` | Asks the substrate and gates the answer |
+| `kg_llm.py` | Claude layer |
+| `kg_lens_links.py` | Lens links and clusters |
+| `kg_view.py` | Builds the page |
+| `kg_serve.py` | Local server |
+| `view_template.html`, `view_field.js`, `view_edit.js` | The page |
+| `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
+| `seed_sc.py` | Creates and updates `sc` capsules |
+| `seed_cubes.py` | Project claims as draft cubes |
+| `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
+| `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
+| `requirements.txt` | Anthropic SDK, needed only for `--claude` |
+| `support_kg.py`, `test_*.py` | Tests |
 
-# Run the gate's own tests
-./keystone-gate/kg gate test
+## Tests
 
-# Ask gated
-./keystone-gate/kg ask "who is james"
-
-# Inspect a gate decision
-./keystone-gate/kg gate check "why is scp-claim trusted"
-```
-
-Tests
-
-```bash
+```sh
 python tests/run.py
 ```
 
-Tests cover:
+Gate and boundary tests read a temporary copy of `sc.db`, so they cannot write to the live one. The Claude tests use a fake client.
 
-· Boundary: foundations exist, boundary imports work, stats counts content, route list runs
-· DataCube: corrected to 5 lenses + contradicts field
-· Gate: every rule in both directions, fail-closed on unknown rules, logged chat is not grounding
-· Claude: anchored answers pass, and every failure falls back. Uses a fake client, so no network
-· Cubes: completeness, attestation, validation going stale, every edit event-logged
-· Proposals and rules: accept, reject, rejections sticking, decision matching
+Browser behaviour is not covered by the test suite. It has been checked by hand and with scripted runs in Edge.
 
-Boundary and gate tests read a temporary copy of sc.db, so the live database is never written to.
+## Known issues
 
-Status
+- `kg_router.py` only lists neighbours.
+- `view_field.js` is over the project's 400-line rule.
+- `default-cube` rules `unknown_required` and `forward_only_lens_changes` are not enforced.
+- Attestation adds the same trust whatever the reasoning, so "correct" counts the same as a full argument.
 
-Boundary proven. Four foundations in sc.json, projected into sc.db. kg stats and kg route list cross the boundary cleanly.
+## Design decisions
 
-Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (4/4 pass). All tests pass with python tests/run.py.
-
-Cubes working. Cubes hold project claims and hardware notes. Drafts arrive as proposals, with OPINION, validation and attestation left to a human. Completeness is computed and decides attestation eligibility. Changing a face after validation marks the validation stale, so the cube drops out of eligibility until a human validates it again.
-
-Attestation working. kg cube attest writes an observation of the cube, so fused_trust counts it as evidence. It needs a complete cube, and changing a face retracts it. None of the 3 cubes is attested yet: that is a human's call.
-
-Behaviour working. kg cube tick runs five rules that propose fills and neighbours. Nothing applies without a human accept, and rejections stick.
-
-Design decisions, stated
-
-· Single DB, separate program. Keystone Gate shares sc.db with the substrate but never modifies substrate code. This preserves the substrate's stability through another ~15 capability layers. If the boundary breaks, we find out in kg stats before any logic is built.
-· Contract as data, enforcement as code. The sc capsule holds the rules; kg_gate.py holds the checkers. Neither alone can enforce. Both must agree.
-· Structure-only gate. The gate does not judge reasoning. It judges references. That's the correct scope - an automated judge of reasoning is a bigger problem than the one Keystone Gate solves.
-· Four foundations, no schema change. foundation:cube, foundation:lens, foundation:cube-face, foundation:neighbour are capsules in sc.json. schema.sql is unchanged. The gate can be dropped entirely by removing those four rows and the keystone-gate/ directory.
-  
+- **One database, separate program.** The gate can check answers against the substrate directly. The cost is that cube data and substrate data are mixed, and a bad write affects both.
+- **Contract as data, checks as code.** A contract edit alone adds nothing, because a new rule also needs a checker.
+- **Structure-only gate.** Judging reasoning automatically is a harder problem, and would itself need checking. That is left to the person validating.

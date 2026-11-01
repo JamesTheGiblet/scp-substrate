@@ -1,10 +1,6 @@
-REASONING.md
-
----
-
 Reasoning
 
-The substrate can answer four classes of question. None of them uses inference. All of them walk the graph, sum numbers, or apply stored rules.
+The substrate handles six kinds of work, described below. All of them walk the graph, sum numbers, compare words or apply stored rules. None uses logical inference.
 
 ---
 
@@ -44,6 +40,8 @@ effect:    {"relationship": "stale-question", "derive_from": "open-question"}
 
 sequence — condition is {type: "sequence", match, ...}. Matches a run of adjacent parse nodes and reduces them to a new phrase, linked to its parts with has-child. This is how the grammar rules in SymLM fire.
 
+Running it. scps rules writes to sc.db: it adds any derived links and logs them.
+
 Idempotence. Every derivation uses INSERT OR IGNORE on (source, type, target). Re-running the engine produces zero new fires. Events only logged on successful insert.
 
 What it doesn't do. No backward chaining. No negation. No universal quantifiers. No temporal reasoning beyond "age > N". A rule either matches or doesn't, based on the current state of the graph.
@@ -57,7 +55,7 @@ Question it answers: "How much should this be trusted?"
 Three modes:
 
 Parameter trust (trust.compute_all)
-Reads every capsule with foundation:leighton-weight that has numeric n0 and k. Computes n0 * e^(-k * t_days). Writes to trust_scores. Logs trust.computed on change.
+Reads every capsule with foundation:leighton-weight that has numeric n0 and k, except trust/freq/* capsules, which are word counts rather than trust. Computes n0 * e^(-k * t_days). Writes to trust_scores. Logs trust.computed on change.
 
 ```
 trust instance state: {n0: 1.0, k: 0.01, age_days: 0}
@@ -85,7 +83,7 @@ posterior  = Bayesian update(prior, likelihood)
 
 Both prior and likelihood clamped to [1e-3, 1-1e-3] so extreme values don't freeze the posterior.
 
-What it doesn't do. No learning. The sigmoid is fixed; there is no calibration loop adjusting it against ground truth. If observation scores are miscalibrated, the fusion inherits the miscalibration. Fusion is a decision, not an oracle.
+What it doesn't do. No learning. The sigmoid is fixed; there is no calibration loop adjusting it against ground truth. If observation scores are miscalibrated, the fusion inherits the miscalibration. The result is a modelling choice, not a measured probability.
 
 ---
 
@@ -119,7 +117,7 @@ Why is scp-claim trusted?
   → About: everything-is-capsules
 ```
 
-Every line is a query against the substrate. Nothing is hardcoded. Change the threshold in the rule capsule, re-run the rule, re-run why — the narrative changes.
+Each line comes from a query, though the rule it reads is fixed in code as trusted-rule. Change that rule's threshold and re-run it, and the output changes.
 
 What it doesn't do. It walks one specific chain (trust → rule → score → model). A generic "explain this arbitrary fact" would need a graph-walker over all typed links, which is what explain does — but explain produces a different kind of answer (see below).
 
@@ -173,6 +171,28 @@ What it doesn't do. No inference. Everything it says is either in the capsule's 
 
 ---
 
+5. Attestation — a person's judgement as evidence
+
+Question it answers: "Does a person stand behind this cube?"
+
+How: attest() refuses a cube that is not complete. Otherwise it writes an observation with score 1.0 and an observes link to the cube. trust_from_evidence counts that like any other observation, so fused_trust moves from 0.50 to about 0.73.
+
+Changing a face sets the observation's score to 0 and marks it retracted, and marks the validation stale.
+
+What it doesn't do. It records that a person agreed, not how good their reasoning was. Every attested cube gets the same score.
+
+---
+
+6. Lens links — comparing what cubes say
+
+Question it answers: "Which cubes say related things on the same lens?"
+
+How: kg_lens_links.py compares each lens only with the same lens on other cubes, using TF-IDF and cosine similarity. A link needs at least two shared terms and a similarity of at least 0.10, and each cube keeps its strongest three. Clusters come from label propagation over the links. Pending drafts are included.
+
+What it doesn't do. It compares vocabulary, not meaning. Two cubes can share words by coincidence, and two cubes making the same point in different words will not link.
+
+---
+
 Composition — how the modes cooperate
 
 The interesting behaviour is when modes chain. A real example from the substrate:
@@ -195,7 +215,7 @@ The interesting behaviour is when modes chain. A real example from the substrate
 
 Five stages, four subsystems. Each stage reads the substrate; the only writes are in stages 1 and 3. Everything else is traversal and rendering.
 
-That's what "reasoning" means here: composition of walks over a stable graph, not inference over propositions.
+Reasoning here means composing walks over the graph, not inference over propositions.
 
 ---
 

@@ -75,6 +75,32 @@ def cmd_cube_review(args):
           else f"\nReviewed {seen} cube(s).")
 
 
+def cmd_cube_view(args):
+    import webbrowser
+    from kg_view import write_view
+    s = Substrate()
+    result = write_view(s)
+    s.close()
+    print(f"Wrote {result['cubes']} cubes to {result['path']}")
+    if not args.no_open:
+        webbrowser.open(result["path"].as_uri())
+
+
+def cmd_cube_serve(args):
+    import webbrowser
+    from kg_serve import make_server
+    server = make_server(args.by, args.port)
+    url = f"http://127.0.0.1:{server.server_address[1]}/"
+    print(f"Cube Field at {url} (this machine only). Press Ctrl+C to stop.")
+    if not args.no_open:
+        webbrowser.open(url)
+    try:
+        server.serve_forever()
+    except KeyboardInterrupt:
+        print("\nStopped.")
+    server.server_close()
+
+
 def cmd_cube_show(args):
     from kg_agent import show_cube, LENSES
     s = Substrate()

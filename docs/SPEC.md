@@ -15,7 +15,7 @@ A substrate has four kinds of things:
 | **Link** | row in `links` | a typed edge between capsules |
 | **Event** | row in `events` | a record of something that happened |
 
-There is no fifth primitive. Every stored fact is one of these four.
+Every stored fact is one of these four. The `trust_scores` table is a stored copy of a computed value, not a fact in its own right.
 
 ---
 
@@ -126,7 +126,7 @@ capsule.written the capsule {"foundation": "..."}
 capsule.imported the capsule {"source": "<path>"}
 capsule.superseded the old capsule {"new_id": "<id>"}
 capsule.renamed the capsule {"from": "<old id>"}
-capsule.deleted the capsule {"reason": "..."}
+capsule.deleted the capsule {"reason": "..."}, from absorb_repo.py --prune
 capsule.filled the capsule {"from": "placeholder"}
 link.added the source {"type": "...", "target": "..."}
 link.retyped the source {"target": "...", "new_type": "..."}
@@ -142,7 +142,7 @@ Events are the ledger. Nothing in the system reconstructs state from events; the
 
 The substrate has two artifacts that must stay in sync:
 
-· sc.json — the constitution. Human-authored, versioned, single source of truth for foundations.
+· sc.json — the foundations. Human-authored, versioned, single source of truth for foundations.
 · sc.db — the world. Derived from sc.json at startup, plus instances accumulated by user writes.
 
 bootstrap.py is the projection. It is idempotent: run it a hundred times, the DB reaches the same state. It checks for capsules table existence before writing DDL, so it's safe against an existing DB.
@@ -303,14 +303,14 @@ The system is enumerable. Every rule, every word, every classifier, every intent
 - **Bounded** — grammar and lexicon are fixed at any given time and listed in the substrate.
 - **Local** — no network, no external model, one file.
 - **Traceable** — every parse is a tree of `has-child` links; every query is a walk.
-- **Grounded** — every answer comes from the substrate, never from statistical prior.
-- **Deliberate** — behaviour changes only when a human adds, edits, or removes a capsule.
+- **Grounded** — answers are built from substrate content by walkers, not from statistics.
+- **Deliberate** — grammar and intents change when a capsule is edited. Word and rule trust also move with `scps confirm` and `scps reject`.
 
 ### Distinguished from a large language model
 
-A large language model produces plausible text from a distribution over tokens, with no way to trace a given output to its cause. A SymLM produces text from rules the substrate can list, and any output can be traced to the rules and capsules that produced it. A SymLM will never hallucinate; it will fail obviously when it cannot parse or generate. An LLM will produce something plausible; a SymLM will produce something *correct or nothing*.
+A large language model produces text from a distribution over tokens, which makes it fluent and broad but hard to trace to a cause. SymLM builds text from rules that can be listed, so an output can be traced to the rules and capsules behind it.
 
-The two systems are not on the same axis. SymLM is not "smaller" — it is a different mechanism. The correct comparison is not "which is better" but "what do you need?" If you need provenance and explanation, you need a symbolic model. If you need fluency and breadth, you need a statistical one. A substrate like SCP can contain both; at v0.1 it contains one.
+SymLM covers far less. It fails visibly when it cannot parse or match a question, though a walker can still give a wrong answer if a capsule is wrong or an entity is misidentified. The substrate can hold both kinds of system: `kg ask --claude` adds Claude for wording, outside SymLM.
 
 ---
 
@@ -320,6 +320,7 @@ The substrate holds a small inventory of local and remote repositories, plus sym
 
 ### Repo capsule
 
+```
 repo/<owner>/<repo>      (GitHub-absorbed)
 repo/<repo>              (locally-absorbed)
 foundation: knowledge
@@ -406,7 +407,7 @@ Intents are capsules of `kind: input-intent` under `foundation:knowledge`:
 intent/why-trusted       → walker=why_trusted    (backward reasoning)
 intent/verified          → walker=verified       (signature records)
 intent/what-decided      → walker=what_decided   (decisions + rationale)
-intent/what-believe      → walker=what_believe   (cubes, your view, the case against)
+intent/what-believe      → walker=what_believe   (cubes on a topic, or attested cubes)
 intent/what-uses         → walker=what_uses      (tools)
 intent/what-building     → walker=what_building  (projects)
 intent/what-supports     → walker=what_supports  (evidence)
@@ -509,12 +510,12 @@ The gate is not Keystone-Gate-specific. Any application that produces language f
 - Write checkers for each `must` rule
 - Route all output through the gate before rendering
 
-The pattern makes four guarantees:
+What the pattern does and does not do:
 
-1. **Structure is enforced, not hoped for.** Answers that reference imaginary IDs are refused, not cautioned.
-2. **Contracts are data.** A new rule is a capsule edit plus a function. No configuration file, no framework.
-3. **Refusal is complete.** A rejected answer is withheld, not shown with a warning. The gate cannot be ignored by the client.
-4. **The substrate stays untouched.** Gates live in applications, not in `substrate.py`. The substrate absorbs them as data plus a client.
+1. Answers that fail a check are refused, but only on paths that use the gate. `kg ask` does. `scps ask` does not.
+2. Contracts are data, and a new rule also needs a checker function.
+3. A rejected answer is withheld, not shown with a warning.
+4. Gates live in applications, not in `substrate.py`.
 
 ### Gating a real LLM
 
@@ -535,4 +536,35 @@ Keystone Gate is the first implementation of this pattern:
 - `keystone-gate/kg_llm.py` - `ask_claude()` - walker, then Claude, then the gate, with fallback
 - `keystone-gate/kg gate test` - runs the sc capsule's own test cases against the live substrate
 
-The substrate does not need to know the gate exists. The gate does not need to know how the substrate works internally - only that it can query for capsule existence and trust values. That asymmetry is what makes the boundary work.
+The substrate does not depend on the gate. The gate depends on capsule lookups, stored content and trust values.
+
+---
+
+## 16. Cubes
+
+Cubes belong to Keystone Gate and use no new tables. `keystone-gate/README.md` describes how to use them.
+
+### Capsules
+
+| ID | Foundation | Kind | Holds |
+|---|---|---|---|
+| `cube/<slug>` | `foundation:cube` | `cube` | `content`, `source`, `tags`, `contradicts` |
+| `<cube>/face/<LENS>` | `foundation:cube-face` | `cube-face` | `lens`, `content`, `filled_by`, `confidence` |
+| `<cube>/face/human-validation` | `foundation:cube-face` | `cube-face` | `validator`, `note`, optional `stale` |
+| `<cube>/proposal/<n>` | `foundation:knowledge` | `cube-proposal` | `proposal_type`, `status`, `proposed_by`, and the change |
+| `<cube>/attestation` | `foundation:observation` | `attestation` | `score`, `source`, `note`, optional `retracted_because` |
+| `source/<name>` | `foundation:knowledge` | `source-document` | Where a set of cubes came from |
+
+Links: `has-face`, `about`, `classified-by`, `neighbour`, `contradicts`, `observes` (attestation to cube), `derived-from` (cube to source).
+
+### Completeness
+
+`score = lenses_filled * per_lens + human_validation`, with both weights read from `default-cube`: 0.16 and 0.20. A cube is complete at 1.0. A stale validation counts as none. Validation needs `rules.minimum_lenses` filled lenses.
+
+### Attestation
+
+Needs a complete cube. It writes the attestation observation, which `fused_trust` counts as evidence. Changing a face's content sets its score to 0 and records why.
+
+### Browser access
+
+`kg cube serve` runs an HTTP server bound to 127.0.0.1. `POST /api/do` applies one action and returns the updated cubes and clusters. Each write needs the `X-Cube-Token` header, issued when the server starts and embedded in the page. Requests with another `Host` or `Origin` are refused.
