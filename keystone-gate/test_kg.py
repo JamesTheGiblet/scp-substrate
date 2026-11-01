@@ -172,6 +172,125 @@ def test_gate_no_intent_is_compliant():
         s.close()
 
 
+# --- cube tests ----------------------------------------------------------
+def _fresh_kg_substrate():
+    """In-memory substrate with KG foundations + default-cube."""
+    from substrate import Substrate
+    s = Substrate(":memory:")
+    s.conn.executescript(Path("schema.sql").read_text())
+    import json as _j
+    with s.conn:
+        for fid in ["foundation:foundation", "foundation:knowledge",
+                    "foundation:cube", "foundation:lens", "foundation:cube-face",
+                    "foundation:neighbour"]:
+            s.conn.execute(
+                "INSERT INTO capsules (id, foundation, state_json, is_meta) "
+                "VALUES (?, 'foundation:foundation', '{}', 1)", (fid,)
+            )
+        s.conn.execute(
+            "INSERT INTO capsules (id, foundation, state_json) VALUES "
+            "('default-cube', 'foundation:knowledge', ?)",
+            (_j.dumps({"kind": "datacube",
+                       "lenses": ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"]}),)
+        )
+    return s
+
+
+def test_cube_create():
+    from kg_agent import create_cube, completeness
+    s = _fresh_kg_substrate()
+    try:
+        r = create_cube(s, "the sky is blue")
+        assert "error" not in r, r
+        assert r["cube_id"] == "cube/the-sky-is-blue"
+        comp = completeness(s, r["cube_id"])
+        assert comp["score"] == 0.0
+        assert comp["complete"] is False
+    finally:
+        s.close()
+
+
+def test_cube_fill_and_completeness():
+    from kg_agent import create_cube, fill_face, completeness, LENSES
+    s = _fresh_kg_substrate()
+    try:
+        r = create_cube(s, "test cube")
+        cid = r["cube_id"]
+        for i, lens in enumerate(LENSES):
+            fill_face(s, cid, lens, f"content {i}")
+        comp = completeness(s, cid)
+        assert abs(comp["score"] - 0.80) < 1e-6, comp
+        assert len(comp["filled_lenses"]) == 5
+        assert comp["validated"] is False
+        assert comp["complete"] is False
+    finally:
+        s.close()
+
+
+def test_cube_validate_completes():
+    from kg_agent import create_cube, fill_face, validate, completeness, LENSES
+    s = _fresh_kg_substrate()
+    try:
+        r = create_cube(s, "test cube")
+        cid = r["cube_id"]
+        for i, lens in enumerate(LENSES):
+            fill_face(s, cid, lens, f"content {i}")
+        validate(s, cid, "james", note="looks right")
+        comp = completeness(s, cid)
+        assert abs(comp["score"] - 1.00) < 1e-6, comp
+        assert comp["validated"] is True
+        assert comp["complete"] is True
+    finally:
+        s.close()
+
+
+def test_cube_attestation_gating():
+    from kg_agent import create_cube, fill_face, validate, attestation_eligible, LENSES
+    s = _fresh_kg_substrate()
+    try:
+        r = create_cube(s, "test cube")
+        cid = r["cube_id"]
+        assert attestation_eligible(s, cid) is False
+        for i, lens in enumerate(LENSES):
+            fill_face(s, cid, lens, f"content {i}")
+        assert attestation_eligible(s, cid) is False
+        validate(s, cid, "james")
+        assert attestation_eligible(s, cid) is True
+    finally:
+        s.close()
+
+
+def test_cube_invalid_lens():
+    from kg_agent import create_cube, fill_face
+    s = _fresh_kg_substrate()
+    try:
+        r = create_cube(s, "test cube")
+        cid = r["cube_id"]
+        bad = fill_face(s, cid, "NOT_A_LENS", "content")
+        assert "error" in bad
+    finally:
+        s.close()
+
+
+def test_cube_contradicts():
+    from kg_agent import create_cube, set_contradicts
+    s = _fresh_kg_substrate()
+    try:
+        r1 = create_cube(s, "the sky is blue")
+        r2 = create_cube(s, "the sky is green")
+        r = set_contradicts(s, r1["cube_id"], r2["cube_id"], note="colour disagreement")
+        assert "error" not in r
+        c = s.get(r1["cube_id"])
+        assert c["state"]["contradicts"]["other"] == r2["cube_id"]
+        link = s.conn.execute(
+            "SELECT 1 FROM links WHERE source=? AND type='contradicts' AND target=?",
+            (r1["cube_id"], r2["cube_id"]),
+        ).fetchone()
+        assert link
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]

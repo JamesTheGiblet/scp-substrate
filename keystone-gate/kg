@@ -142,6 +142,131 @@ def cmd_gate_test(args):
     return 0 if failed == 0 else 1
 
 
+def cmd_cube_new(args):
+    from kg_agent import create_cube
+    s = Substrate()
+    tags = args.tag or None
+    result = create_cube(s, args.content, source=args.source, tags=tags)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Created: {result['cube_id']}")
+    print(f"  content: {args.content!r}")
+    if args.source:
+        print(f"  source: {args.source}")
+    print()
+    print("Empty cube. Fill lenses with: kg cube fill <id> <lens> \"<content>\"")
+    print(f"Lenses: {', '.join(__import__('kg_agent').LENSES)}")
+
+
+def cmd_cube_fill(args):
+    from kg_agent import fill_face, LENSES
+    lens = args.lens.upper()
+    if lens not in LENSES:
+        print(f"error: invalid lens {lens!r}; must be one of {LENSES}")
+        return
+    s = Substrate()
+    result = fill_face(s, args.cube_id, lens, args.content,
+                       confidence=args.confidence, filled_by="human")
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Filled: {result['face_id']}")
+    print(f"  {lens}: {args.content!r}")
+
+
+def cmd_cube_validate(args):
+    from kg_agent import validate
+    s = Substrate()
+    result = validate(s, args.cube_id, args.by, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Validated: {args.cube_id}")
+    print(f"  validator: {args.by}")
+    if args.note:
+        print(f"  note: {args.note}")
+
+
+def cmd_cube_show(args):
+    from kg_agent import show_cube, LENSES
+    s = Substrate()
+    data = show_cube(s, args.cube_id)
+    s.close()
+    if "error" in data:
+        print(f"error: {data['error']}")
+        return
+
+    print(f"{data['cube_id']}")
+    print(f"  content: {data['content']!r}")
+    if data.get("source"):
+        print(f"  source: {data['source']}")
+    if data.get("tags"):
+        print(f"  tags: {data['tags']}")
+    print(f"  created: {data['created_at']}")
+    if data.get("contradicts"):
+        print(f"  contradicts: {data['contradicts']['other']} ({data['contradicts'].get('note') or 'no note'})")
+    print()
+
+    print("  Faces:")
+    for lens in LENSES:
+        face = data["faces"].get(lens)
+        if face:
+            c = face.get("content", "")
+            if len(c) > 60:
+                c = c[:57] + "..."
+            print(f"    [x] {lens:10} {c}")
+        else:
+            print(f"    [ ] {lens:10} (empty)")
+    print()
+
+    v = data.get("validation")
+    if v:
+        note = v.get("note") or ""
+        if len(note) > 60:
+            note = note[:57] + "..."
+        print(f"  Validated by {v.get('validator')} at {v.get('validated_at')}")
+        if note:
+            print(f"    note: {note}")
+    else:
+        print("  Validation: (not yet validated)")
+    print()
+
+    comp = data["completeness"]
+    print(f"  Completeness: {comp['score']:.2f} ({len(comp['filled_lenses'])}/5 lenses"
+          f"{' + validated' if comp['validated'] else ''})")
+    if comp["missing_lenses"]:
+        print(f"  Missing lenses: {', '.join(comp['missing_lenses'])}")
+    print(f"  Attestation eligible: {'YES' if comp['complete'] else 'NO'}")
+
+
+def cmd_cube_list(args):
+    from kg_agent import list_cubes
+    s = Substrate()
+    cubes = list_cubes(s)
+    s.close()
+    if not cubes:
+        print("No cubes yet.")
+        return
+    for c in cubes:
+        marker = "[complete]" if c["complete"] else "[incomplete]"
+        print(f"  {c['id']:45} {c['score']:.2f} {marker}")
+
+
+def cmd_cube_contradicts(args):
+    from kg_agent import set_contradicts
+    s = Substrate()
+    result = set_contradicts(s, args.cube_id, args.other_id, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"{result['cube_id']} contradicts {result['contradicts']}")
+
+
 def main():
     ap = argparse.ArgumentParser(prog="kg", description="Keystone Gate CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -167,6 +292,41 @@ def main():
 
     sp_test = sp_sub.add_parser("test", help="run the sc capsule's test cases")
     sp_test.set_defaults(func=cmd_gate_test)
+
+    sp = sub.add_parser("cube", help="cube operations")
+    sp_sub = sp.add_subparsers(dest="cube_cmd", required=True)
+
+    sp_new = sp_sub.add_parser("new", help="create a new cube")
+    sp_new.add_argument("content")
+    sp_new.add_argument("--source", default=None)
+    sp_new.add_argument("--tag", action="append", default=None)
+    sp_new.set_defaults(func=cmd_cube_new)
+
+    sp_fill = sp_sub.add_parser("fill", help="fill one lens face")
+    sp_fill.add_argument("cube_id")
+    sp_fill.add_argument("lens")
+    sp_fill.add_argument("content")
+    sp_fill.add_argument("--confidence", type=float, default=None)
+    sp_fill.set_defaults(func=cmd_cube_fill)
+
+    sp_val = sp_sub.add_parser("validate", help="record human validation")
+    sp_val.add_argument("cube_id")
+    sp_val.add_argument("--by", required=True)
+    sp_val.add_argument("--note", default=None)
+    sp_val.set_defaults(func=cmd_cube_validate)
+
+    sp_show = sp_sub.add_parser("show", help="show cube state")
+    sp_show.add_argument("cube_id")
+    sp_show.set_defaults(func=cmd_cube_show)
+
+    sp_list = sp_sub.add_parser("list", help="list all cubes")
+    sp_list.set_defaults(func=cmd_cube_list)
+
+    sp_con = sp_sub.add_parser("contradicts", help="flag cube as contradicting another")
+    sp_con.add_argument("cube_id")
+    sp_con.add_argument("other_id")
+    sp_con.add_argument("--note", default=None)
+    sp_con.set_defaults(func=cmd_cube_contradicts)
 
     args = ap.parse_args()
     args.func(args)
