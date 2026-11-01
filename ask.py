@@ -37,6 +37,11 @@ def classify_intent(s, text):
 # --- entity extraction ---------------------------------------------------
 def extract_entity(s, text, intent):
     """Find the most likely substrate ID the question is about."""
+    # Direct ID match first — handles paths like repo/owner/name, file/owner/name/path.py
+    for word in re.findall(r"[a-z0-9_./-]+", text.lower()):
+        if "/" in word and len(word) >= 5 and s.get(word):
+            return word
+
     tokens = [t for t in re.findall(r"[a-z0-9]+", text.lower()) if len(t) >= 2]
 
     SKIP_PREFIXES = ("lex/", "typo/", "alias/", "corpus/")
