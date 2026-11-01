@@ -34,7 +34,7 @@ A cube holds a claim. Each of its five lenses is a face, worth 16%, and human va
 The usual path:
 
 1. Lenses arrive as proposals, from rules (`kg cube tick`) or seed files. A proposal changes nothing until a person accepts it. A rejected proposal stays rejected unless its content or rationale changes.
-2. A person writes OPINION.
+2. A person writes OPINION, or accepts or rewrites a suggested draft. Drafts from `seed_opinions.py` are Claude's suggestions.
 3. A person validates the cube. `default-cube` sets a minimum of 2 lenses for this.
 4. At 100%, a person can attest it. This writes an observation of the cube, so `fused_trust` counts it as evidence, moving the score from 0.50 to about 0.73.
 
@@ -147,10 +147,13 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_lens_links.py` | Lens links and clusters |
 | `kg_view.py` | Builds the page |
 | `kg_serve.py` | Local server |
-| `view_template.html`, `view_field.js`, `view_edit.js` | The page |
+| `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
+| `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
+| `view_field_world.js`, `view_field_draw.js`, `view_field_move.js` | The 3D view: layout, drawing, moving around |
 | `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
 | `seed_sc.py` | Creates and updates `sc` capsules |
 | `seed_cubes.py` | Project claims as draft cubes |
+| `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals. They are not your views until accepted |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
 | `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
 | `requirements.txt` | Anthropic SDK, needed only for `--claude` |
@@ -169,7 +172,6 @@ Browser behaviour is not covered by the test suite. It has been checked by hand 
 ## Known issues
 
 - `kg_router.py` only lists neighbours.
-- `view_field.js` is over the project's 400-line rule.
 - `default-cube` rules `unknown_required` and `forward_only_lens_changes` are not enforced.
 - Attestation adds the same trust whatever the reasoning, so "correct" counts the same as a full argument.
 

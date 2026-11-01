@@ -77,20 +77,24 @@ def test_new_cube_returns_fresh_clusters():
 def test_filling_a_face_replaces_its_draft():
     with _Server() as srv:
         cid = "cube/esp32-logic-is-3v3"
-        status, reply = srv.post({"action": "fill", "cube_id": cid, "lens": "COUNTER", "content": "my own words"})
+        status, reply = srv.post({"action": "fill", "cube_id": cid, "lens": "OPINION", "content": "my own words"})
         assert status == 200, reply
         cube = next(c for c in reply["cubes"] if c["id"] == cid)
-        assert cube["faces"]["COUNTER"]["content"] == "my own words"
-        assert "pending" not in cube["faces"]["COUNTER"]
+        assert cube["faces"]["OPINION"]["content"] == "my own words"
+        assert "pending" not in cube["faces"]["OPINION"]
 
 
 def test_accept_validate_and_attest_flow_through_the_rules():
     with _Server() as srv:
         cid = "cube/torque-falls-with-arm-length"
         assert srv.post({"action": "attest", "cube_id": cid})[0] == 400
-        cube = next(c for c in srv.post({"action": "fill", "cube_id": cid, "lens": "OPINION", "content": "yes"})[1]["cubes"] if c["id"] == cid)
-        for lens in ("FACT", "COUNTER", "FICTION", "CONTEXT"):
-            assert srv.post({"action": "accept", "proposal_id": cube["faces"][lens]["proposal_id"]})[0] == 200
+        from kg_view import collect
+        s = Substrate()
+        try:
+            cube = next(c for c in collect(s) if c["id"] == cid)
+        finally:
+            s.close()
+        assert srv.post({"action": "accept", "proposal_id": cube["faces"]["OPINION"]["proposal_id"]})[0] == 200
         assert srv.post({"action": "validate", "cube_id": cid, "note": "holds"})[0] == 200
         status, reply = srv.post({"action": "attest", "cube_id": cid})
         assert status == 200, reply

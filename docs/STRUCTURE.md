@@ -167,7 +167,7 @@ python tests/run.py runs everything.
 
 - The test_substrate_N.py files use :memory: SQLite databases with small fixtures.
 - The keystone-gate tests use :memory: fixtures and a temporary copy of sc.db, so they cannot write to the live one.
-- test_house_rules.py fails if a Python file passes 400 lines or an exception is silently swallowed. It does not check JavaScript.
+- test_house_rules.py fails if a code or page file passes 400 lines, or a Python exception is silently swallowed.
 
 The test files split by size, so numbered files are not grouped by topic.
 

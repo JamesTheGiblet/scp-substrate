@@ -132,7 +132,7 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 | `src/` | Substrate, engines, crypto, SymLM, walkers |
 | `scripts/` | Bootstrap, keys, importers, indexers, vocabulary tools |
 | `seeds/` | Scripts that create starting capsules. Most are create-only, so capsules are authoritative after the first run |
-| `tests/` | `run.py` runs every test file. `test_house_rules.py` checks the line limit and silent exception handlers on Python files |
+| `tests/` | `run.py` runs every test file. `test_house_rules.py` checks the line limit on code and page files, and silent exception handlers |
 | `keystone-gate/` | Cubes, gate, Claude layer, page and server |
 | `docs/` | `SPEC.md`, `STRUCTURE.md`, `REASONING.md`, and signed SCP documents |
 
@@ -155,7 +155,6 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 ## Known issues
 
 - `kg ask --claude` has been tested with a fake client and a mock server, not against the live API.
-- `keystone-gate/view_field.js` is about 690 lines, over the project's 400-line rule. The line-limit test checks Python only.
 - `default-cube` rules `unknown_required` and `forward_only_lens_changes` are not enforced.
 - `kg_router.py` only lists neighbours. There is no routing.
 - Foundation schemas are descriptive. Nothing validates capsule state against them.

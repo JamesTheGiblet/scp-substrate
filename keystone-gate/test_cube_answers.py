@@ -192,8 +192,8 @@ def test_pending_drafts_are_not_filled_faces():
     s = Substrate()
     try:
         cube = next(c for c in collect(s) if c["id"] == "cube/esp32-logic-is-3v3")
-        assert cube["faces"]["COUNTER"]["pending"] is True
-        assert cube["score"] == 0.0
+        assert cube["faces"]["OPINION"]["pending"] is True
+        assert abs(cube["score"] - 0.64) < 1e-6, cube["score"]
     finally:
         s.close()
 

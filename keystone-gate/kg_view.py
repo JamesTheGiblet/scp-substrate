@@ -14,8 +14,13 @@ from trust import fused_trust
 
 _here = Path(__file__).resolve().parent
 TEMPLATE = _here / "view_template.html"
-FIELD = _here / "view_field.js"
-EDIT = _here / "view_edit.js"
+PARTS = {name: _here / file for name, file in {
+    "/*STYLE*/": "view_style.css",
+    "/*GRID*/": "view_grid.js",
+    "/*BAR*/": "view_bar.js",
+    "/*EDIT*/": "view_edit.js",
+}.items()}
+FIELD = [_here / f"view_field_{part}.js" for part in ("world", "draw", "move")]
 OUTPUT = _here.parent / "build" / "cubes.html"
 
 
@@ -107,8 +112,10 @@ def render(cubes, api=None):
     """Fill the template. '<' is escaped so stored text cannot end the script."""
     data = _safe_json(cubes)
     page = TEMPLATE.read_text(encoding="utf-8")
-    page = page.replace("/*FIELD*/", FIELD.read_text(encoding="utf-8"))
-    page = page.replace("/*EDIT*/", EDIT.read_text(encoding="utf-8"))
+    field = "\n".join(p.read_text(encoding="utf-8") for p in FIELD)
+    page = page.replace("/*FIELD*/", "(() => {\n" + field + "})();")
+    for marker, path in PARTS.items():
+        page = page.replace(marker, path.read_text(encoding="utf-8"))
     page = page.replace("/*API*/null", _safe_json(api))
     modes = all_modes(cubes) if cubes and "faces" in cubes[0] else {}
     return page.replace("/*CUBES*/[]", data).replace("/*MODES*/{}", _safe_json(modes))
