@@ -54,7 +54,7 @@ A foundation is a capsule with:
 · foundation = "foundation:foundation" (self-hosting)
 · state containing at least name; optionally description, schema, allowed_links
 
-The 14 foundations loaded at v0.1.0:
+The 18 foundations loaded at v0.1.0:
 
 ```
 foundation:foundation
@@ -71,6 +71,10 @@ foundation:rule
 foundation:token
 foundation:phrase
 foundation:sentence
+foundation:cube
+foundation:lens
+foundation:cube-face
+foundation:neighbour
 ```
 
 Foundations are the invariant of the system. Adding one is a versioned edit to sc.json; removing one soft-deprecates it (state.deprecated = true) but does not delete it, since instances may still reference it.
@@ -157,7 +161,7 @@ Breaking this rule — e.g. editing sc.db directly, or hand-writing a foundation
 
 7. Schema stability
 
-schema.sql has not changed since the initial JSON → SQLite migration. Seven layers of engines and features have been added on top without altering it:
+schema.sql has changed once since the initial JSON → SQLite migration: the never-populated rules table was dropped, logged as a schema.migration event. These layers were added on top without any other change:
 
 1. Rule engine
 2. Trust engine
@@ -252,7 +256,7 @@ The document's foundation is foundation:knowledge, because a declaration is a cl
 
 11. Invariants
 
-1. schema.sql unchanged since initial migration
+1. schema.sql changes only by reviewed, logged migration
 2. Foundations are written only by bootstrap.py; Substrate.write() rejects foundation:* IDs
 3. Foundation removal is soft (deprecation), never hard delete
 4. Links are unique triples; UNIQUE(source, type, target) enforces
@@ -285,9 +289,9 @@ There are no weights. There is no training loop. There is no probability distrib
 | Dimension | Count | Where |
 |---|---|---|
 | Grammar rules | 12 | `grammar/*` capsules |
-| Lexicon | 441 | `lex/*` capsules |
-| Feature-tagged nouns | ~90 | `lex/*` capsules with `features.animacy` |
-| Input classifiers | 12 | `classifier/*` capsules |
+| Lexicon | 478 | `lex/*` capsules |
+| Feature-tagged nouns | 97 | `lex/*` capsules with `features.animacy` |
+| Input classifiers | 11 | `classifier/*` capsules |
 | Query intents | 12 | `intent/*` capsules |
 | Corpus sentences | 24 | `corpus/*` capsules |
 
@@ -414,12 +418,13 @@ intent/what-files        → walker=what_files     (files in a repo)
 
 ```
 
-Each intent has a `phrases` list. Classification does substring matching (`any_phrase` mode). Order matters: intents are sorted by id, and earlier ids win on ambiguity.
+Each intent has a `phrases` list. Classification does substring matching on `phrases` (`any_phrase` mode), then tries any regexes in the optional `patterns` list. Order matters: intents are sorted by id, and earlier ids win on ambiguity.
 
 ### Entity extraction
 
 `extract_entity` finds the substrate ID the question is *about*:
 1. Direct ID match: any token that contains `/` and exists in the substrate (`repo/owner/name`, `file/owner/name/path`)
+   A hyphenated token that is the last segment of exactly one ID also matches (`james-gilbert-v1`)
 2. 3-, 2-, 1-word compound slugs scanning left-to-right
 3. `state.text` or `state.name` match across lexical entries
 4. Intent-specific fallback (`james` for `what_uses`, `james` for `what_building`, `None` for `what_decided` and `list_kind`)
@@ -477,17 +482,23 @@ version:     <semver>
 
 ```
 
-An `sc` capsule is data. It contains no executable logic. It describes what a gated function may produce. Adding a rule means adding a `must` entry and a matching checker in the gate implementation.
+An `sc` capsule is data. It contains no executable logic. It describes what a gated function may produce. Adding a rule means adding a `must` or `must_not` entry and a matching checker in the gate implementation.
 
-The first seeded contract is `sc/symlm-answerer`, with two `must` rules:
-- `no_invented_ids` - every capsule ID mentioned in an answer must exist in the substrate
-- `no_hallucinated_trust` - every numeric trust score must match `trust_now(id).score` or `fused_trust(id).posterior` within tolerance
+The first seeded contract is `sc/symlm-answerer`. `must` and `must_not` entries are both enforced:
+- `no_invented_ids` - every slashed ID or path mentioned must be a capsule or appear in stored content
+- `no_hallucinated_trust` - every numeric trust score must match `trust_now(id).score`, `fused_trust(id).posterior` or the capsule's stored `score`, within 0.02
+- `no_hallucinated_entities` - every hyphenated slug and multi-word name must be a capsule or appear in stored content
+- `no_llm_prior` - an affirmative answer must carry the real `input-intent` that produced it. Explicit refusals (`ok: false`) pass
+
+"Stored content" means whole terms found in capsule state, link types and kind names. Logged chat (`conversation-turn`, `unparsed-input`) does not count: typing a name does not make it real.
+
+Two limits are deliberate. A bare single word ("bigfoot") cannot be told apart from English, so it is out of reach. `no_llm_prior` checks provenance, not whether the words follow from the walk.
 
 ### The gate check
 
 The gate is a function `check(substrate, {input, result}, sc) -> {ok, violations[]}`. Where `result` is the output of `ask.answer_question` (or of any LLM, later).
 
-For each `must` entry in the `sc` capsule, a checker function runs. If any checker produces violations, `ok = false` and the answer is refused. If no checker exists for a rule name, the gate fails closed - an unknown rule is a violation, never a pass.
+For each `must` and `must_not` entry in the `sc` capsule, a checker function runs. If any checker produces violations, `ok = false` and the answer is refused. If no checker exists for a rule name, the gate fails closed - an unknown rule is a violation, never a pass.
 
 ### The pattern, generalised
 
@@ -509,7 +520,7 @@ The pattern makes four guarantees:
 Keystone Gate is the first implementation of this pattern:
 
 - `keystone-gate/seed_sc.py` - seeds `sc/symlm-answerer`
-- `keystone-gate/kg_gate.py` - `check()`, `_check_no_invented_ids`, `_check_no_hallucinated_trust`
+- `keystone-gate/kg_gate.py` - `check()` and one `_check_*` function per rule
 - `keystone-gate/kg_hal.py` - `ask_gated()` - asks substrate, gates answer, returns pass or reject
 - `keystone-gate/kg gate test` - runs the sc capsule's own test cases against the live substrate
 

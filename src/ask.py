@@ -26,12 +26,19 @@ def classify_intent(s, text):
     for cid, state in _intents(s):
         for phrase in state.get("phrases", []):
             if phrase.lower() in text_lower:
-                return {
-                    "id": cid,
-                    "walker": state["walker"],
-                    "requires_entity": state.get("requires_entity", False),
-                }
+                return _intent_match(cid, state)
+        for pattern in state.get("patterns", []):
+            if re.search(pattern, text_lower):
+                return _intent_match(cid, state)
     return None
+
+
+def _intent_match(cid, state):
+    return {
+        "id": cid,
+        "walker": state["walker"],
+        "requires_entity": state.get("requires_entity", False),
+    }
 
 
 # --- entity extraction ---------------------------------------------------
@@ -41,6 +48,17 @@ def extract_entity(s, text, intent):
     for word in re.findall(r"[a-z0-9_./-]+", text.lower()):
         if "/" in word and len(word) >= 5 and s.get(word):
             return word
+
+    # A hyphenated word may be the last segment of one namespaced ID:
+    # james-gilbert-v1 -> giblets-forge/author/james-gilbert-v1
+    for word in re.findall(r"[a-z0-9_.-]+", text.lower()):
+        if "-" in word and not s.get(word):
+            rows = s.conn.execute(
+                "SELECT id FROM capsules WHERE substr(id, -?) = ?",
+                (len(word) + 1, "/" + word),
+            ).fetchall()
+            if len(rows) == 1:
+                return rows[0]["id"]
 
     tokens = [t for t in re.findall(r"[a-z0-9]+", text.lower()) if len(t) >= 2]
 

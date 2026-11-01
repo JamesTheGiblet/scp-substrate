@@ -12,16 +12,18 @@ Filters:
 
 POS tagging: heuristic (context + morphology), flagged by confidence.
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import argparse
 import ast
 import json
 import re
 from collections import Counter, defaultdict
-from pathlib import Path
 
 from substrate import Substrate
 
-ROOT = Path(__file__).parent
+ROOT = Path(__file__).resolve().parent.parent
 
 # Words that signal the *next* word's POS
 DET = {"the", "a", "an", "this", "that", "these", "those", "my", "your",
@@ -94,7 +96,8 @@ def collect_sources(s):
             pass
 
     # 3. Python docstrings + comments
-    for path in sorted(ROOT.glob("*.py")):
+    code = [p for d in ("src", "scripts", "seeds", "tests") for p in (ROOT / d).glob("*.py")]
+    for path in sorted(code, key=lambda p: p.name):
         try:
             src = path.read_text()
             # Docstrings via ast

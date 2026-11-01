@@ -5,10 +5,10 @@ import sys
 from pathlib import Path
 
 # Two paths:
-#   parent.parent → find `substrate`
+#   parent.parent/src → find `substrate`
 #   parent        → find `kg_*` siblings
 _here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here.parent))
+sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 
 from substrate import Substrate
@@ -230,7 +230,10 @@ def cmd_cube_show(args):
         note = v.get("note") or ""
         if len(note) > 60:
             note = note[:57] + "..."
-        print(f"  Validated by {v.get('validator')} at {v.get('validated_at')}")
+        label = "Validation STALE, was" if v.get("stale") else "Validated"
+        print(f"  {label} by {v.get('validator')} at {v.get('validated_at')}")
+        if v.get("stale"):
+            print(f"    because: {v.get('stale_because')}")
         if note:
             print(f"    note: {note}")
     else:

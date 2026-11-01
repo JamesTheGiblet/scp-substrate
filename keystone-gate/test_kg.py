@@ -1,18 +1,42 @@
 """Boundary tests for Keystone Gate.
 
-These tests use the real DB (not :memory:) because the boundary is the whole
+These tests use real data (not :memory:) because the boundary is the whole
 point — we're proving Keystone Gate can query the substrate's foundations.
+They run on a temporary copy of sc.db, so they can never write to the live one.
 """
+import atexit
+import os
+import shutil
+import sqlite3
 import sys
+import tempfile
 from pathlib import Path
 
 _here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here.parent))
+sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 
+import substrate
 from substrate import Substrate
 from kg_stats import stats, count_by_foundation
 from kg_router import route_list
+
+
+def _use_copy_of_live_db():
+    """Point every default Substrate() at a throwaway backup of sc.db."""
+    tmp = tempfile.mkdtemp(prefix="kg-test-")
+    atexit.register(shutil.rmtree, tmp, ignore_errors=True)
+    path = os.path.join(tmp, "sc.db")
+    live = sqlite3.connect(_here.parent / "sc.db")
+    copy = sqlite3.connect(path)
+    with copy:
+        live.backup(copy)
+    live.close()
+    copy.close()
+    substrate.Substrate.__init__.__defaults__ = (path,)
+
+
+_use_copy_of_live_db()
 
 
 def test_foundations_exist():
@@ -45,14 +69,21 @@ def test_default_cube_corrected():
         s.close()
 
 
-def test_stats_returns_zeros_initially():
-    """kg_stats runs and returns sensible zeros on an unpopulated KG."""
+def test_stats_counts_kg_content():
+    """kg_stats counts what is stored, with neighbours as link pairs."""
     st = stats()
     assert set(st.keys()) == {"cubes", "lenses", "cube_faces", "neighbours"}
-    # All zero at boundary-proven-but-not-populated state
     for k, v in st.items():
         assert isinstance(v, int), f"{k} should be int, got {type(v)}"
         assert v >= 0, f"{k} should be non-negative"
+    s = Substrate()
+    try:
+        links = s.conn.execute(
+            "SELECT COUNT(*) FROM links WHERE type='neighbour'"
+        ).fetchone()[0]
+    finally:
+        s.close()
+    assert st["neighbours"] * 2 == links, (st, links)
 
 
 def test_route_list_runs():
@@ -172,12 +203,119 @@ def test_gate_no_intent_is_compliant():
         s.close()
 
 
+def _gate(result):
+    """Run a fake answer through the live contract. Returns violated rule names."""
+    from kg_gate import check, load_sc
+    s = Substrate()
+    try:
+        answer = {"ok": True, "intent": "intent/what-is", "entity": None, **result}
+        compliance = check(s, {"input": "test", "result": answer}, sc=load_sc(s))
+        return [v["rule"] for v in compliance["violations"]]
+    finally:
+        s.close()
+
+
+def test_gate_rejects_invented_slug():
+    assert "no_hallucinated_entities" in _gate({"summary": "santa-claus is real."})
+
+
+def test_gate_rejects_invented_name():
+    assert "no_hallucinated_entities" in _gate({"summary": "Written by Santa Claus."})
+
+
+def test_gate_rejects_uppercase_slashed_id():
+    assert "no_invented_ids" in _gate({"summary": "see repo/Fake/Thing"})
+
+
+def test_gate_rejects_fragment_of_real_id():
+    """Grounding matches whole terms, not substrings of stored content."""
+    assert "no_invented_ids" in _gate({"summary": "see repo/jamesthegiblet"})
+
+
+def test_gate_rejects_whole_number_trust():
+    r = _gate({"summary": "scp-claim has trust 2.0", "entity": "scp-claim"})
+    assert "no_hallucinated_trust" in r, r
+
+
+def test_gate_rejects_capitalised_trust_label():
+    r = _gate({"summary": "Trust: 0.1234", "entity": "scp-claim"})
+    assert "no_hallucinated_trust" in r, r
+
+
+def test_gate_rejects_answer_without_provenance():
+    r = _gate({"summary": "The sky is blue.", "intent": None})
+    assert r == ["no_llm_prior"], r
+
+
+def test_gate_rejects_fake_intent():
+    r = _gate({"summary": "The sky is blue.", "intent": "intent/made-up"})
+    assert "no_llm_prior" in r, r
+
+
+def test_gate_allows_refusal_without_intent():
+    r = _gate({"ok": False, "summary": "I couldn't identify that.", "intent": None})
+    assert r == [], r
+
+
+def test_gate_passes_file_paths_in_stored_content():
+    """A where-is answer cites paths, which are not capsule IDs."""
+    from kg_gate import check, load_sc
+    s = Substrate()
+    try:
+        path = s.conn.execute(
+            "SELECT json_extract(state_json, '$.path') AS p FROM capsules "
+            "WHERE json_extract(state_json, '$.kind') = 'source-file' "
+            "  AND json_extract(state_json, '$.path') LIKE '%/%' LIMIT 1"
+        ).fetchone()["p"]
+        answer = {"ok": True, "intent": "intent/where-is", "entity": None,
+                  "summary": "1 match(es):", "detail": f"  {path}:10 [function] x"}
+        compliance = check(s, {"input": "x", "result": answer}, sc=load_sc(s))
+        assert compliance["ok"], compliance
+    finally:
+        s.close()
+
+
+def test_is_x_signed_finds_namespaced_capsule():
+    from ask import answer_question
+    s = Substrate()
+    try:
+        r = answer_question(s, "is james-gilbert-v1 signed")
+        assert r["entity"] == "giblets-forge/author/james-gilbert-v1", r
+        assert r["intent"] == "intent/verified", r
+        assert answer_question(s, "what is signed-not-trusted")["intent"] == "intent/what-is"
+    finally:
+        s.close()
+
+
+def test_gate_ignores_logged_chat_as_grounding():
+    """Typing a name into `scps talk` must not make it real."""
+    from kg_gate import _grounded_terms
+    s = Substrate()
+    try:
+        s.write({"id": "turn/fake", "foundation": "foundation:knowledge",
+                 "state": {"kind": "conversation-turn", "text": "ask about zaphod-beeblebrox"}})
+        assert "zaphod-beeblebrox" not in _grounded_terms(s)
+    finally:
+        s.close()
+
+
+def test_gate_fails_closed_on_unknown_must_not_rule():
+    from kg_gate import check
+    s = Substrate()
+    try:
+        sc = {"name": "t", "must": [], "must_not": [{"rule": "not_a_rule"}]}
+        compliance = check(s, {"input": "x", "result": {"ok": True, "summary": "x"}}, sc=sc)
+        assert not compliance["ok"], compliance
+    finally:
+        s.close()
+
+
 # --- cube tests ----------------------------------------------------------
 def _fresh_kg_substrate():
     """In-memory substrate with KG foundations + default-cube."""
     from substrate import Substrate
     s = Substrate(":memory:")
-    s.conn.executescript(Path("schema.sql").read_text())
+    s.conn.executescript((_here.parent / "schema.sql").read_text())
     import json as _j
     with s.conn:
         for fid in ["foundation:foundation", "foundation:knowledge",
@@ -256,6 +394,88 @@ def test_cube_attestation_gating():
         assert attestation_eligible(s, cid) is False
         validate(s, cid, "james")
         assert attestation_eligible(s, cid) is True
+    finally:
+        s.close()
+
+
+def _complete_cube(s):
+    from kg_agent import create_cube, fill_face, validate, LENSES
+    cid = create_cube(s, "test cube")["cube_id"]
+    for lens in LENSES:
+        fill_face(s, cid, lens, f"{lens} content")
+    validate(s, cid, "james")
+    return cid
+
+
+def test_face_change_voids_validation():
+    from kg_agent import fill_face, attestation_eligible, completeness, show_cube
+    s = _fresh_kg_substrate()
+    try:
+        cid = _complete_cube(s)
+        assert attestation_eligible(s, cid) is True
+        fill_face(s, cid, "FACT", "something else entirely")
+        comp = completeness(s, cid)
+        assert comp["validated"] is False and comp["complete"] is False, comp
+        assert abs(comp["score"] - 0.80) < 1e-6, comp
+        assert attestation_eligible(s, cid) is False
+        assert "FACT changed" in show_cube(s, cid)["validation"]["stale_because"]
+    finally:
+        s.close()
+
+
+def test_refill_with_same_content_keeps_validation():
+    from kg_agent import fill_face, attestation_eligible
+    s = _fresh_kg_substrate()
+    try:
+        cid = _complete_cube(s)
+        fill_face(s, cid, "FACT", "FACT content")
+        assert attestation_eligible(s, cid) is True
+    finally:
+        s.close()
+
+
+def test_revalidation_clears_stale():
+    from kg_agent import fill_face, validate, attestation_eligible
+    s = _fresh_kg_substrate()
+    try:
+        cid = _complete_cube(s)
+        fill_face(s, cid, "FACT", "changed")
+        validate(s, cid, "james", note="reviewed the change")
+        assert attestation_eligible(s, cid) is True
+    finally:
+        s.close()
+
+
+def test_agent_edits_are_event_logged():
+    """Updates go through Substrate.write, so nothing skips the ledger."""
+    from kg_agent import (create_cube, fill_face, validate, propose_face,
+                          reject_proposal, set_contradicts)
+    s = _fresh_kg_substrate()
+
+    def written(cid):
+        return s.conn.execute(
+            "SELECT COUNT(*) FROM events WHERE event_type='capsule.written' AND capsule_id=?",
+            (cid,),
+        ).fetchone()[0]
+
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        b = create_cube(s, "cube b")["cube_id"]
+        face = fill_face(s, a, "FACT", "one")["face_id"]
+        fill_face(s, a, "FACT", "two")
+        assert written(face) == 2
+
+        v = validate(s, a, "james")["face_id"]
+        validate(s, a, "james")
+        assert written(v) == 2
+
+        pid = propose_face(s, a, "COUNTER", "x", proposed_by="r")["proposal_id"]
+        propose_face(s, a, "COUNTER", "y", proposed_by="r")
+        reject_proposal(s, pid, "james")
+        assert written(pid) == 3
+
+        set_contradicts(s, a, b)
+        assert written(a) == 2
     finally:
         s.close()
 
@@ -460,7 +680,7 @@ def _seed_decision_substrate():
     from substrate import Substrate
     import json as _j
     s = Substrate(":memory:")
-    s.conn.executescript(Path("schema.sql").read_text())
+    s.conn.executescript((_here.parent / "schema.sql").read_text())
     with s.conn:
         for fid in ["foundation:foundation", "foundation:knowledge",
                     "foundation:cube", "foundation:lens", "foundation:cube-face",
@@ -588,6 +808,108 @@ def test_rejection_sticks():
         # No pending proposals
         pending = list_proposals(s, cube_id=cid, status="pending")
         assert len(pending) == 0
+    finally:
+        s.close()
+
+
+def test_rejection_sticks_past_nine_proposals():
+    """Proposal 10 sorts before proposal 9 as text; rejections must not care."""
+    from kg_agent import create_cube, propose_face, reject_proposal
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        for i in range(11):
+            pid = propose_face(s, cid, "FACT", f"v{i}", proposed_by="rule")["proposal_id"]
+            reject_proposal(s, pid, rejected_by="james")
+        for i in range(11):
+            r = propose_face(s, cid, "FACT", f"v{i}", proposed_by="rule")
+            assert r.get("skipped") is True, (i, r)
+    finally:
+        s.close()
+
+
+def test_earlier_rejection_still_sticks():
+    """A rejected, B rejected, A proposed again: A stays rejected."""
+    from kg_agent import create_cube, propose_face, reject_proposal
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        for content in ("a", "b"):
+            pid = propose_face(s, cid, "FACT", content, proposed_by="rule")["proposal_id"]
+            reject_proposal(s, pid, rejected_by="james")
+        assert propose_face(s, cid, "FACT", "a", proposed_by="rule").get("skipped") is True
+    finally:
+        s.close()
+
+
+def test_neighbour_rejection_sticks_both_directions():
+    from kg_agent import create_cube, propose_neighbour, reject_proposal, list_proposals
+    s = _fresh_kg_substrate()
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        b = create_cube(s, "cube b")["cube_id"]
+        pid = propose_neighbour(s, a, b, proposed_by="rule")["proposal_id"]
+        reject_proposal(s, pid, rejected_by="james")
+        assert propose_neighbour(s, a, b, proposed_by="rule").get("skipped") is True
+        assert propose_neighbour(s, b, a, proposed_by="rule").get("skipped") is True
+        assert list_proposals(s, status="pending") == []
+    finally:
+        s.close()
+
+
+def test_neighbour_rejection_allows_new_rationale():
+    from kg_agent import create_cube, propose_neighbour, reject_proposal
+    s = _fresh_kg_substrate()
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        b = create_cube(s, "cube b")["cube_id"]
+        pid = propose_neighbour(s, a, b, proposed_by="rule",
+                                rationale="shared tags: ['x']")["proposal_id"]
+        reject_proposal(s, pid, rejected_by="james")
+        r = propose_neighbour(s, b, a, proposed_by="rule",
+                              rationale="shared tags: ['x', 'y']")
+        assert r.get("status") == "created", r
+    finally:
+        s.close()
+
+
+def test_neighbour_proposal_idempotent_both_directions():
+    from kg_agent import create_cube, propose_neighbour, list_proposals
+    s = _fresh_kg_substrate()
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        b = create_cube(s, "cube b")["cube_id"]
+        r1 = propose_neighbour(s, a, b, proposed_by="rule")
+        r2 = propose_neighbour(s, b, a, proposed_by="rule")
+        assert r1["proposal_id"] == r2["proposal_id"], (r1, r2)
+        assert len(list_proposals(s, status="pending")) == 1
+    finally:
+        s.close()
+
+
+def test_decision_match_ignores_shared_english_words():
+    from kg_rules import _find_decision_for
+    s = _seed_decision_substrate()
+    try:
+        for text in ("the code ran on a single machine", "a mode of transport",
+                     "my file is lost", "I chose pizza for dinner"):
+            assert _find_decision_for(s, text) is None, text
+        assert _find_decision_for(s, "SQLite decision")["id"] == "chose-sqlite"
+        assert _find_decision_for(s, "a single file database")["id"] == "chose-sqlite"
+    finally:
+        s.close()
+
+
+def test_decision_match_picks_strongest_overlap():
+    from kg_rules import _find_decision_for
+    s = _seed_decision_substrate()
+    try:
+        s.write({"id": "chose-rust", "foundation": "foundation:knowledge",
+                 "state": {"kind": "decision", "decision": "Rust for the firmware toolchain"}})
+        s.write({"id": "chose-rust-builds", "foundation": "foundation:knowledge",
+                 "state": {"kind": "decision", "decision": "Rust for firmware toolchain builds"}})
+        hit = _find_decision_for(s, "rust firmware toolchain builds")
+        assert hit["id"] == "chose-rust-builds", hit
     finally:
         s.close()
 

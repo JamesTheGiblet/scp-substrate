@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Generate an Ed25519 keypair and save it under ~/.config/scp/keys/."""
-import json, os, sys
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+import json, os
 from signing import generate_keypair
 
 KEYS_DIR = Path.home() / ".config" / "scp" / "keys"

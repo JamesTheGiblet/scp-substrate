@@ -3,7 +3,7 @@
 import hashlib, json, sqlite3, sys
 from pathlib import Path
 
-ROOT       = Path(__file__).parent
+ROOT       = Path(__file__).resolve().parent.parent
 SC_JSON    = ROOT / "sc.json"
 SC_DB      = ROOT / "sc.db"
 SCHEMA_SQL = ROOT / "schema.sql"

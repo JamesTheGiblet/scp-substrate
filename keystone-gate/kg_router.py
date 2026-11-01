@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 _here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here.parent))
+sys.path.insert(0, str(_here.parent / "src"))
 
 
 def route_list():

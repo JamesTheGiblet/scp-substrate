@@ -6,7 +6,7 @@ The LLM is the interface only. It handles language, never truth. A rule-based la
 
 ## Boundary
 
-This directory and the substrate share **one database** (`../sc.db`). It does **not** add code to `substrate.py`, `rules.py`, `trust.py`, `queries.py`, or `schema.sql`. It calls `from substrate import Substrate` and writes via `Substrate.write()` and `Substrate.link()`.
+This directory and the substrate share **one database** (`../sc.db`). It does **not** add code to `src/substrate.py`, `src/rules.py`, `src/trust.py`, `src/queries.py`, or `schema.sql`. It calls `from substrate import Substrate` and writes via `Substrate.write()` and `Substrate.link()`.
 
 **Substrate provides:**
 - Four foundations: `foundation:cube`, `foundation:lens`, `foundation:cube-face`, `foundation:neighbour`
@@ -18,12 +18,12 @@ This directory and the substrate share **one database** (`../sc.db`). It does **
 - A gate that refuses answers violating a contract (`kg_gate.py`, `kg_hal.py`)
 - A CLI (`kg`) that runs the gate end-to-end
 - Statistics and listing for KG content (`kg_stats.py`, `kg_router.py`)
+- Cubes: lens faces, human validation, weighted completeness, neighbours (`kg_agent.py`)
+- Rules that propose face fills and neighbour links for a human to accept or reject (`kg_rules.py`)
 
 **Not yet built** (see "Status" below):
-- Cube-as-agent (fills own faces, finds related cubes)
 - Neighbourhood-router (beyond listing)
-- Weighted completeness scoring
-- Attestation gating (completeness gates trust)
+- Attestation feeding trust (eligibility is computed but nothing consumes it)
 - Real LLM interface (currently tests the substrate's own walker)
 
 ## The gate
@@ -37,27 +37,30 @@ An `sc` capsule is a data-defined contract:
 sc/symlm-answerer
 kind: sc
 must:
-- no_invented_ids:      every capsule ID mentioned must exist in the substrate
-- no_hallucinated_trust: every numeric trust score must match trust_now or fused_trust
+- no_invented_ids:      every slashed ID or path must be a capsule or in stored content
+- no_hallucinated_trust: every numeric trust score must match trust_now, fused_trust or the stored score
 must_not:
-- no_llm_prior:         must not claim knowledge not present in the substrate
-- no_hallucinated_entities: must not invent entity names or file paths
+- no_llm_prior:         an affirmative answer must carry the real intent that produced it
+- no_hallucinated_entities: slugs and multi-word names must be capsules or in stored content
 test_cases:
 - {input: "who is james", expect_pass: true}
 - {input: "who is santa claus", expect_pass: true}
 - {input: "why is scp-claim trusted", expect_pass: true}
+- {input: "where is parse_sentence", expect_pass: true}
 
 ```
 
 The gate checks the contract. Every answer that comes through `kg ask "..."` is:
 
 1. Produced by the substrate's walker (`ask.answer_question`) or, later, by any LLM
-2. Checked against `sc/symlm-answerer`'s `must` rules
+2. Checked against `sc/symlm-answerer`'s `must` and `must_not` rules
 3. **Shown only if compliance passes** - otherwise withheld and the violations printed
 
 The gate is structure-only by design. It checks that any references in the answer are real. It does not judge whether the reasoning is correct - that's the human's job (the 20% validation in the DataCube model). The gate is the mechanism that makes the human's judgment *trustworthy by construction*: if the gate passed, you know the answer isn't hallucinating references.
 
-Adding a rule = adding a `must` entry to the sc capsule + a checker function in `kg_gate.py`'s `_RULES` dict. Removing a rule = removing both. There's no configuration file, no plugin system. The contract is data; the enforcement is a function.
+What it cannot catch: a bare single invented word ("bigfoot") looks like English, and `no_llm_prior` proves an answer came from a real intent, not that the words follow from the walk. A rule in the contract with no checker fails closed.
+
+Adding a rule = adding a `must` or `must_not` entry to the sc capsule + a checker function in `kg_gate.py`'s `_RULES` dict. Removing a rule = removing both. There's no configuration file, no plugin system. The contract is data; the enforcement is a function.
 
 ## Layout
 
@@ -67,8 +70,9 @@ keystone-gate/
 ├── README.md          this file
 ├── kg                 CLI entry point (executable)
 ├── kg_stats.py        count KG capsules in substrate
-├── kg_router.py       list neighbours (stub-level: no routing logic yet)
-├── kg_agent.py        cube-as-agent (empty; not yet built)
+├── kg_router.py       list neighbours (no routing logic yet)
+├── kg_agent.py        cubes: faces, validation, neighbours, proposals
+├── kg_rules.py        rules that propose fills and neighbours
 ├── kg_gate.py         the gate - rules, checks, refusal
 ├── kg_hal.py          HAL - asks the substrate, gates the answer
 ├── seed_sc.py         seed sc capsules (create-or-update)
@@ -80,11 +84,23 @@ keystone-gate/
 
 ```
 
-kg stats                            # count cubes, lenses, cube-faces, neighbours
+kg stats                            # count cubes, lenses, cube-faces, neighbour pairs
 kg route list                       # list all neighbours
 kg ask "<question>"                 # ask substrate, gated - refuses if compliance fails
 kg gate check "<question>"          # show rules + pass/reject with violations
 kg gate test                        # run sc capsule's own test_cases
+kg cube new "<content>"             # create a cube (--source, --tag)
+kg cube fill <id> <lens> "<text>"   # fill one lens face
+kg cube validate <id> --by <name>   # record human validation
+kg cube show <id>                   # faces, validation, completeness
+kg cube list                        # all cubes with scores
+kg cube contradicts <id> <other>    # flag a contradiction
+kg cube tick [id]                   # run rules, creating proposals
+kg cube proposals [id]              # list proposals (--status)
+kg cube accept <proposal> --by <n>  # apply a proposal
+kg cube reject <proposal> --by <n>  # reject it; sticks unless the content or rationale changes
+kg neighbour link <a> <b>           # link two cubes both ways
+kg neighbour list <id>              # list a cube's neighbours
 
 ```
 
@@ -113,19 +129,25 @@ Tests
 python keystone-gate/test_kg.py
 ```
 
-11 tests covering:
+57 tests covering:
 
-· Boundary: foundations exist, boundary imports work, stats returns zeros, route list runs
+· Boundary: foundations exist, boundary imports work, stats counts content, route list runs
 · DataCube: corrected to 5 lenses + contradicts field
-· Gate: sc capsule exists, passes good answers, rejects invented IDs, rejects invented entities, rejects hallucinated trust, passes when no intent matched
+· Gate: every rule in both directions, fail-closed on unknown rules, logged chat is not grounding
+· Cubes: completeness, attestation, validation going stale, every edit event-logged
+· Proposals and rules: accept, reject, rejections sticking, decision matching
+
+Boundary and gate tests read a temporary copy of sc.db, so the live database is never written to.
 
 Status
 
 Boundary proven. Four foundations in sc.json, projected into sc.db. kg stats and kg route list cross the boundary cleanly.
 
-Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (3/3 pass). 11 KG tests pass. 70 substrate tests pass - untouched.
+Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (4/4 pass). 57 KG tests pass. 70 substrate tests pass - untouched.
 
-Cube logic pending. kg_agent.py is empty. There are 0 cubes in the substrate. The weighted completeness model is data on default-cube but not computed anywhere. Attestation gating is not implemented.
+Cubes working. There are 3 cubes in the substrate, all complete. Completeness is computed and decides attestation eligibility. Changing a face after validation marks the validation stale, so the cube drops out of eligibility until a human validates it again. Nothing consumes eligibility yet.
+
+Behaviour working. kg cube tick runs five rules that propose fills and neighbours. Nothing applies without a human accept, and rejections stick.
 
 Design decisions, stated
 

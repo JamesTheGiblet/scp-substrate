@@ -14,7 +14,7 @@ Question it answers: "Given what's in the substrate, what can be derived?"
 
 How: iterate every capsule with foundation:rule. For each, evaluate its condition against the current graph. If it matches, insert a derived link and log a rule.fired event.
 
-Three condition types:
+Four condition types:
 
 pair (default) — condition is {source, target}. Fires if both capsules exist, derives a link from source to target with effect.relationship as the type.
 
@@ -41,6 +41,8 @@ condition: {"type": "kind_and_age", "kind": "question",
 effect:    {"relationship": "stale-question", "derive_from": "open-question"}
 → scp --stale-question--> granular-event-types
 ```
+
+sequence — condition is {type: "sequence", match, ...}. Matches a run of adjacent parse nodes and reduces them to a new phrase, linked to its parts with has-child. This is how the grammar rules in SymLM fire.
 
 Idempotence. Every derivation uses INSERT OR IGNORE on (source, type, target). Re-running the engine produces zero new fires. Events only logged on successful insert.
 

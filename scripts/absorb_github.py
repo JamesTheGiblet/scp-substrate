@@ -7,21 +7,22 @@ Two API calls per repo:
 No content download. File identity is the git blob SHA from the tree response.
 
 Usage:
-  python absorb_github.py owner/repo --dry-run
-  python absorb_github.py owner/repo --write
+  python scripts/absorb_github.py owner/repo --dry-run
+  python scripts/absorb_github.py owner/repo --write
 
 Auth (recommended): export GITHUB_TOKEN=ghp_...
   Without token: 60 req/hour (30 repos).
   With token:    5,000 req/hour (2,500 repos).
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import argparse
 import json
 import os
-import sys
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
-from pathlib import Path
 
 from absorb_repo import (
     SKIP_DIRS, SKIP_FILE_EXTS, LANG_BY_EXT,

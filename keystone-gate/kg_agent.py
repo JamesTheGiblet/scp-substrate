@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here.parent))
+sys.path.insert(0, str(_here.parent / "src"))
 
 from substrate import Substrate
 
@@ -30,6 +30,15 @@ def _slugify(text):
 
 def _now():
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _update_state(s, capsule_id, state):
+    """Replace a capsule's state through Substrate.write, so the event is logged."""
+    s.write({
+        "id": capsule_id,
+        "foundation": s.get(capsule_id)["foundation"],
+        "state": state,
+    })
 
 
 def create_cube(s, content, source=None, tags=None, cube_id=None):
@@ -84,11 +93,9 @@ def fill_face(s, cube_id, lens, content, confidence=None, filled_by="human"):
     }
     existing = s.get(face_id)
     if existing:
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(state), face_id),
-            )
+        _update_state(s, face_id, state)
+        if existing["state"].get("content") != content:
+            _mark_validation_stale(s, cube_id, lens)
     else:
         s.write({
             "id": face_id,
@@ -98,6 +105,15 @@ def fill_face(s, cube_id, lens, content, confidence=None, filled_by="human"):
         s.link(cube_id, "has-face", face_id)
         s.link(face_id, "about", cube_id)
     return {"face_id": face_id, "lens": lens}
+
+
+def _mark_validation_stale(s, cube_id, lens):
+    """A human validated what the cube said then. Changing a face voids that."""
+    face_id = f"{cube_id}/face/human-validation"
+    face = s.get(face_id)
+    if face:
+        _update_state(s, face_id, {**face["state"], "stale": True,
+                                   "stale_because": f"{lens} changed at {_now()}"})
 
 
 def validate(s, cube_id, validator, note=None):
@@ -116,11 +132,7 @@ def validate(s, cube_id, validator, note=None):
     }
     existing = s.get(face_id)
     if existing:
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(state), face_id),
-            )
+        _update_state(s, face_id, state)
     else:
         s.write({
             "id": face_id,
@@ -141,11 +153,7 @@ def set_contradicts(s, cube_id, other_cube_id, note=None):
         return {"error": f"other cube {other_cube_id} not found"}
     new_state = dict(c["state"])
     new_state["contradicts"] = {"other": other_cube_id, "note": note, "set_at": _now()}
-    with s.conn:
-        s.conn.execute(
-            "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-            (json.dumps(new_state), cube_id),
-        )
+    _update_state(s, cube_id, new_state)
     if not s.conn.execute(
         "SELECT 1 FROM links WHERE source=? AND type='contradicts' AND target=?",
         (cube_id, other_cube_id),
@@ -172,7 +180,7 @@ def completeness(s, cube_id):
         st = json.loads(r["state_json"])
         lens = st.get("lens")
         if lens == "HUMAN_VALIDATION":
-            validated = True
+            validated = not st.get("stale")
         elif lens in LENSES:
             filled.append(lens)
 
@@ -286,50 +294,36 @@ def list_neighbours(s, cube_id):
 # and leaves the cube unchanged.
 #
 # Proposals are idempotent per (cube, lens) for face type and per
-# (cube, other_cube) for neighbour type. Running the same rule twice does
+# unordered cube pair for neighbour type. Running the same rule twice does
 # not create duplicate proposals — it updates the pending one in place.
 
 
-def _find_pending_face_proposal(s, cube_id, lens):
-    row = s.conn.execute(
-        "SELECT id FROM capsules WHERE "
-        "  json_extract(state_json, '$.kind') = 'cube-proposal' AND "
-        "  json_extract(state_json, '$.proposal_type') = 'face' AND "
-        "  json_extract(state_json, '$.cube_id') = ? AND "
-        "  json_extract(state_json, '$.lens') = ? AND "
-        "  json_extract(state_json, '$.status') = 'pending'",
-        (cube_id, lens),
-    ).fetchone()
-    return row["id"] if row else None
-
-
-def _find_pending_neighbour_proposal(s, cube_id, other_cube_id):
-    row = s.conn.execute(
-        "SELECT id FROM capsules WHERE "
-        "  json_extract(state_json, '$.kind') = 'cube-proposal' AND "
-        "  json_extract(state_json, '$.proposal_type') = 'neighbour' AND "
-        "  json_extract(state_json, '$.cube_id') = ? AND "
-        "  json_extract(state_json, '$.other_cube_id') = ? AND "
-        "  json_extract(state_json, '$.status') = 'pending'",
-        (cube_id, other_cube_id),
-    ).fetchone()
-    return row["id"] if row else None
-
-
-def _find_existing_face_proposal(s, cube_id, lens):
-    """Return most recent proposal for (cube, lens) regardless of status."""
-    row = s.conn.execute(
+def _face_proposals(s, cube_id, lens):
+    """Return every proposal for (cube, lens), any status."""
+    rows = s.conn.execute(
         "SELECT id, state_json FROM capsules WHERE "
         "  json_extract(state_json, '$.kind') = 'cube-proposal' AND "
         "  json_extract(state_json, '$.proposal_type') = 'face' AND "
         "  json_extract(state_json, '$.cube_id') = ? AND "
-        "  json_extract(state_json, '$.lens') = ? "
-        "ORDER BY id DESC LIMIT 1",
+        "  json_extract(state_json, '$.lens') = ?",
         (cube_id, lens),
-    ).fetchone()
-    if not row:
-        return None
-    return {"id": row["id"], **json.loads(row["state_json"])}
+    ).fetchall()
+    return [{"id": r["id"], **json.loads(r["state_json"])} for r in rows]
+
+
+def _neighbour_proposals(s, cube_id, other_cube_id):
+    """Return every proposal for the pair, either direction, any status."""
+    rows = s.conn.execute(
+        "SELECT id, state_json FROM capsules WHERE "
+        "  json_extract(state_json, '$.kind') = 'cube-proposal' AND "
+        "  json_extract(state_json, '$.proposal_type') = 'neighbour' AND "
+        "  ((json_extract(state_json, '$.cube_id') = ? AND "
+        "    json_extract(state_json, '$.other_cube_id') = ?) OR "
+        "   (json_extract(state_json, '$.cube_id') = ? AND "
+        "    json_extract(state_json, '$.other_cube_id') = ?))",
+        (cube_id, other_cube_id, other_cube_id, cube_id),
+    ).fetchall()
+    return [{"id": r["id"], **json.loads(r["state_json"])} for r in rows]
 
 
 def _next_proposal_id(s, cube_id):
@@ -351,30 +345,29 @@ def propose_face(s, cube_id, lens, content, proposed_by, rationale=None, confide
     if existing_face:
         return {"skipped": True, "reason": "lens already filled", "lens": lens}
 
-    existing = _find_existing_face_proposal(s, cube_id, lens)
-    if existing:
-        # Rejection sticks: if previously rejected with identical content, skip.
-        # If previously rejected but content differs, allow a new proposal
-        # (the rule has new information the human hasn't seen yet).
-        if existing.get("status") == "rejected" and existing.get("content") == content:
+    proposals = _face_proposals(s, cube_id, lens)
+
+    # Rejection sticks: if ever rejected with identical content, skip.
+    # If rejected but content differs, allow a new proposal
+    # (the rule has new information the human hasn't seen yet).
+    for p in proposals:
+        if p.get("status") == "rejected" and p.get("content") == content:
             return {"skipped": True,
                     "reason": "previously rejected with same content",
                     "lens": lens,
-                    "proposal_id": existing["id"]}
-        if existing.get("status") == "pending":
-            new_state = dict(existing)
+                    "proposal_id": p["id"]}
+
+    for p in proposals:
+        if p.get("status") == "pending":
+            new_state = dict(p)
             del new_state["id"]
             new_state["content"] = content
             new_state["rationale"] = rationale
             new_state["confidence"] = confidence
             new_state["proposed_by"] = proposed_by
             new_state["proposed_at"] = _now()
-            with s.conn:
-                s.conn.execute(
-                    "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                    (json.dumps(new_state), existing["id"]),
-                )
-            return {"proposal_id": existing["id"], "lens": lens, "status": "updated"}
+            _update_state(s, p["id"], new_state)
+            return {"proposal_id": p["id"], "lens": lens, "status": "updated"}
 
     pid = _next_proposal_id(s, cube_id)
     s.write({
@@ -398,7 +391,7 @@ def propose_face(s, cube_id, lens, content, proposed_by, rationale=None, confide
 
 
 def propose_neighbour(s, cube_id, other_cube_id, proposed_by, rationale=None):
-    """Propose linking two cubes as neighbours. Idempotent on (cube, other_cube)."""
+    """Propose linking two cubes as neighbours. Idempotent on the pair."""
     if not s.get(cube_id):
         return {"error": f"cube {cube_id} not found"}
     if not s.get(other_cube_id):
@@ -414,19 +407,27 @@ def propose_neighbour(s, cube_id, other_cube_id, proposed_by, rationale=None):
     if existing_link:
         return {"skipped": True, "reason": "neighbour link already exists"}
 
-    existing_pid = _find_pending_neighbour_proposal(s, cube_id, other_cube_id)
-    if existing_pid:
-        existing = s.get(existing_pid)
-        new_state = dict(existing["state"])
-        new_state["rationale"] = rationale
-        new_state["proposed_by"] = proposed_by
-        new_state["proposed_at"] = _now()
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(new_state), existing_pid),
-            )
-        return {"proposal_id": existing_pid, "other_cube_id": other_cube_id, "status": "updated"}
+    proposals = _neighbour_proposals(s, cube_id, other_cube_id)
+
+    # Rejection sticks: if ever rejected for the same rationale, skip, whichever
+    # cube the rule runs from. A new rationale (more shared tags) is new
+    # information the human hasn't seen yet.
+    for p in proposals:
+        if p.get("status") == "rejected" and p.get("rationale") == rationale:
+            return {"skipped": True,
+                    "reason": "previously rejected with same rationale",
+                    "other_cube_id": other_cube_id,
+                    "proposal_id": p["id"]}
+
+    for p in proposals:
+        if p.get("status") == "pending":
+            new_state = dict(p)
+            del new_state["id"]
+            new_state["rationale"] = rationale
+            new_state["proposed_by"] = proposed_by
+            new_state["proposed_at"] = _now()
+            _update_state(s, p["id"], new_state)
+            return {"proposal_id": p["id"], "other_cube_id": other_cube_id, "status": "updated"}
 
     pid = _next_proposal_id(s, cube_id)
     s.write({
@@ -496,11 +497,7 @@ def accept_proposal(s, proposal_id, accepted_by):
     new_state["accepted_by"] = accepted_by
     new_state["accepted_at"] = _now()
     new_state["applied"] = applied
-    with s.conn:
-        s.conn.execute(
-            "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-            (json.dumps(new_state), proposal_id),
-        )
+    _update_state(s, proposal_id, new_state)
     return {"proposal_id": proposal_id, "status": "accepted", "applied": applied}
 
 
@@ -518,9 +515,5 @@ def reject_proposal(s, proposal_id, rejected_by, reason=None):
     new_state["rejected_by"] = rejected_by
     new_state["rejected_at"] = _now()
     new_state["rejection_reason"] = reason
-    with s.conn:
-        s.conn.execute(
-            "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-            (json.dumps(new_state), proposal_id),
-        )
+    _update_state(s, proposal_id, new_state)
     return {"proposal_id": proposal_id, "status": "rejected"}

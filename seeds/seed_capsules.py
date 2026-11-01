@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 """Seed 11 useful capsules + 19 links. Idempotent — re-running writes nothing new."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import json
 from substrate import Substrate
 

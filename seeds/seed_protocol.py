@@ -1,4 +1,7 @@
 """Seed the Social Protocol Stack as capsules. Create-only."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from substrate import Substrate
 
 CAPSULES = [

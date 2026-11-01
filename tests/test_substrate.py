@@ -1,8 +1,11 @@
-"""Regression suite. Run: python test_substrate.py"""
-import json
+"""Regression suite. Run: python tests/test_substrate.py"""
 import sys
-import traceback
 from pathlib import Path
+ROOT = Path(__file__).resolve().parent.parent
+for _d in ("src", "scripts", "seeds"):
+    sys.path.insert(0, str(ROOT / _d))
+import json
+import traceback
 
 from substrate import Substrate
 from signing import generate_keypair, sign, verify, canonicalise
@@ -18,7 +21,7 @@ def hx(s): return bytes.fromhex(s)
 def fresh_substrate():
     """In-memory DB with minimal fixtures. Never touches sc.db."""
     s = Substrate(":memory:")
-    s.conn.executescript(Path("schema.sql").read_text())
+    s.conn.executescript((ROOT / "schema.sql").read_text())
     with s.conn:
         s.conn.execute("""INSERT INTO capsules (id, foundation, state_json, is_meta)
             VALUES ('foundation:foundation', 'foundation:foundation', '{}', 1)""")
@@ -44,7 +47,7 @@ def fresh_parse_fixture():
     from seed_lexicon import LEXICON
     from seed_grammar import GRAMMAR
     s = Substrate(":memory:")
-    s.conn.executescript(Path("schema.sql").read_text())
+    s.conn.executescript((ROOT / "schema.sql").read_text())
     with s.conn:
         s.conn.execute(
             "INSERT INTO capsules (id, foundation, state_json, is_meta) "
@@ -1019,7 +1022,7 @@ def test_import_person():
     from pathlib import Path
     from import_person import import_person
     s = Substrate(":memory:")
-    s.conn.executescript(Path("schema.sql").read_text())
+    s.conn.executescript((ROOT / "schema.sql").read_text())
     with s.conn:
         for fid in ["foundation:foundation", "foundation:knowledge"]:
             s.conn.execute(
@@ -1071,7 +1074,7 @@ def test_import_circadian_phases():
     from pathlib import Path
     from import_circadian import import_circadian
     s = Substrate(":memory:")
-    s.conn.executescript(Path("schema.sql").read_text())
+    s.conn.executescript((ROOT / "schema.sql").read_text())
     with s.conn:
         for fid in ["foundation:foundation", "foundation:knowledge"]:
             s.conn.execute(

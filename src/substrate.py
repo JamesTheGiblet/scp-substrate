@@ -3,7 +3,7 @@ from pathlib import Path
 
 class Substrate:
     def __init__(self, db_path=None):
-        self.db_path = db_path or str(Path(__file__).parent / "sc.db")
+        self.db_path = db_path or str(Path(__file__).resolve().parent.parent / "sc.db")
         self.conn = sqlite3.connect(self.db_path)
         self.conn.row_factory = sqlite3.Row
         self.conn.execute("PRAGMA foreign_keys = ON")

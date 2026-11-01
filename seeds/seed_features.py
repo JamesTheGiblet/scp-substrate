@@ -1,4 +1,7 @@
 """Tag nouns with animacy. Create-or-update. Idempotent."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import json
 from substrate import Substrate
 

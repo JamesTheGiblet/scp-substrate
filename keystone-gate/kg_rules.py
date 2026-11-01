@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 
 _here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here.parent))
+sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 
 from kg_agent import LENSES, propose_face, propose_neighbour
@@ -38,6 +38,7 @@ _STOP = {
     "even", "still", "more", "most", "less", "least", "then", "than",
     "into", "onto", "upon", "your", "some", "many", "much", "very",
     "over", "under", "through", "about", "above", "below",
+    "chose", "choose", "chosen", "decide", "decided", "decision",
 }
 
 
@@ -51,8 +52,11 @@ def _find_substrate_capsule_by_text(s, text, kind=None):
 
     Match rules, in order:
       1. Whole field is a substring of the text (exact phrase)
-      2. Any significant 4+ char word from the field appears in the text
-         (token overlap - narrows on domain words, not generic English)
+      2. Token overlap: a significant word from the capsule's ID appears in
+         the text, or at least two from the field do. One shared field word
+         ("file", "mode") is ordinary English and proves nothing.
+
+    Exact phrases win; otherwise the capsule with the most overlap.
     """
     query = "SELECT id, state_json FROM capsules WHERE foundation = 'foundation:knowledge'"
     params = []
@@ -62,9 +66,11 @@ def _find_substrate_capsule_by_text(s, text, kind=None):
     rows = s.conn.execute(query, params).fetchall()
     text_l = text.lower()
     text_words = _tokens(text_l)
+    best, best_overlap = None, 0
 
     for r in rows:
         st = json.loads(r["state_json"])
+        id_overlap = _tokens(r["id"]) & text_words
         for field in ("text", "name", "claim", "statement", "decision", "question"):
             v = st.get(field)
             if not isinstance(v, str):
@@ -74,10 +80,11 @@ def _find_substrate_capsule_by_text(s, text, kind=None):
             if v_l in text_l:
                 return {"id": r["id"], "state": st}
             # Rule 2: token overlap
-            v_words = _tokens(v_l)
-            if v_words & text_words:
-                return {"id": r["id"], "state": st}
-    return None
+            overlap = _tokens(v_l) & text_words
+            if (id_overlap or len(overlap) >= 2) and len(overlap | id_overlap) > best_overlap:
+                best = {"id": r["id"], "state": st}
+                best_overlap = len(overlap | id_overlap)
+    return best
 
 
 def _find_decision_for(s, text):

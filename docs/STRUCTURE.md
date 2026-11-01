@@ -1,9 +1,3 @@
-STRUCTURE.md
-
-Here it is, verbatim:
-
----
-
 Structure
 
 What's here, why, and how it fits.
@@ -15,41 +9,41 @@ Directory
 ```
 ~/scp-substrate/
 ├── README.md              entry point
-├── SPEC.md                substrate specification (this repo's)
-├── STRUCTURE.md           this file
-├── REASONING.md           how rules / trust / why / explain work
-│
+├── scps                   CLI
 ├── schema.sql             DDL — the shape
 ├── sc.json                foundations — the constitution
 ├── sc.db                  instances, links, events — the world
 │
-├── substrate.py           Substrate class, DB access, decay UDF
-├── ed25519.py             Ed25519 primitive (own, RFC 8032)
-├── signing.py             sign / verify / canonicalise / did:key
+├── src/                   everything importable
+│   ├── substrate.py       Substrate class, DB access, decay UDF
+│   ├── ed25519.py         Ed25519 primitive (own, RFC 8032)
+│   ├── signing.py         sign / verify / canonicalise / did:key
+│   ├── rules.py           rule engine (4 condition types)
+│   ├── trust.py           trust engine (parameter, evidence, fusion)
+│   ├── queries.py         read-only queries
+│   ├── why.py             backward reasoning (why is X trusted?)
+│   ├── explain.py         forward reasoning (what is X?)
+│   └── parse, generate, corpus, analysis, protocol,
+│       feedback, talk, ask   SymLM language layer
 │
-├── rules.py               rule engine (3 condition types)
-├── trust.py               trust engine (parameter, evidence, fusion)
-├── queries.py             read-only queries
+├── scripts/               run by hand
+│   ├── bootstrap.py       project sc.json into sc.db
+│   ├── keygen.py          generate Ed25519 keypair
+│   ├── sign_doc.py        sign an SCP document
+│   ├── import_scp.py      SCP document ingest (also import_person, import_circadian)
+│   ├── absorb_repo.py     index a local repo (also absorb_github)
+│   └── fill_styles.py, extract_vocab.py, learn_frequencies.py
 │
-├── why.py                 backward reasoning (why is X trusted?)
-├── explain.py             forward reasoning (what is X?)
+├── seeds/                 create-only capsule seeds, reconcile_seeds.py
+├── tests/                 test_substrate.py, 70 tests, in-memory fixtures
 │
-├── import_scp.py          SCP document ingest
-├── fill_styles.py         SCP inherits placeholder resolution
-├── seed_capsules.py       one-shot seed of 11 context capsules
-├── keygen.py              generate Ed25519 keypair
-├── sign_doc.py            sign an SCP document
-├── bootstrap.py           project sc.json into sc.db
-│
-├── scps                   CLI (10 subcommands)
-├── test_substrate.py      21 tests, in-memory fixtures
-│
-├── docs/                  SCP source documents (*.scp.json)
+├── docs/                  SPEC, STRUCTURE, REASONING, SCP documents (*.scp.json)
 ├── keystone-gate/         Keystone Gate - sibling app, shares sc.db
 │   ├── kg                 CLI entry point
 │   ├── kg_stats.py        count KG capsules
 │   ├── kg_router.py       neighbour listing
-│   ├── kg_agent.py        cube-as-agent (stub)
+│   ├── kg_agent.py        cubes: faces, validation, proposals
+│   ├── kg_rules.py        rules that propose fills and neighbours
 │   ├── kg_gate.py         gate: rules, checks, refusal
 │   ├── kg_hal.py          HAL: ask substrate, gate the answer
 │   ├── seed_sc.py         seed sc capsules
@@ -100,26 +94,25 @@ seed_capsules.py one-shot: 11 context capsules substrate
 keygen.py CLI: generate keypair signing
 sign_doc.py CLI: sign a document signing
 bootstrap.py CLI: project sc.json into sc.db stdlib
-scps CLI: 10 subcommands all of the above
-test_substrate.py 21 tests all of the above
+scps CLI all of the above
+test_substrate.py 70 tests all of the above
 
 ---
 
 Schema
 
-Six tables.
+Five tables.
 
 ```sql
 capsules(id PK, foundation, state_json, is_meta, created_at, updated_at)
 links(id PK, source FK, type, target FK, metadata, created_at)
      UNIQUE(source, type, target)
 events(seq PK, event_type, capsule_id, payload, occurred_at)
-rules(id PK FK, trigger_on, condition, action, enabled)          -- unused
 trust_scores(capsule_id FK, model_id FK, score, computed_at)      -- PK(capsule_id, model_id)
 schema_version(version)
 ```
 
-The rules table is unused. Rules are stored as capsules with foundation:rule; the engine queries capsules directly. The table is a leftover from the migration and should be dropped in a future schema change or documented as deprecated. Do not populate it.
+Rules are stored as capsules with foundation:rule; the engine queries capsules directly.
 
 Indexes:
 
@@ -131,7 +124,6 @@ idx_links_target           ON links(target, type)
 idx_links_type             ON links(type)
 idx_events_capsule         ON events(capsule_id, occurred_at)
 idx_events_type            ON events(event_type, occurred_at)
-idx_rules_trigger          ON rules(trigger_on) WHERE enabled=1   -- unused
 ```
 
 ---
@@ -183,13 +175,13 @@ A new CLI command — add cmd_X(a) and a subparser in scps. That's it.
 
 A new SCP document format — write a new importer modelled on import_scp.py. It must accept a JSON dict and produce capsule writes through Substrate.
 
-A schema change — the hard one. Requires a numbered migration script, updating schema.sql, bumping schema_version, and re-running bootstrap.py (which will skip DDL creation on existing DBs, so migration must be applied separately). Not attempted in the current codebase.
+A schema change — the hard one. Requires a numbered migration script, updating schema.sql, bumping schema_version, and re-running bootstrap.py (which will skip DDL creation on existing DBs, so migration must be applied separately). Done once so far: the unused rules table was dropped, logged as a schema.migration event.
 
 ---
 
 Test coverage
 
-test_substrate.py runs 21 tests against :memory: SQLite databases. Each test builds a minimal substrate fixture:
+test_substrate.py runs 70 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 57 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
 
 ```
 foundation:foundation
@@ -204,23 +196,6 @@ model-1             (leighton-weight)
 
 Tests never touch sc.db. They can run while the substrate is live, in parallel, without risk.
 
-Coverage by area:
-
-Area Tests
-Crypto test_ed25519_rfc_vector_1, test_sign_verify_roundtrip, test_tamper_detection, test_canonicalise_deterministic
-Substrate test_get, test_write_and_link, test_foundation_protection, test_supersede, test_supersede_rejects_missing_old
-Rules test_rules_idempotent, test_rules_malformed_warns, test_kind_and_age_rule, test_kind_and_age_skips_young_question
-Trust test_trust_parameter, test_trust_from_evidence, test_sigmoid, test_fuse_no_evidence, test_fuse_mid_prior_strong_evidence, test_fuse_disagreement_moves, test_fuse_clamping, test_fused_trust_integration
+Tests cover crypto, the substrate, rules, trust, SymLM, the gate, cubes and proposals. The test files are the authoritative list.
 
 Not covered: why.py, explain.py, import_scp.py, bootstrap.py, scps itself. These are exercised only through manual use.
-
----
-
-The rules table — a known wart
-
-The rules table in schema.sql was created during the initial migration when rules were imagined as a first-class substrate concept. By the time the rule engine was implemented, rules had been modelled as capsules with foundation:rule, which fit the substrate's "everything is a capsule" model better. The table was never populated.
-
-It remains in schema.sql. Dropping it requires a schema change. Until then:
-
-· Do not populate it.
-· idx_rules_trigger is dead weight.

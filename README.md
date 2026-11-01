@@ -18,6 +18,8 @@ Instances live in `sc.db`. They are the actual things — `james`, `scp`, `obs-0
 
 ## What's in this directory
 
+Root holds the world (`sc.json`, `sc.db`, `schema.sql`) and the `scps` CLI. Code lives in `src/` (engines, SymLM, crypto), `scripts/` (ingestion and tools), `seeds/`, `tests/` and `keystone-gate/`.
+
 ### Substrate
 | File | Purpose |
 |---|---|
@@ -51,13 +53,15 @@ Instances live in `sc.db`. They are the actual things — `james`, `scp`, `obs-0
 ### Keystone Gate (sibling application)
 | Path | Purpose |
 |---|---|
-| `keystone-gate/kg` | CLI - stats, route, ask, gate check, gate test |
+| `keystone-gate/kg` | CLI - stats, route, ask, gate, cube, neighbour |
 | `keystone-gate/kg_gate.py` | The gate - rules, checks, refusal |
 | `keystone-gate/kg_hal.py` | HAL - asks substrate, gates answer |
+| `keystone-gate/kg_agent.py` | Cubes - faces, validation, completeness, neighbours, proposals |
+| `keystone-gate/kg_rules.py` | Rules that propose face fills and neighbour links |
 | `keystone-gate/seed_sc.py` | Seeds `sc/*` capsules |
-| `keystone-gate/test_kg.py` | 11 boundary + gate tests |
+| `keystone-gate/test_kg.py` | 57 boundary, gate, cube and proposal tests |
 
-Keystone Gate shares `sc.db` with the substrate but does not modify it. See `keystone-gate/README.md` for the gate pattern and `SPEC.md §15` for the general specification.
+Keystone Gate shares `sc.db` with the substrate and writes its own capsules through `Substrate`; it does not change substrate code. See `keystone-gate/README.md` for the gate pattern and `docs/SPEC.md §15` for the general specification.
 
 ### Crypto
 | File | Purpose |
@@ -71,6 +75,8 @@ Keystone Gate shares `sc.db` with the substrate but does not modify it. See `key
 | File | Purpose |
 |---|---|
 | `import_scp.py` | Import a `giblets-scp` v1.x document |
+| `import_person.py` | Import a person model document |
+| `import_circadian.py` | Import a daily routine document |
 | `absorb_repo.py` | Index a local repo — files + Python/JS symbols |
 | `absorb_github.py` | Index a GitHub repo — metadata + tree (no content) |
 | `fill_styles.py` | Promote `inherits` placeholders to real content |
@@ -82,17 +88,17 @@ Keystone Gate shares `sc.db` with the substrate but does not modify it. See `key
 | File | Purpose |
 |---|---|
 | `scps` | CLI — see `./scps --help` |
-| `test_substrate.py` | 68 tests, in-memory fixtures, no `sc.db` dependency |
+| `test_substrate.py` | 70 tests, in-memory fixtures, no `sc.db` dependency |
 
 ### Docs
-`SPEC.md` (substrate spec), `STRUCTURE.md` (file map, schema, extension points), `REASONING.md` (how rules/trust/why/explain work). `docs/` holds SCP source documents. `legacy/` holds pre-SQLite JSON.
+`docs/SPEC.md` (substrate spec), `docs/STRUCTURE.md` (file map, schema, extension points), `docs/REASONING.md` (how rules/trust/why/explain work). `docs/` also holds SCP source documents. `legacy/` holds pre-SQLite JSON.
 
 ## Quick start
 
 ```sh
 cd ~/scp-substrate
-python bootstrap.py         # project sc.json into sc.db
-python test_substrate.py    # confirm 68 tests pass
+python scripts/bootstrap.py         # project sc.json into sc.db
+python tests/test_substrate.py    # confirm 70 tests pass
 ./scps stats                # what's in the substrate
 ```
 
@@ -143,9 +149,9 @@ Ask examples
 Signing an SCP document
 
 ```sh
-python keygen.py default                    # → ~/.config/scp/keys/default.json (mode 0600)
-python sign_doc.py my-doc.scp.json -o my-doc.signed.scp.json
-python import_scp.py my-doc.signed.scp.json
+python scripts/keygen.py default                    # → ~/.config/scp/keys/default.json (mode 0600)
+python scripts/sign_doc.py my-doc.scp.json -o my-doc.signed.scp.json
+python scripts/import_scp.py my-doc.signed.scp.json
 ```
 
 import_scp.py verifies the signature and writes a verification:* capsule with a verifies link. Signing does not modify trust. Provenance and trust are separate.
@@ -153,11 +159,11 @@ import_scp.py verifies the signature and writes a verification:* capsule with a 
 Absorbing repos
 
 ```sh
-python absorb_repo.py  /path/to/repo --dry-run    # local
-python absorb_repo.py  /path/to/repo --write
+python scripts/absorb_repo.py  /path/to/repo --dry-run    # local
+python scripts/absorb_repo.py  /path/to/repo --write
 
-python absorb_github.py owner/repo --dry-run      # GitHub (no token needed for public)
-python absorb_github.py owner/repo --write
+python scripts/absorb_github.py owner/repo --dry-run      # GitHub (no token needed for public)
+python scripts/absorb_github.py owner/repo --write
 ```
 
 Local absorption reads contents: file hashes, line counts, imports, function/class symbols (Python via ast, JS via regex). GitHub absorption reads metadata + tree only (no content, no symbols).
@@ -168,7 +174,7 @@ What it does not do
 · No neural components. SymLM is symbolic: grammar rules, features, intents. It parses and classifies; it does not generate from weights.
 · No content indexing. Repos store file metadata (sha, size, language) and symbol names, not file bytes. grep on disk remains better for content search.
 · No cross-session conversation memory. Each scps talk starts fresh. Conversation turns are logged as capsules but not read back as context.
-· ~350 untagged nouns. The lexicon has 441 words; only ~90 have animacy features. Untagged nouns pass semantic checks by default, which occasionally produces grammatically valid but semantically odd sentences.
+· ~380 untagged nouns. The lexicon has 478 words; only 97 have animacy features. Untagged nouns pass semantic checks by default, which occasionally produces grammatically valid but semantically odd sentences.
 · Ed25519 is pure-Python. Not constant-time. Fine for signing your own documents on your own device. Not for adversarial contexts or signing on behalf of others.
 · Canonicalisation is a local convention. Sorted keys, no whitespace, signature.value blanked. Matches no external standard (not JCS / RFC 8785). Interop requires agreement on both sides.
 · import_scp.py handles giblets-scp v1.x only. Other formats need a new importer.

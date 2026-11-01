@@ -1,4 +1,7 @@
 """Seed input-intent classifiers. Create-only."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from substrate import Substrate
 
 INTENTS = [
@@ -11,6 +14,7 @@ INTENTS = [
     {"id": "intent/verified",
      "walker": "verified",
      "phrases": ["is it verified", "is it signed", "is it authentic", "who signed"],
+     "patterns": [r"^is \S+ (signed|verified|authentic)\??$"],
      "requires_entity": True,
      "description": "Show verification records"},
     {"id": "intent/what-decided",
@@ -49,7 +53,7 @@ INTENTS = [
      "walker": "where_is",
      "phrases": ["where is", "where's", "find function", "find class",
                  "where is function", "where is class", "locate"],
-     "requires_entity": True,
+     "requires_entity": False,
      "description": "Find a symbol or file by name"},
     {"id": "intent/what-files",
      "walker": "what_files",
@@ -83,6 +87,7 @@ def main():
                 "walker": it["walker"],
                 "match_mode": "any_phrase",
                 "phrases": it["phrases"],
+                "patterns": it.get("patterns", []),
                 "requires_entity": it["requires_entity"],
                 "description": it["description"],
             },

@@ -3,10 +3,13 @@
 Phase 1: metadata only. No content, no symbols, no imports.
 
 Usage:
-  python absorb_repo.py <path> --dry-run     # show what would happen
-  python absorb_repo.py <path> --write       # actually write
-  python absorb_repo.py <path>               # dry-run is default
+  python scripts/absorb_repo.py <path> --dry-run     # show what would happen
+  python scripts/absorb_repo.py <path> --write       # actually write
+  python scripts/absorb_repo.py <path>               # dry-run is default
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import argparse
 import re
 import ast
@@ -15,7 +18,6 @@ import json
 import os
 import subprocess
 from datetime import datetime, timezone
-from pathlib import Path
 
 from substrate import Substrate
 

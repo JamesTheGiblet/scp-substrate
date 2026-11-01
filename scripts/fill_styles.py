@@ -2,6 +2,9 @@
 
 Content comes from the declaration blob itself — no invention.
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 from substrate import Substrate
 
 FOUNDATION = "foundation:knowledge"

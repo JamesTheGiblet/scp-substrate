@@ -1,4 +1,7 @@
 """One-shot: read current capsule state, rewrite seed scripts to match."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import json
 from substrate import Substrate
 
@@ -106,6 +109,7 @@ def main():
 
     # Preserve the original main() bodies, only swap the data block
     import os
+    os.chdir(Path(__file__).resolve().parent)
     if not os.path.exists("seed_lexicon.py.bak"):
         os.rename("seed_lexicon.py", "seed_lexicon.py.bak")
         os.rename("seed_grammar.py", "seed_grammar.py.bak")

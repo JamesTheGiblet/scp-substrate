@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Sign an SCP document with an Ed25519 key from ~/.config/scp/keys/."""
-import argparse, json
+import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+import argparse, json
 from signing import sign, normalise_signature
 
 KEYS_DIR = Path.home() / ".config" / "scp" / "keys"

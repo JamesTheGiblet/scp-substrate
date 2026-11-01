@@ -13,11 +13,12 @@ state, NOT as trust instances — the document is explicit that these are
 Claude's reads from conversation, unconfirmed, not substrate-derived
 truth. Promoting them to trust would over-formalise the model.
 """
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import argparse
 import json
-import sys
 from datetime import datetime, timezone
-from pathlib import Path
 
 from substrate import Substrate
 from signing import verify

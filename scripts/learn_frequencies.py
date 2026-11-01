@@ -1,4 +1,7 @@
 """Parse every corpus sentence, count token occurrences, seed trust."""
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 import json
 from collections import Counter
 

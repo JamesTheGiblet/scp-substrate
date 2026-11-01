@@ -3,9 +3,10 @@
 Hybrid: declaration → state_json, inherits → links, SCP-specific fields
 quarantined under state.source_format for later promotion.
 """
-import json
 import sys
 from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+import json
 
 from substrate import Substrate
 
@@ -75,7 +76,7 @@ def import_scp(s: Substrate, doc: dict, *, source_path: str = None) -> dict:
 
 def main():
     if len(sys.argv) < 2:
-        sys.exit("usage: python import_scp.py <file.scp.json>")
+        sys.exit("usage: python scripts/import_scp.py <file.scp.json>")
     path = Path(sys.argv[1])
     if not path.exists():
         sys.exit(f"file not found: {path}")

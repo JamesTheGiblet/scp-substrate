@@ -1,11 +1,9 @@
 """Seed sc capsules (gated LLM contracts). Create-or-update."""
-import json
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 _here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here.parent))
+sys.path.insert(0, str(_here.parent / "src"))
 
 from substrate import Substrate
 
@@ -25,9 +23,9 @@ SC_CAPSULES = [
             ],
             "must_not": [
                 {"rule": "no_llm_prior",
-                 "description": "Must not claim knowledge not present in the substrate"},
+                 "description": "An affirmative answer must carry the real input-intent that produced it; provenance only, not semantic entailment"},
                 {"rule": "no_hallucinated_entities",
-                 "description": "Must not invent capsule IDs, entity names, or file paths"},
+                 "description": "Slugs and multi-word names must be capsules or appear in stored content. Bare single words are out of reach"},
             ],
             "test_cases": [
                 {"input": "who is james", "expect_pass": True,
@@ -36,9 +34,11 @@ SC_CAPSULES = [
                  "reason": "answer is 'not in substrate' — no invented IDs, so it passes"},
                 {"input": "why is scp-claim trusted", "expect_pass": True,
                  "reason": "trust score must match fused_trust"},
+                {"input": "where is parse_sentence", "expect_pass": True,
+                 "reason": "file paths in stored content are grounded, not invented IDs"},
             ],
             "boundary": "The gate checks structure, not semantics. It does not verify that a walker gave the 'right' answer — only that the answer's references are real.",
-            "version": "1.0",
+            "version": "1.1",
         },
     },
 ]
@@ -51,11 +51,11 @@ def main():
         existing = s.get(sc["id"])
         if existing:
             if existing["state"] != sc["state"]:
-                with s.conn:
-                    s.conn.execute(
-                        "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                        (json.dumps(sc["state"]), sc["id"]),
-                    )
+                s.write({
+                    "id": sc["id"],
+                    "foundation": "foundation:knowledge",
+                    "state": sc["state"],
+                })
                 updated += 1
         else:
             s.write({
