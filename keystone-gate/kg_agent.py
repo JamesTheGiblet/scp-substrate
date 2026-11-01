@@ -316,6 +316,22 @@ def _find_pending_neighbour_proposal(s, cube_id, other_cube_id):
     return row["id"] if row else None
 
 
+def _find_existing_face_proposal(s, cube_id, lens):
+    """Return most recent proposal for (cube, lens) regardless of status."""
+    row = s.conn.execute(
+        "SELECT id, state_json FROM capsules WHERE "
+        "  json_extract(state_json, '$.kind') = 'cube-proposal' AND "
+        "  json_extract(state_json, '$.proposal_type') = 'face' AND "
+        "  json_extract(state_json, '$.cube_id') = ? AND "
+        "  json_extract(state_json, '$.lens') = ? "
+        "ORDER BY id DESC LIMIT 1",
+        (cube_id, lens),
+    ).fetchone()
+    if not row:
+        return None
+    return {"id": row["id"], **json.loads(row["state_json"])}
+
+
 def _next_proposal_id(s, cube_id):
     n = 1
     while s.get(f"{cube_id}/proposal/{n}"):
@@ -335,21 +351,30 @@ def propose_face(s, cube_id, lens, content, proposed_by, rationale=None, confide
     if existing_face:
         return {"skipped": True, "reason": "lens already filled", "lens": lens}
 
-    existing_pid = _find_pending_face_proposal(s, cube_id, lens)
-    if existing_pid:
-        existing = s.get(existing_pid)
-        new_state = dict(existing["state"])
-        new_state["content"] = content
-        new_state["rationale"] = rationale
-        new_state["confidence"] = confidence
-        new_state["proposed_by"] = proposed_by
-        new_state["proposed_at"] = _now()
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(new_state), existing_pid),
-            )
-        return {"proposal_id": existing_pid, "lens": lens, "status": "updated"}
+    existing = _find_existing_face_proposal(s, cube_id, lens)
+    if existing:
+        # Rejection sticks: if previously rejected with identical content, skip.
+        # If previously rejected but content differs, allow a new proposal
+        # (the rule has new information the human hasn't seen yet).
+        if existing.get("status") == "rejected" and existing.get("content") == content:
+            return {"skipped": True,
+                    "reason": "previously rejected with same content",
+                    "lens": lens,
+                    "proposal_id": existing["id"]}
+        if existing.get("status") == "pending":
+            new_state = dict(existing)
+            del new_state["id"]
+            new_state["content"] = content
+            new_state["rationale"] = rationale
+            new_state["confidence"] = confidence
+            new_state["proposed_by"] = proposed_by
+            new_state["proposed_at"] = _now()
+            with s.conn:
+                s.conn.execute(
+                    "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
+                    (json.dumps(new_state), existing["id"]),
+                )
+            return {"proposal_id": existing["id"], "lens": lens, "status": "updated"}
 
     pid = _next_proposal_id(s, cube_id)
     s.write({

@@ -574,6 +574,42 @@ def test_run_rules_idempotent():
         s.close()
 
 
+def test_rejection_sticks():
+    """Rejecting a proposal prevents re-proposal of identical content."""
+    from kg_agent import create_cube, propose_face, reject_proposal, list_proposals
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        r1 = propose_face(s, cid, "FACT", "the sky is green", proposed_by="rule_a")
+        reject_proposal(s, r1["proposal_id"], rejected_by="james", reason="wrong colour")
+        # Rule runs again — same content, should be skipped
+        r2 = propose_face(s, cid, "FACT", "the sky is green", proposed_by="rule_a")
+        assert r2.get("skipped") is True, r2
+        # No pending proposals
+        pending = list_proposals(s, cube_id=cid, status="pending")
+        assert len(pending) == 0
+    finally:
+        s.close()
+
+
+def test_rejection_allows_new_content():
+    """Rejected but different content → allowed through."""
+    from kg_agent import create_cube, propose_face, reject_proposal, list_proposals
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        r1 = propose_face(s, cid, "FACT", "the sky is green", proposed_by="rule_a")
+        reject_proposal(s, r1["proposal_id"], rejected_by="james", reason="wrong colour")
+        # New content — should be allowed
+        r2 = propose_face(s, cid, "FACT", "the sky is blue", proposed_by="rule_a")
+        assert r2.get("status") == "created", r2
+        pending = list_proposals(s, cube_id=cid, status="pending")
+        assert len(pending) == 1
+        assert pending[0]["content"] == "the sky is blue"
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]
