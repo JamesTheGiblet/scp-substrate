@@ -340,6 +340,240 @@ def test_neighbour_list():
         s.close()
 
 
+# --- proposal tests ------------------------------------------------------
+def test_propose_face():
+    from kg_agent import create_cube, propose_face, list_proposals
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        r = propose_face(s, cid, "FACT", "the sky is blue", proposed_by="test_rule")
+        assert "error" not in r, r
+        assert r["status"] == "created"
+        props = list_proposals(s, cube_id=cid, status="pending")
+        assert len(props) == 1
+        assert props[0]["lens"] == "FACT"
+        assert props[0]["content"] == "the sky is blue"
+    finally:
+        s.close()
+
+
+def test_propose_face_idempotent():
+    from kg_agent import create_cube, propose_face, list_proposals
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        r1 = propose_face(s, cid, "FACT", "first version", proposed_by="rule")
+        r2 = propose_face(s, cid, "FACT", "second version", proposed_by="rule")
+        assert r1["proposal_id"] == r2["proposal_id"]
+        assert r2["status"] == "updated"
+        props = list_proposals(s, cube_id=cid)
+        assert len(props) == 1
+        assert props[0]["content"] == "second version"
+    finally:
+        s.close()
+
+
+def test_propose_face_skips_filled_lens():
+    from kg_agent import create_cube, fill_face, propose_face
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        fill_face(s, cid, "FACT", "already filled")
+        r = propose_face(s, cid, "FACT", "would be newer", proposed_by="rule")
+        assert r.get("skipped") is True
+    finally:
+        s.close()
+
+
+def test_accept_proposal_fills_face():
+    from kg_agent import (create_cube, propose_face, accept_proposal,
+                          completeness, list_proposals)
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        r = propose_face(s, cid, "FACT", "the sky is blue", proposed_by="rule")
+        pid = r["proposal_id"]
+        acc = accept_proposal(s, pid, accepted_by="james")
+        assert "error" not in acc, acc
+        assert acc["status"] == "accepted"
+        # Face now exists
+        face = s.get(f"{cid}/face/FACT")
+        assert face is not None
+        assert face["state"]["content"] == "the sky is blue"
+        # Completeness moved
+        comp = completeness(s, cid)
+        assert abs(comp["score"] - 0.16) < 1e-6
+        # Proposal is no longer pending
+        pending = list_proposals(s, cube_id=cid, status="pending")
+        assert len(pending) == 0
+    finally:
+        s.close()
+
+
+def test_reject_proposal_leaves_cube_unchanged():
+    from kg_agent import (create_cube, propose_face, reject_proposal,
+                          completeness, list_proposals)
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        r = propose_face(s, cid, "FACT", "the sky is green", proposed_by="rule")
+        pid = r["proposal_id"]
+        rej = reject_proposal(s, pid, rejected_by="james", reason="wrong colour")
+        assert rej["status"] == "rejected"
+        # Face still empty
+        assert s.get(f"{cid}/face/FACT") is None
+        # Completeness still zero
+        comp = completeness(s, cid)
+        assert comp["score"] == 0.0
+        # Not pending, but is rejected
+        rejected = list_proposals(s, cube_id=cid, status="rejected")
+        assert len(rejected) == 1
+        assert rejected[0]["rejection_reason"] == "wrong colour"
+    finally:
+        s.close()
+
+
+def test_propose_neighbour():
+    from kg_agent import create_cube, propose_neighbour, accept_proposal
+    s = _fresh_kg_substrate()
+    try:
+        a = create_cube(s, "cube a")["cube_id"]
+        b = create_cube(s, "cube b")["cube_id"]
+        r = propose_neighbour(s, a, b, proposed_by="rule", rationale="shared tag")
+        assert "error" not in r, r
+        pid = r["proposal_id"]
+        acc = accept_proposal(s, pid, accepted_by="james")
+        assert acc["status"] == "accepted"
+        # Link now exists
+        link = s.conn.execute(
+            "SELECT 1 FROM links WHERE source=? AND type='neighbour' AND target=?",
+            (a, b),
+        ).fetchone()
+        assert link
+    finally:
+        s.close()
+
+
+# --- rule tests ----------------------------------------------------------
+def _seed_decision_substrate():
+    """KG substrate with a chose-sqlite-like decision capsule."""
+    from substrate import Substrate
+    import json as _j
+    s = Substrate(":memory:")
+    s.conn.executescript(Path("schema.sql").read_text())
+    with s.conn:
+        for fid in ["foundation:foundation", "foundation:knowledge",
+                    "foundation:cube", "foundation:lens", "foundation:cube-face",
+                    "foundation:neighbour"]:
+            s.conn.execute(
+                "INSERT INTO capsules (id, foundation, state_json, is_meta) "
+                "VALUES (?, 'foundation:foundation', '{}', 1)", (fid,)
+            )
+        s.conn.execute(
+            "INSERT INTO capsules (id, foundation, state_json) VALUES "
+            "('chose-sqlite', 'foundation:knowledge', ?)",
+            (_j.dumps({
+                "kind": "decision",
+                "decision": "SQLite, single file, WAL mode",
+                "rationale": "One writer, many readers, no network.",
+                "alternatives_considered": ["Postgres", "DuckDB"],
+                "decided_by": "james",
+            }),)
+        )
+    return s
+
+
+def test_rule_fact_from_decision():
+    from kg_agent import create_cube, list_proposals
+    from kg_rules import run_rules
+    s = _seed_decision_substrate()
+    try:
+        cid = create_cube(s, "SQLite decision for the substrate")["cube_id"]
+        run_rules(s, cid, only_rules=["fact_from_decision"])
+        props = list_proposals(s, cube_id=cid, status="pending")
+        fact_props = [p for p in props if p["lens"] == "FACT"]
+        assert len(fact_props) == 1
+        assert "SQLite" in fact_props[0]["content"]
+        assert fact_props[0]["proposed_by"] == "fact_from_decision"
+    finally:
+        s.close()
+
+
+def test_rule_counter_from_alternatives():
+    from kg_agent import create_cube, list_proposals
+    from kg_rules import run_rules
+    s = _seed_decision_substrate()
+    try:
+        cid = create_cube(s, "SQLite decision")["cube_id"]
+        run_rules(s, cid, only_rules=["counter_from_alternatives"])
+        props = list_proposals(s, cube_id=cid, status="pending")
+        counter = [p for p in props if p["lens"] == "COUNTER"]
+        assert len(counter) == 1
+        assert "Postgres" in counter[0]["content"]
+        assert "DuckDB" in counter[0]["content"]
+    finally:
+        s.close()
+
+
+def test_rule_neighbour_by_tag():
+    from kg_agent import create_cube, list_proposals
+    from kg_rules import run_rules
+    s = _seed_decision_substrate()
+    try:
+        a = create_cube(s, "cube about databases")["cube_id"]
+        b = create_cube(s, "another cube about databases")["cube_id"]
+        # Both tagged "database"
+        for cid in (a, b):
+            c = s.get(cid)
+            st = dict(c["state"]); st["tags"] = ["database"]
+            import json as _j
+            with s.conn:
+                s.conn.execute(
+                    "UPDATE capsules SET state_json=? WHERE id=?",
+                    (_j.dumps(st), cid),
+                )
+        run_rules(s, a, only_rules=["neighbour_by_tag"])
+        props = list_proposals(s, cube_id=a, status="pending")
+        neigh = [p for p in props if p.get("proposal_type") == "neighbour"]
+        assert len(neigh) == 1
+        assert neigh[0]["other_cube_id"] == b
+    finally:
+        s.close()
+
+
+def test_rule_skips_filled_lens():
+    from kg_agent import create_cube, fill_face
+    from kg_rules import run_rules
+    s = _seed_decision_substrate()
+    try:
+        cid = create_cube(s, "SQLite decision")["cube_id"]
+        fill_face(s, cid, "FACT", "manually filled first")
+        # Rule tries to propose FACT, must skip because lens is filled
+        results = run_rules(s, cid, only_rules=["fact_from_decision"])
+        # Either skipped or empty; no new pending FACT proposals
+        from kg_agent import list_proposals
+        props = list_proposals(s, cube_id=cid, status="pending")
+        fact_props = [p for p in props if p["lens"] == "FACT"]
+        assert len(fact_props) == 0
+    finally:
+        s.close()
+
+
+def test_run_rules_idempotent():
+    from kg_agent import create_cube, list_proposals
+    from kg_rules import run_rules
+    s = _seed_decision_substrate()
+    try:
+        cid = create_cube(s, "SQLite decision")["cube_id"]
+        run_rules(s, cid)
+        first = list_proposals(s, cube_id=cid, status="pending")
+        run_rules(s, cid)
+        second = list_proposals(s, cube_id=cid, status="pending")
+        assert len(first) == len(second)
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]

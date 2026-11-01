@@ -298,6 +298,97 @@ def cmd_neighbour_list(args):
             print(f"  -> {n}")
 
 
+def cmd_cube_proposals(args):
+    from kg_agent import list_proposals
+    s = Substrate()
+    props = list_proposals(s, cube_id=args.cube_id, status=args.status)
+    s.close()
+    if not props:
+        scope = f" (cube {args.cube_id})" if args.cube_id else ""
+        print(f"No {args.status} proposals.{scope}")
+        return
+    for p in props:
+        ptype = p.get("proposal_type", "?")
+        if ptype == "face":
+            content = p.get("content", "")
+            if len(content) > 60:
+                content = content[:57] + "..."
+            print(f"  {p['id']}")
+            print(f"    face    [{p['lens']}] {content}")
+        elif ptype == "neighbour":
+            print(f"  {p['id']}")
+            print(f"    neigh   -> {p.get('other_cube_id')}")
+        print(f"    by      {p.get('proposed_by', '?')}")
+        if p.get("rationale"):
+            r = p["rationale"]
+            if len(r) > 70:
+                r = r[:67] + "..."
+            print(f"    reason  {r}")
+        print(f"    status  {p.get('status')}")
+        print()
+
+
+def cmd_cube_accept(args):
+    from kg_agent import accept_proposal
+    s = Substrate()
+    r = accept_proposal(s, args.proposal_id, accepted_by=args.by)
+    s.close()
+    if "error" in r:
+        print(f"error: {r['error']}")
+        return
+    print(f"Accepted: {r['proposal_id']}")
+
+
+def cmd_cube_reject(args):
+    from kg_agent import reject_proposal
+    s = Substrate()
+    r = reject_proposal(s, args.proposal_id, rejected_by=args.by, reason=args.reason)
+    s.close()
+    if "error" in r:
+        print(f"error: {r['error']}")
+        return
+    print(f"Rejected: {r['proposal_id']}")
+    if args.reason:
+        print(f"  reason: {args.reason}")
+
+
+def cmd_cube_tick(args):
+    from kg_agent import list_cubes
+    from kg_rules import run_rules
+    s = Substrate()
+    cubes = list_cubes(s)
+    if args.cube_id:
+        cubes = [c for c in cubes if c["id"] == args.cube_id]
+    if not cubes:
+        print("No cubes to tick.")
+        s.close()
+        return
+
+    total_new = total_updated = total_skipped = 0
+    for c in cubes:
+        results = run_rules(s, c["id"])
+        created = [r for r in results if r.get("status") == "created"]
+        updated = [r for r in results if r.get("status") == "updated"]
+        skipped = [r for r in results if r.get("skipped")]
+        errored = [r for r in results if "error" in r]
+        total_new += len(created)
+        total_updated += len(updated)
+        total_skipped += len(skipped)
+        if not (created or updated or errored):
+            continue
+        print(f"{c['id']} (completeness {c['score']:.2f})")
+        for r in created:
+            print(f"  [new] {r.get('rule','?')} -> {r.get('lens') or r.get('other_cube_id')}")
+        for r in updated:
+            print(f"  [upd] {r.get('rule','?')} -> {r.get('lens') or r.get('other_cube_id')}")
+        for r in errored:
+            print(f"  [err] {r.get('rule','?')}: {r['error']}")
+        print()
+
+    s.close()
+    print(f"Tick complete: {total_new} new, {total_updated} updated, {total_skipped} skipped")
+
+
 def main():
     ap = argparse.ArgumentParser(prog="kg", description="Keystone Gate CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -358,6 +449,27 @@ def main():
     sp_con.add_argument("other_id")
     sp_con.add_argument("--note", default=None)
     sp_con.set_defaults(func=cmd_cube_contradicts)
+
+    sp_c_prop = sp_sub.add_parser("proposals", help="list proposals for a cube")
+    sp_c_prop.add_argument("cube_id", nargs="?", default=None)
+    sp_c_prop.add_argument("--status", default="pending",
+                           choices=["pending", "accepted", "rejected", "any"])
+    sp_c_prop.set_defaults(func=cmd_cube_proposals)
+
+    sp_c_acc = sp_sub.add_parser("accept", help="accept a proposal")
+    sp_c_acc.add_argument("proposal_id")
+    sp_c_acc.add_argument("--by", required=True)
+    sp_c_acc.set_defaults(func=cmd_cube_accept)
+
+    sp_c_rej = sp_sub.add_parser("reject", help="reject a proposal")
+    sp_c_rej.add_argument("proposal_id")
+    sp_c_rej.add_argument("--by", required=True)
+    sp_c_rej.add_argument("--reason", default=None)
+    sp_c_rej.set_defaults(func=cmd_cube_reject)
+
+    sp_c_tick = sp_sub.add_parser("tick", help="run rules against cubes")
+    sp_c_tick.add_argument("cube_id", nargs="?", default=None)
+    sp_c_tick.set_defaults(func=cmd_cube_tick)
 
     sp = sub.add_parser("neighbour", help="neighbour operations")
     sp_sub = sp.add_subparsers(dest="neighbour_cmd", required=True)

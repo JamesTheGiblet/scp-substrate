@@ -1,0 +1,259 @@
+"""Cube rules. Each rule reads the substrate and proposes face fills or
+neighbour links for a cube. Rules are pure: given substrate state, they
+return a list of proposals. Nothing fires without a human accept.
+
+Rule shape:
+    {
+        "id": str,
+        "description": str,
+        "applies": callable(s, cube) -> bool,
+        "propose": callable(s, cube) -> list of {type, ...kwargs}
+    }
+
+The propose callable returns dicts ready to pass to propose_face or
+propose_neighbour. Rules must be idempotent — running twice must produce
+the same proposal IDs (the propose_* functions handle that).
+"""
+import json
+import re
+import sys
+from pathlib import Path
+
+_here = Path(__file__).resolve().parent
+sys.path.insert(0, str(_here.parent))
+sys.path.insert(0, str(_here))
+
+from kg_agent import LENSES, propose_face, propose_neighbour
+
+
+def _cube_tags(cube_state):
+    return set(t.lower() for t in (cube_state.get("tags") or []))
+
+
+# Words too generic to prove a text match on their own
+_STOP = {
+    "have", "with", "this", "that", "from", "they", "there", "these",
+    "those", "their", "which", "when", "where", "what", "were", "been",
+    "being", "will", "would", "could", "should", "also", "just", "only",
+    "even", "still", "more", "most", "less", "least", "then", "than",
+    "into", "onto", "upon", "your", "some", "many", "much", "very",
+    "over", "under", "through", "about", "above", "below",
+}
+
+
+def _tokens(text):
+    """Return the set of significant words (4+ chars) in a text."""
+    return set(re.findall(r"[a-z]{4,}", text.lower())) - _STOP
+
+
+def _find_substrate_capsule_by_text(s, text, kind=None):
+    """Find a capsule whose field value matches the text.
+
+    Match rules, in order:
+      1. Whole field is a substring of the text (exact phrase)
+      2. Any significant 4+ char word from the field appears in the text
+         (token overlap - narrows on domain words, not generic English)
+    """
+    query = "SELECT id, state_json FROM capsules WHERE foundation = 'foundation:knowledge'"
+    params = []
+    if kind:
+        query += " AND json_extract(state_json, '$.kind') = ?"
+        params.append(kind)
+    rows = s.conn.execute(query, params).fetchall()
+    text_l = text.lower()
+    text_words = _tokens(text_l)
+
+    for r in rows:
+        st = json.loads(r["state_json"])
+        for field in ("text", "name", "claim", "statement", "decision", "question"):
+            v = st.get(field)
+            if not isinstance(v, str):
+                continue
+            v_l = v.lower()
+            # Rule 1: whole field appears in text
+            if v_l in text_l:
+                return {"id": r["id"], "state": st}
+            # Rule 2: token overlap
+            v_words = _tokens(v_l)
+            if v_words & text_words:
+                return {"id": r["id"], "state": st}
+    return None
+
+
+def _find_decision_for(s, text):
+    return _find_substrate_capsule_by_text(s, text, kind="decision")
+
+
+# --- Rule 1: fact_from_decision -----------------------------------------
+def _rule_fact_from_decision(s, cube_state):
+    decision = _find_decision_for(s, cube_state.get("content", ""))
+    if not decision:
+        return []
+    st = decision["state"]
+    parts = []
+    if st.get("decision"):
+        parts.append(st["decision"])
+    if st.get("rationale"):
+        parts.append(st["rationale"])
+    if not parts:
+        return []
+    return [{
+        "type": "face",
+        "lens": "FACT",
+        "content": " ".join(parts),
+        "proposed_by": "fact_from_decision",
+        "rationale": f"from capsule {decision['id']} (kind=decision)",
+        "confidence": 0.85,
+    }]
+
+
+# --- Rule 2: counter_from_alternatives ----------------------------------
+def _rule_counter_from_alternatives(s, cube_state):
+    decision = _find_decision_for(s, cube_state.get("content", ""))
+    if not decision:
+        return []
+    alts = decision["state"].get("alternatives_considered") or []
+    if not alts:
+        return []
+    return [{
+        "type": "face",
+        "lens": "COUNTER",
+        "content": "Considered but not chosen: " + "; ".join(alts),
+        "proposed_by": "counter_from_alternatives",
+        "rationale": f"from {decision['id']}.alternatives_considered",
+        "confidence": 0.80,
+    }]
+
+
+# --- Rule 3: context_from_source ----------------------------------------
+def _rule_context_from_source(s, cube_state):
+    source = cube_state.get("source")
+    if not source:
+        return []
+    # Search for a capsule whose state or id mentions the source
+    source_l = source.lower()
+    rows = s.conn.execute(
+        "SELECT id, state_json FROM capsules WHERE foundation = 'foundation:knowledge'"
+    ).fetchall()
+    for r in rows:
+        st = json.loads(r["state_json"])
+        for field in ("name", "text", "statement", "claim"):
+            v = st.get(field)
+            if isinstance(v, str) and v.lower() in source_l:
+                return [{
+                    "type": "face",
+                    "lens": "CONTEXT",
+                    "content": f"Source: {r['id']} — " + (st.get("description") or st.get("statement") or st.get("decision") or st.get(field, ""))[:200],
+                    "proposed_by": "context_from_source",
+                    "rationale": f"cube references source {source!r}",
+                    "confidence": 0.70,
+                }]
+    return []
+
+
+# --- Rule 4: counter_from_contradicts -----------------------------------
+def _rule_counter_from_contradicts(s, cube_state):
+    contra = cube_state.get("contradicts")
+    if not contra:
+        return []
+    other_id = contra.get("other")
+    other = s.get(other_id)
+    if not other:
+        return []
+    # Look for a FACT face on the other cube
+    other_fact = s.get(f"{other_id}/face/FACT")
+    if other_fact:
+        content = other_fact["state"].get("content", "")
+    else:
+        content = other["state"].get("content", "")
+    if not content:
+        return []
+    return [{
+        "type": "face",
+        "lens": "COUNTER",
+        "content": f"Contradicts {other_id}: {content[:200]}",
+        "proposed_by": "counter_from_contradicts",
+        "rationale": f"cube has contradicts field pointing at {other_id}",
+        "confidence": 0.75,
+    }]
+
+
+# --- Rule 5: neighbour_by_tag -------------------------------------------
+def _rule_neighbour_by_tag(s, cube_state):
+    cube_tags = _cube_tags(cube_state)
+    if not cube_tags:
+        return []
+    # Find other cubes that share at least one tag
+    cube_id = cube_state.get("_cube_id")  # injected by run_rules
+    if not cube_id:
+        return []
+    rows = s.conn.execute(
+        "SELECT id, state_json FROM capsules WHERE foundation = 'foundation:cube' AND is_meta = 0"
+    ).fetchall()
+    proposals = []
+    for r in rows:
+        if r["id"] == cube_id:
+            continue
+        other_state = json.loads(r["state_json"])
+        other_tags = _cube_tags(other_state)
+        shared = cube_tags & other_tags
+        if shared:
+            proposals.append({
+                "type": "neighbour",
+                "other_cube_id": r["id"],
+                "proposed_by": "neighbour_by_tag",
+                "rationale": f"shared tags: {sorted(shared)}",
+            })
+    return proposals
+
+
+RULES = [
+    {"id": "fact_from_decision",         "propose": _rule_fact_from_decision},
+    {"id": "counter_from_alternatives",  "propose": _rule_counter_from_alternatives},
+    {"id": "context_from_source",        "propose": _rule_context_from_source},
+    {"id": "counter_from_contradicts",   "propose": _rule_counter_from_contradicts},
+    {"id": "neighbour_by_tag",           "propose": _rule_neighbour_by_tag},
+]
+
+
+def run_rules(s, cube_id, only_rules=None):
+    """Run all rules against a cube. Return list of proposal results.
+
+    Idempotent: existing pending proposals are updated in place, not
+    duplicated. Filled lenses are skipped. Existing neighbour links skipped.
+    """
+    cube = s.get(cube_id)
+    if not cube:
+        return [{"error": f"cube {cube_id} not found"}]
+
+    cube_state = dict(cube["state"])
+    cube_state["_cube_id"] = cube_id
+
+    results = []
+    for rule in RULES:
+        if only_rules and rule["id"] not in only_rules:
+            continue
+        try:
+            proposals = rule["propose"](s, cube_state) or []
+        except Exception as e:
+            results.append({"rule": rule["id"], "error": str(e)})
+            continue
+        for p in proposals:
+            if p.get("type") == "face":
+                r = propose_face(
+                    s, cube_id, p["lens"], p["content"],
+                    proposed_by=p["proposed_by"],
+                    rationale=p.get("rationale"),
+                    confidence=p.get("confidence"),
+                )
+            elif p.get("type") == "neighbour":
+                r = propose_neighbour(
+                    s, cube_id, p["other_cube_id"],
+                    proposed_by=p["proposed_by"],
+                    rationale=p.get("rationale"),
+                )
+            else:
+                continue
+            r["rule"] = rule["id"]
+            results.append(r)
+    return results
