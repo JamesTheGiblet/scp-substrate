@@ -1,0 +1,44 @@
+{
+  "sc_version": "1.2",
+  "id": "circadian.evening.weekday",
+  "title": "Weekday afternoon/evening routine (Mon-Fri)",
+  "owner": "James Gilbert",
+  "status": "provisional",
+  "applies": { "days": ["MO", "TU", "WE", "TH", "FR"] },
+  "follows": "circadian.morning.weekday",
+  "anchors": {
+    "arrive_home": "16:30",
+    "food_start": "18:00",
+    "evening_start": "19:00",
+    "winddown_start": "~21:00",
+    "bed_target": "~22:00"
+  },
+  "sequence": [
+    { "id": "decompress", "start": "16:30", "end": "18:00", "desc": "Smoke, chill, watch cartoons" },
+    { "id": "food",       "start": "18:00", "end": "19:00", "desc": "Food, including cooking time" },
+    { "id": "evening",    "start": "19:00", "end": "~21:00", "branch": "tammi_home" },
+    { "id": "winddown",   "start": "~21:00", "end": "~22:00", "desc": "Wind down - comfort cartoons only (Family Guy / South Park / American Dad / Bob's Burgers)", "excludes": ["computer", "phone", "code"], "allows": ["tv_comfort_series"] },
+    { "id": "bed",        "at": "~22:00", "desc": "Try to go to bed" }
+  ],
+  "enforcement": {
+    "mode": "soft",
+    "rule": "Bedtime is a target, not a hard rule. Strict enforcement backfires - the harder the rule is pushed, the harder it gets to keep. Nudge toward winddown at ~21:00; never hard-stop.",
+    "sleep_window": "~22:00 to 05:00/05:30 = ~7 to 7.5 hours"
+  },
+  "branches": {
+    "tammi_home": {
+      "condition": "Tammi is home",
+      "true": { "mode": "together", "desc": "Time with Tammi", "excludes": ["code", "build"] },
+      "false": { "mode": "solo", "desc": "Movie, code, build - whatever", "allows": ["movie", "code", "build"] }
+    }
+  },
+  "rules": [
+    "Tammi home overrides everything in the evening block - no code, no build.",
+    "Solo evening activity is free choice, not scheduled."
+  ],
+  "open_items": [
+    "Travel 07:55 walk-in to 16:30 home (work day itself) not yet captured",
+    "Weekend routine not yet captured"
+  ],
+  "signature": "PLACEHOLDER - sign locally"
+}
