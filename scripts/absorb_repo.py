@@ -299,8 +299,6 @@ def absorb(s, root, write=False, prune_stale=False):
         }
 
     # Write
-    s_conn = s.conn
-
     # --- Repo capsule ---
     repo_state = {
         "kind": "repo",
@@ -319,11 +317,7 @@ def absorb(s, root, write=False, prune_stale=False):
 
     existing = s.get(repo_id)
     if existing:
-        with s_conn:
-            s_conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(repo_state), repo_id),
-            )
+        s.write({"id": repo_id, "foundation": "foundation:knowledge", "state": repo_state})
     else:
         s.write({"id": repo_id, "foundation": "foundation:knowledge", "state": repo_state})
         # james owns this repo
@@ -363,11 +357,7 @@ def absorb(s, root, write=False, prune_stale=False):
             if ex["state"].get("sha256") == sha:
                 skipped += 1
                 continue
-            with s_conn:
-                s_conn.execute(
-                    "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                    (json.dumps(file_state), fid),
-                )
+            s.write({"id": fid, "foundation": "foundation:knowledge", "state": file_state})
             updated += 1
         else:
             s.write({"id": fid, "foundation": "foundation:knowledge", "state": file_state})
@@ -390,11 +380,7 @@ def absorb(s, root, write=False, prune_stale=False):
                 cur_state = dict(cur["state"])
                 if cur_state.get("imports") != imports:
                     cur_state["imports"] = imports
-                    with s_conn:
-                        s_conn.execute(
-                            "UPDATE capsules SET state_json=? WHERE id=?",
-                            (json.dumps(cur_state), fid),
-                        )
+                    s.write({"id": fid, "foundation": "foundation:knowledge", "state": cur_state})
 
         for sym in symbols:
             sid = f"symbol/{_slug(repo_name)}/{path_slug}/{sym['name']}"

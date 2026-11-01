@@ -41,6 +41,33 @@ SC_CAPSULES = [
             "version": "1.1",
         },
     },
+    {
+        "id": "sc/claude-answerer",
+        "state": {
+            "kind": "sc",
+            "name": "claude-answerer",
+            "purpose": "Reword a walker's answer in natural language through Claude",
+            "must": [
+                {"rule": "no_invented_ids",
+                 "description": "Every capsule ID mentioned in the answer must exist in the substrate"},
+                {"rule": "no_hallucinated_trust",
+                 "description": "Any numeric trust score must match the capsule's actual trust"},
+                {"rule": "claims_quote_evidence",
+                 "description": "Every claim must quote, verbatim, the walker evidence it rests on"},
+                {"rule": "no_unsourced_terms",
+                 "description": "Numbers and capitalised words must come from the evidence or the question"},
+            ],
+            "must_not": [
+                {"rule": "no_llm_prior",
+                 "description": "An affirmative answer must carry the real input-intent that produced it"},
+                {"rule": "no_hallucinated_entities",
+                 "description": "Slugs and multi-word names must be capsules or appear in stored content"},
+            ],
+            "test_cases": [],
+            "boundary": "Checks that claims are anchored to evidence and carry no new names or numbers. It does not prove a paraphrase means what its quote means. A refused answer falls back to the walker.",
+            "version": "1.0",
+        },
+    },
 ]
 
 

@@ -515,6 +515,15 @@ The pattern makes four guarantees:
 3. **Refusal is complete.** A rejected answer is withheld, not shown with a warning. The gate cannot be ignored by the client.
 4. **The substrate stays untouched.** Gates live in applications, not in `substrate.py`. The substrate absorbs them as data plus a client.
 
+### Gating a real LLM
+
+`sc/claude-answerer` is the contract for `kg ask --claude`. The walker finds the facts and Claude only rewords them. Each claim must carry a verbatim quote from the walker's evidence, so two rules join the four above:
+
+- `claims_quote_evidence` - every claim's quote must appear in the evidence
+- `no_unsourced_terms` - numbers and capitalised words must come from the evidence or the question
+
+A paraphrase that misstates its quote, or a new lowercase word, still passes: the gate proves anchoring, not meaning. Any failure or refusal shows the walker's own gated answer, so the LLM path cannot be worse than the walker.
+
 ### Implementation reference
 
 Keystone Gate is the first implementation of this pattern:
@@ -522,6 +531,7 @@ Keystone Gate is the first implementation of this pattern:
 - `keystone-gate/seed_sc.py` - seeds `sc/symlm-answerer`
 - `keystone-gate/kg_gate.py` - `check()` and one `_check_*` function per rule
 - `keystone-gate/kg_hal.py` - `ask_gated()` - asks substrate, gates answer, returns pass or reject
+- `keystone-gate/kg_llm.py` - `ask_claude()` - walker, then Claude, then the gate, with fallback
 - `keystone-gate/kg gate test` - runs the sc capsule's own test cases against the live substrate
 
 The substrate does not need to know the gate exists. The gate does not need to know how the substrate works internally - only that it can query for capsule existence and trust values. That asymmetry is what makes the boundary work.

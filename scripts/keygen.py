@@ -3,18 +3,22 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-import json, os
+import argparse, json, os
 from signing import generate_keypair
 
 KEYS_DIR = Path.home() / ".config" / "scp" / "keys"
 
 def main():
+    ap = argparse.ArgumentParser(description="Generate an Ed25519 keypair.")
+    ap.add_argument("name", nargs="?", default="default",
+                    help="key name, saved as <name>.json")
+    name = ap.parse_args().name
+
     KEYS_DIR.mkdir(parents=True, exist_ok=True)
     os.chmod(KEYS_DIR.parent.parent, 0o700)
     os.chmod(KEYS_DIR.parent, 0o700)
     os.chmod(KEYS_DIR, 0o700)
 
-    name = sys.argv[1] if len(sys.argv) > 1 else "default"
     path = KEYS_DIR / f"{name}.json"
     if path.exists():
         sys.exit(f"key already exists: {path}\n(delete it first if you want a new one)")

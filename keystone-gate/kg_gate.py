@@ -244,11 +244,55 @@ def _check_no_hallucinated_trust(s, result):
     return violations
 
 
+def _normalised(text):
+    return " ".join(text.split())
+
+
+def _check_claims_quote_evidence(s, result):
+    """Every claim must quote, verbatim, the walker evidence it rests on."""
+    claims = result.get("claims") or []
+    if not claims:
+        return [{"rule": "claims_quote_evidence", "detail": "answer has no claims"}]
+    evidence = _normalised(result.get("evidence") or "")
+    return [{
+        "rule": "claims_quote_evidence",
+        "detail": f"quote not found in evidence: {claim.get('evidence')!r}",
+    } for claim in claims
+        if not claim.get("evidence")
+        or _normalised(claim["evidence"]) not in evidence]
+
+
+def _check_no_unsourced_terms(s, result):
+    """Numbers and capitalised words must come from the evidence or the question.
+
+    The first word of a sentence is capitalised anyway, so it proves nothing.
+    """
+    source = f"{result.get('evidence') or ''} {result.get('question') or ''}".lower()
+    known = set(re.findall(r"\w+(?:\.\d+)?", source))
+    violations = []
+    for claim in result.get("claims") or []:
+        terms = re.findall(r"\b\d+(?:\.\d+)?\b", claim.get("text", ""))
+        for sentence in re.split(r"[.!?:]\s+", claim.get("text", "")):
+            terms += re.findall(r"\b[A-Z][A-Za-z]+\b", sentence)
+            first = re.match(r"\W*([A-Z][A-Za-z]+)\b", sentence)
+            if first:
+                terms.remove(first.group(1))
+        for term in dict.fromkeys(terms):
+            if term.lower() not in known:
+                violations.append({
+                    "rule": "no_unsourced_terms",
+                    "detail": f"{term!r} is not in the evidence or the question",
+                })
+    return violations
+
+
 _RULES = {
     "no_invented_ids": _check_no_invented_ids,
     "no_hallucinated_trust": _check_no_hallucinated_trust,
     "no_hallucinated_entities": _check_no_hallucinated_entities,
     "no_llm_prior": _check_no_llm_prior,
+    "claims_quote_evidence": _check_claims_quote_evidence,
+    "no_unsourced_terms": _check_no_unsourced_terms,
 }
 
 

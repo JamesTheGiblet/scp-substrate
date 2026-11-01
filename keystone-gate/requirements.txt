@@ -1,0 +1,2 @@
+# Only needed for `kg ask --claude`. Everything else is standard library.
+anthropic>=2.3,<3

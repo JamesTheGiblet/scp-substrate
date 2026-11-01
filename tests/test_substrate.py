@@ -1001,6 +1001,142 @@ def test_python_symbols():
     os.unlink(path)
 
 
+def test_keygen_help_writes_no_key():
+    import os, shutil, subprocess, tempfile
+    home = Path(tempfile.mkdtemp())
+    try:
+        env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "keygen.py"), "--help"],
+                           capture_output=True, text=True, env=env)
+        assert r.returncode == 0, r.stderr
+        assert list(home.iterdir()) == [], list(home.iterdir())
+    finally:
+        shutil.rmtree(home, ignore_errors=True)
+
+
+def test_keygen_writes_named_key():
+    import shutil, tempfile
+    import keygen
+    tmp = Path(tempfile.mkdtemp())
+    saved_dir, saved_argv = keygen.KEYS_DIR, sys.argv
+    try:
+        keygen.KEYS_DIR = tmp / "a" / "b" / "keys"
+        keygen.KEYS_DIR.mkdir(parents=True)
+        sys.argv = ["keygen.py", "demo"]
+        keygen.main()
+        assert json.loads((keygen.KEYS_DIR / "demo.json").read_text())["did_key"]
+    finally:
+        keygen.KEYS_DIR, sys.argv = saved_dir, saved_argv
+        shutil.rmtree(tmp, ignore_errors=True)
+
+
+def test_absorb_updates_are_event_logged():
+    import shutil, tempfile
+    from absorb_repo import absorb
+    s = _absorb_fixture()
+    tmp = Path(tempfile.mkdtemp()) / "demo"
+    try:
+        tmp.mkdir()
+        (tmp / "a.py").write_text("import os\n")
+        absorb(s, tmp, write=True)
+        (tmp / "a.py").write_text("import sys\n")
+        absorb(s, tmp, write=True)
+        logged = dict(s.conn.execute(
+            "SELECT capsule_id, COUNT(*) FROM events "
+            "WHERE event_type='capsule.written' GROUP BY capsule_id"
+        ).fetchall())
+        assert logged["repo/demo"] == 2, logged
+        # created, imports added, then changed + imports changed
+        assert logged["file/demo/a.py"] == 4, logged
+    finally:
+        s.close()
+        shutil.rmtree(tmp.parent, ignore_errors=True)
+
+
+def test_import_scp_document():
+    from import_scp import import_scp
+    s = fresh_substrate()
+    try:
+        s.write({"id": "subject", "foundation": "foundation:knowledge", "state": {}})
+        doc = {
+            "scp_id": "forge/doc-v1",
+            "scp_version": "1.2",
+            "declaration": {"entity": {"capsule": "subject"}},
+            "inherits": ["forge/parent"],
+            "signature": {"value": "abc", "key_id": "did:key:z", "algorithm": "Ed25519"},
+        }
+        r = import_scp(s, doc, source_path="doc.json")
+        assert r["signed"] is True, r
+        assert r["declares"] == "subject", r
+        assert r["inherits_created"] == ["forge/parent"], r
+        types = {(l["type"], l["target"]) for l in s.get("forge/doc-v1")["links"]}
+        assert ("inherits", "forge/parent") in types, types
+        assert ("declares", "subject") in types, types
+    finally:
+        s.close()
+
+
+def test_import_scp_help_exits_cleanly():
+    import subprocess
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "import_scp.py"), "--help"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0 and "usage" in r.stdout, r
+
+
+def test_why_walks_back_through_rule_and_model():
+    from why import why_trusted
+    s = fresh_substrate()
+    try:
+        s.write({"id": "trust-a", "foundation": "foundation:leighton-weight",
+                 "state": {"n0": 1.0, "k": 0, "age_days": 0}})
+        s.link("trust-a", "about", "alice")
+        s.write({"id": "trusted-rule", "foundation": "foundation:rule",
+                 "state": {"condition": {"type": "trust_above", "threshold": 0.5},
+                           "effect": {"relationship": "trusted", "derive_from": "about"}}})
+        compute_all(s)
+        evaluate_rules(s)
+        chain = why_trusted(s, "trust-a")
+        assert chain["derived_link"]["target"] == "alice", chain
+        assert abs(chain["score"]["score"] - 1.0) < 1e-6, chain
+        assert chain["model"]["id"] == "model-1", chain
+        assert chain["about"] == "alice", chain
+    finally:
+        s.close()
+
+
+def test_why_reports_untrusted():
+    from why import why_trusted
+    s = fresh_substrate()
+    try:
+        assert why_trusted(s, "alice") == {"claim": "alice", "trusted": False}
+    finally:
+        s.close()
+
+
+def test_explain_narrates_state_and_links():
+    from explain import explain
+    s = fresh_substrate()
+    try:
+        s.write({"id": "bob", "foundation": "foundation:knowledge",
+                 "state": {"claim": "Y"}})
+        s.link("bob", "uses", "alice")
+        text = explain(s, "bob")
+        assert 'claim: "Y"' in text, text
+        assert "uses" in text and "alice" in text, text
+    finally:
+        s.close()
+
+
+def test_scps_cli_runs():
+    """The CLI starts and lists its commands."""
+    import subprocess
+    r = subprocess.run([sys.executable, str(ROOT / "scps"), "--help"],
+                       capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+    for cmd in ("ask", "explain", "trust", "stats"):
+        assert cmd in r.stdout, cmd
+
+
 def _absorb_fixture():
     s = Substrate(":memory:")
     s.conn.executescript((ROOT / "schema.sql").read_text())

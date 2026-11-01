@@ -2,7 +2,6 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-import json
 from collections import Counter
 
 from substrate import Substrate
@@ -58,18 +57,16 @@ def main():
     new = 0
     for word, count in word_counts.items():
         tid = f"trust/freq/{word}"
-        if s.get(tid):
-            with s.conn:
-                s.conn.execute(
-                    "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                    (json.dumps({"n0": count, "k": 0, "count": count, "word": word}), tid)
-                )
-        else:
-            s.write({
-                "id": tid,
-                "foundation": "foundation:leighton-weight",
-                "state": {"n0": count, "k": 0, "count": count, "word": word},
-            })
+        state = {"n0": count, "k": 0, "count": count, "word": word}
+        existing = s.get(tid)
+        if existing and existing["state"] == state:
+            continue
+        s.write({
+            "id": tid,
+            "foundation": "foundation:leighton-weight",
+            "state": state,
+        })
+        if not existing:
             s.link(tid, "about", f"lex/{word}")
             new += 1
 

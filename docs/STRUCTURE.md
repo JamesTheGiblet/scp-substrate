@@ -35,7 +35,7 @@ Directory
 │   └── fill_styles.py, extract_vocab.py, learn_frequencies.py
 │
 ├── seeds/                 create-only capsule seeds, reconcile_seeds.py
-├── tests/                 test_substrate.py, 72 tests, in-memory fixtures
+├── tests/                 test_substrate.py, 81 tests, in-memory fixtures
 │
 ├── docs/                  SPEC, STRUCTURE, REASONING, SCP documents (*.scp.json)
 ├── keystone-gate/         Keystone Gate - sibling app, shares sc.db
@@ -46,6 +46,7 @@ Directory
 │   ├── kg_rules.py        rules that propose fills and neighbours
 │   ├── kg_gate.py         gate: rules, checks, refusal
 │   ├── kg_hal.py          HAL: ask substrate, gate the answer
+│   ├── kg_llm.py          Claude rewords answers, gated, falls back to the walker
 │   ├── seed_sc.py         seed sc capsules
 │   └── test_kg.py         boundary + gate tests
 └── legacy/                pre-SQLite JSON archive (excluded from git)
@@ -95,7 +96,7 @@ keygen.py CLI: generate keypair signing
 sign_doc.py CLI: sign a document signing
 bootstrap.py CLI: project sc.json into sc.db stdlib
 scps CLI all of the above
-test_substrate.py 72 tests all of the above
+test_substrate.py 81 tests all of the above
 
 ---
 
@@ -181,7 +182,7 @@ A schema change — the hard one. Requires a numbered migration script, updating
 
 Test coverage
 
-test_substrate.py runs 72 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 57 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
+test_substrate.py runs 81 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 68 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
 
 ```
 foundation:foundation
@@ -198,4 +199,4 @@ Tests never touch sc.db. They can run while the substrate is live, in parallel, 
 
 Tests cover crypto, the substrate, rules, trust, SymLM, the gate, cubes and proposals. The test files are the authoritative list.
 
-Not covered: why.py, explain.py, import_scp.py, bootstrap.py, scps itself. These are exercised only through manual use.
+Not covered: bootstrap.py and most scps subcommands, which are exercised through manual use. Live paths in absorb_github.py need network access and are not tested.

@@ -114,6 +114,10 @@ def _mark_validation_stale(s, cube_id, lens):
     if face:
         _update_state(s, face_id, {**face["state"], "stale": True,
                                    "stale_because": f"{lens} changed at {_now()}"})
+    attestation = s.get(f"{cube_id}/attestation")
+    if attestation:
+        _update_state(s, attestation["id"], {**attestation["state"], "score": 0.0,
+                                             "retracted_because": f"{lens} changed at {_now()}"})
 
 
 def validate(s, cube_id, validator, note=None):
@@ -205,6 +209,32 @@ def attestation_eligible(s, cube_id):
     return c["complete"]
 
 
+def attest(s, cube_id, attested_by, note=None):
+    """A human vouches for a complete cube. Returns {attestation_id} or {error}.
+
+    Completeness gates attestation, and attestation is what reaches trust:
+    it is an observation of the cube, so fused_trust counts it as evidence.
+    Changing a face retracts it, and a new attestation can then replace it.
+    """
+    if not attestation_eligible(s, cube_id):
+        return {"error": f"{cube_id} is not complete, so it cannot be attested"}
+    attestation_id = f"{cube_id}/attestation"
+    s.write({
+        "id": attestation_id,
+        "foundation": "foundation:observation",
+        "state": {
+            "kind": "attestation",
+            "target": cube_id,
+            "score": 1.0,
+            "source": attested_by,
+            "note": note,
+            "attested_at": _now(),
+        },
+    })
+    s.link(attestation_id, "observes", cube_id)
+    return {"attestation_id": attestation_id}
+
+
 def show_cube(s, cube_id):
     """Return full cube data for rendering."""
     c = s.get(cube_id)
@@ -231,6 +261,7 @@ def show_cube(s, cube_id):
         "created_at": c["state"].get("created_at"),
         "faces": faces,
         "validation": validation,
+        "attestation": (s.get(f"{cube_id}/attestation") or {}).get("state"),
         "completeness": comp,
     }
 

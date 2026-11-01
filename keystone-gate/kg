@@ -40,9 +40,18 @@ def cmd_ask(args):
     from kg_gate import load_sc
     s = Substrate()
     question = " ".join(args.question)
-    sc = load_sc(s)
-    result = ask_gated(s, question, sc=sc)
+    if args.claude:
+        from kg_llm import ask_claude
+        result = ask_claude(s, question)
+    else:
+        result = ask_gated(s, question, sc=load_sc(s))
     s.close()
+
+    if result.get("fallback_reason"):
+        print(f"(Claude not used: {result['fallback_reason']}. Showing the walker's answer.)")
+        for v in result.get("refused", {}).get("violations", []):
+            print(f"  - {v['rule']}: {v['detail']}")
+        print()
 
     if result.get("no_intent"):
         print(f"No intent matched for: {question!r}")
@@ -193,6 +202,18 @@ def cmd_cube_validate(args):
         print(f"  note: {args.note}")
 
 
+def cmd_cube_attest(args):
+    from kg_agent import attest
+    s = Substrate()
+    result = attest(s, args.cube_id, args.by, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Attested: {args.cube_id}")
+    print(f"  by: {args.by}")
+
+
 def cmd_cube_show(args):
     from kg_agent import show_cube, LENSES
     s = Substrate()
@@ -240,6 +261,10 @@ def cmd_cube_show(args):
         print("  Validation: (not yet validated)")
     print()
 
+    a = data.get("attestation")
+    if a:
+        state = "RETRACTED, was attested" if a.get("retracted_because") else "Attested"
+        print(f"  {state} by {a.get('source')} at {a.get('attested_at')}")
     comp = data["completeness"]
     print(f"  Completeness: {comp['score']:.2f} ({len(comp['filled_lenses'])}/5 lenses"
           f"{' + validated' if comp['validated'] else ''})")
@@ -406,6 +431,8 @@ def main():
 
     sp = sub.add_parser("ask", help="ask the substrate, gated — refuses if compliance fails")
     sp.add_argument("question", nargs="+")
+    sp.add_argument("--claude", action="store_true",
+                    help="have Claude reword the answer; sends it to the Anthropic API")
     sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("gate", help="gate operations")
@@ -439,6 +466,12 @@ def main():
     sp_val.add_argument("--by", required=True)
     sp_val.add_argument("--note", default=None)
     sp_val.set_defaults(func=cmd_cube_validate)
+
+    sp_att = sp_sub.add_parser("attest", help="vouch for a complete cube; adds trust evidence")
+    sp_att.add_argument("cube_id")
+    sp_att.add_argument("--by", required=True)
+    sp_att.add_argument("--note", default=None)
+    sp_att.set_defaults(func=cmd_cube_attest)
 
     sp_show = sp_sub.add_parser("show", help="show cube state")
     sp_show.add_argument("cube_id")

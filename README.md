@@ -58,8 +58,9 @@ Root holds the world (`sc.json`, `sc.db`, `schema.sql`) and the `scps` CLI. Code
 | `keystone-gate/kg_hal.py` | HAL - asks substrate, gates answer |
 | `keystone-gate/kg_agent.py` | Cubes - faces, validation, completeness, neighbours, proposals |
 | `keystone-gate/kg_rules.py` | Rules that propose face fills and neighbour links |
+| `keystone-gate/kg_llm.py` | Claude rewords walker answers, gated by `sc/claude-answerer` |
 | `keystone-gate/seed_sc.py` | Seeds `sc/*` capsules |
-| `keystone-gate/test_kg.py` | 57 boundary, gate, cube and proposal tests |
+| `keystone-gate/test_kg.py` | 68 boundary, gate, Claude, cube and proposal tests |
 
 Keystone Gate shares `sc.db` with the substrate and writes its own capsules through `Substrate`; it does not change substrate code. See `keystone-gate/README.md` for the gate pattern and `docs/SPEC.md §15` for the general specification.
 
@@ -88,7 +89,7 @@ Keystone Gate shares `sc.db` with the substrate and writes its own capsules thro
 | File | Purpose |
 |---|---|
 | `scps` | CLI — see `./scps --help` |
-| `test_substrate.py` | 72 tests, in-memory fixtures, no `sc.db` dependency |
+| `test_substrate.py` | 81 tests, in-memory fixtures, no `sc.db` dependency |
 
 ### Docs
 `docs/SPEC.md` (substrate spec), `docs/STRUCTURE.md` (file map, schema, extension points), `docs/REASONING.md` (how rules/trust/why/explain work). `docs/` also holds SCP source documents. `legacy/` holds pre-SQLite JSON.
@@ -98,7 +99,7 @@ Keystone Gate shares `sc.db` with the substrate and writes its own capsules thro
 ```sh
 cd ~/scp-substrate
 python scripts/bootstrap.py         # project sc.json into sc.db
-python tests/test_substrate.py    # confirm 72 tests pass
+python tests/test_substrate.py    # confirm 81 tests pass
 ./scps stats                # what's in the substrate
 ```
 
@@ -171,7 +172,7 @@ Local absorption reads contents: file hashes, line counts, imports, function/cla
 
 What it does not do
 
-· No network, no server. One SQLite file, one writer. absorb_github.py is the only outbound call and only when invoked manually.
+· No server. One SQLite file, one writer. Two things reach the network, and only when invoked by hand: absorb_github.py, and `kg ask --claude`, which sends the question and the walker's answer to the Anthropic API.
 · No neural components. SymLM is symbolic: grammar rules, features, intents. It parses and classifies; it does not generate from weights.
 · No content indexing. Repos store file metadata (sha, size, language) and symbol names, not file bytes. grep on disk remains better for content search.
 · No cross-session conversation memory. Each scps talk starts fresh. Conversation turns are logged as capsules but not read back as context.

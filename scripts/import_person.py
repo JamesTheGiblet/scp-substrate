@@ -87,11 +87,7 @@ def import_person(s, doc, source_path=None, signed_path=None):
 
     existing = s.get(person_id)
     if existing:
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(person_state), person_id),
-            )
+        s.write({"id": person_id, "foundation": "foundation:knowledge", "state": person_state})
     else:
         s.write({
             "id": person_id,

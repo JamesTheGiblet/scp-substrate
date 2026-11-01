@@ -310,6 +310,93 @@ def test_gate_fails_closed_on_unknown_must_not_rule():
         s.close()
 
 
+# --- Claude tests --------------------------------------------------------
+class _FakeResponse:
+    def __init__(self, text, stop_reason="end_turn"):
+        import types
+        self.stop_reason = stop_reason
+        self.content = [types.SimpleNamespace(type="text", text=text)]
+
+
+class _FakeClient:
+    """Stands in for anthropic.Anthropic(). Records requests; no network."""
+    def __init__(self, claims=None, stop_reason="end_turn", error=None):
+        import json, types
+        self.calls = []
+        text = json.dumps({"claims": claims or []})
+
+        def create(**kwargs):
+            self.calls.append(kwargs)
+            if error:
+                raise error
+            return _FakeResponse(text, stop_reason)
+
+        self.beta = types.SimpleNamespace(messages=types.SimpleNamespace(create=create))
+
+
+def _claude(client, question="who is james"):
+    from kg_llm import ask_claude
+    s = Substrate()
+    try:
+        return ask_claude(s, question, client=client)
+    finally:
+        s.close()
+
+
+GOOD_CLAIM = {"text": "James is a builder.", "evidence": "is a person — builder"}
+
+
+def test_claude_answer_passes_when_anchored():
+    client = _FakeClient([GOOD_CLAIM])
+    r = _claude(client)
+    assert r["source"] == "claude" and r["answer"] == "James is a builder.", r
+    sent = client.calls[0]["messages"][0]["content"]
+    assert "is a person" in sent and "who is james" in sent, sent
+
+
+def test_claude_invented_quote_falls_back():
+    r = _claude(_FakeClient([{"text": "James is a pilot.", "evidence": "is a pilot"}]))
+    assert r["source"] == "walker" and "gate refused" in r["fallback_reason"], r
+    assert "builder" in r["answer"], r
+    assert any(v["rule"] == "claims_quote_evidence" for v in r["refused"]["violations"]), r
+
+
+def test_claude_unsourced_number_falls_back():
+    r = _claude(_FakeClient([{"text": "James has 12 projects.",
+                              "evidence": "is a person — builder"}]))
+    assert r["source"] == "walker", r
+    assert any("12" in v["detail"] for v in r["refused"]["violations"]), r
+
+
+def test_claude_unsourced_name_falls_back():
+    r = _claude(_FakeClient([{"text": "James works with Bigfoot.",
+                              "evidence": "is a person — builder"}]))
+    assert r["source"] == "walker", r
+    assert any("Bigfoot" in v["detail"] for v in r["refused"]["violations"]), r
+
+
+def test_claude_no_claims_falls_back():
+    assert _claude(_FakeClient([]))["source"] == "walker"
+
+
+def test_claude_refusal_falls_back():
+    r = _claude(_FakeClient([GOOD_CLAIM], stop_reason="refusal"))
+    assert r["source"] == "walker" and "refusal" in r["fallback_reason"], r
+
+
+def test_claude_api_error_falls_back():
+    r = _claude(_FakeClient(error=RuntimeError("network down")))
+    assert r["source"] == "walker" and "network down" in r["fallback_reason"], r
+    assert "builder" in r["answer"], r
+
+
+def test_claude_not_called_without_facts():
+    client = _FakeClient([GOOD_CLAIM])
+    assert _claude(client, "who is santa claus").get("answer") is not None
+    assert _claude(client, "how do magnets work").get("no_intent") is True
+    assert client.calls == [], client.calls
+
+
 # --- cube tests ----------------------------------------------------------
 def _fresh_kg_substrate():
     """In-memory substrate with KG foundations + default-cube."""
@@ -476,6 +563,49 @@ def test_agent_edits_are_event_logged():
 
         set_contradicts(s, a, b)
         assert written(a) == 2
+    finally:
+        s.close()
+
+
+def test_attest_requires_complete_cube():
+    from kg_agent import create_cube, attest
+    s = _fresh_kg_substrate()
+    try:
+        cid = create_cube(s, "test cube")["cube_id"]
+        assert "error" in attest(s, cid, "james")
+        assert s.get(f"{cid}/attestation") is None
+    finally:
+        s.close()
+
+
+def test_attestation_raises_fused_trust():
+    from kg_agent import attest
+    from trust import fused_trust
+    s = _fresh_kg_substrate()
+    try:
+        cid = _complete_cube(s)
+        before = fused_trust(s, cid)["posterior"]
+        assert "error" not in attest(s, cid, "james")
+        assert fused_trust(s, cid)["posterior"] > before + 0.1
+    finally:
+        s.close()
+
+
+def test_face_change_retracts_attestation():
+    from kg_agent import attest, fill_face, validate
+    from trust import fused_trust
+    s = _fresh_kg_substrate()
+    try:
+        cid = _complete_cube(s)
+        before = fused_trust(s, cid)["posterior"]
+        attest(s, cid, "james")
+        fill_face(s, cid, "FACT", "changed")
+        assert abs(fused_trust(s, cid)["posterior"] - before) < 1e-9
+        assert s.get(f"{cid}/attestation")["state"]["retracted_because"]
+        assert "error" in attest(s, cid, "james")
+        validate(s, cid, "james")
+        assert "error" not in attest(s, cid, "james")
+        assert fused_trust(s, cid)["posterior"] > before + 0.1
     finally:
         s.close()
 

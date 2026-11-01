@@ -186,12 +186,7 @@ def absorb_github(s, owner, repo, write=False):
 
     existing = s.get(repo_id)
     if existing:
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now')"
-                " WHERE id=?",
-                (json.dumps(repo_state), repo_id),
-            )
+        s.write({"id": repo_id, "foundation": "foundation:knowledge", "state": repo_state})
     else:
         s.write({
             "id": repo_id,
@@ -226,12 +221,7 @@ def absorb_github(s, owner, repo, write=False):
             if ex["state"].get("sha") == f["sha"]:
                 skipped += 1
                 continue
-            with s.conn:
-                s.conn.execute(
-                    "UPDATE capsules SET state_json=?, updated_at=datetime('now')"
-                    " WHERE id=?",
-                    (json.dumps(file_state), fid),
-                )
+            s.write({"id": fid, "foundation": "foundation:knowledge", "state": file_state})
             updated += 1
         else:
             s.write({

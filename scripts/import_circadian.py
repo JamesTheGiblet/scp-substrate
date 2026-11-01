@@ -88,11 +88,7 @@ def import_circadian(s, doc, source_path=None, signed_path=None):
 
     existing = s.get(routine_id)
     if existing:
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(routine_state), routine_id),
-            )
+        s.write({"id": routine_id, "foundation": "foundation:knowledge", "state": routine_state})
     else:
         s.write({
             "id": routine_id,
@@ -124,11 +120,7 @@ def import_circadian(s, doc, source_path=None, signed_path=None):
         existing_block = s.get(bid)
         if existing_block:
             if existing_block["state"] != block_state:
-                with s.conn:
-                    s.conn.execute(
-                        "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                        (json.dumps(block_state), bid),
-                    )
+                s.write({"id": bid, "foundation": "foundation:knowledge", "state": block_state})
                 blocks_updated += 1
         else:
             s.write({"id": bid, "foundation": "foundation:knowledge", "state": block_state})
@@ -156,11 +148,7 @@ def import_circadian(s, doc, source_path=None, signed_path=None):
             existing_phase = s.get(pid)
             if existing_phase:
                 if existing_phase["state"] != phase_state:
-                    with s.conn:
-                        s.conn.execute(
-                            "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                            (json.dumps(phase_state), pid),
-                        )
+                    s.write({"id": pid, "foundation": "foundation:knowledge", "state": phase_state})
             else:
                 s.write({"id": pid, "foundation": "foundation:knowledge", "state": phase_state})
                 s.link(routine_id, "contains", pid)
