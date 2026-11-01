@@ -71,6 +71,107 @@ def test_boundary_imports():
     assert _s and _r
 
 
+# --- gate tests ----------------------------------------------------------
+def test_sc_capsule_exists():
+    """The sc/symlm-answerer capsule must be seeded."""
+    s = Substrate()
+    try:
+        sc = s.get("sc/symlm-answerer")
+        assert sc is not None, "sc/symlm-answerer missing"
+        assert sc["state"]["kind"] == "sc"
+        assert len(sc["state"]["must"]) >= 2
+        assert len(sc["state"]["test_cases"]) >= 2
+    finally:
+        s.close()
+
+
+def test_gate_passes_good_answer():
+    """A real answer that references real entities passes the gate."""
+    from kg_hal import ask_gated
+    from kg_gate import load_sc
+    s = Substrate()
+    try:
+        sc = load_sc(s)
+        result = ask_gated(s, "who is james", sc=sc)
+        assert not result.get("rejected"), result
+        assert "answer" in result, result
+    finally:
+        s.close()
+
+
+def test_gate_rejects_invented_id():
+    """A result mentioning a nonexistent slashed ID is rejected."""
+    from kg_gate import check, load_sc
+    s = Substrate()
+    try:
+        sc = load_sc(s)
+        fake_result = {
+            "ok": True,
+            "summary": "Found this",
+            "detail": "  -> contains -> made-up/repo/xyz",
+            "intent": "intent/what-is",
+            "entity": None,
+        }
+        compliance = check(s, {"input": "test", "result": fake_result}, sc=sc)
+        assert not compliance["ok"], compliance
+        assert any(v["rule"] == "no_invented_ids" for v in compliance["violations"])
+        assert any("made-up/repo/xyz" in v["detail"] for v in compliance["violations"])
+    finally:
+        s.close()
+
+
+def test_gate_rejects_invented_entity():
+    """A result whose entity is not a real capsule is rejected."""
+    from kg_gate import check, load_sc
+    s = Substrate()
+    try:
+        sc = load_sc(s)
+        fake_result = {
+            "ok": True,
+            "summary": "Nothing here",
+            "detail": None,
+            "intent": "intent/what-is",
+            "entity": "totally-fake-entity-xyz",
+        }
+        compliance = check(s, {"input": "test", "result": fake_result}, sc=sc)
+        assert not compliance["ok"], compliance
+        assert any(v["rule"] == "no_invented_ids" for v in compliance["violations"])
+    finally:
+        s.close()
+
+
+def test_gate_rejects_hallucinated_trust():
+    """A result claiming a trust score that doesn't match is rejected."""
+    from kg_gate import check, load_sc
+    s = Substrate()
+    try:
+        sc = load_sc(s)
+        fake_result = {
+            "ok": True,
+            "summary": "scp-claim is trusted (score 0.1234)",
+            "detail": None,
+            "intent": "intent/why-trusted",
+            "entity": "scp-claim",
+        }
+        compliance = check(s, {"input": "test", "result": fake_result}, sc=sc)
+        assert not compliance["ok"], compliance
+        assert any(v["rule"] == "no_hallucinated_trust" for v in compliance["violations"])
+    finally:
+        s.close()
+
+
+def test_gate_no_intent_is_compliant():
+    """No intent matched → no answer → nothing to gate → passes."""
+    from kg_gate import check, load_sc
+    s = Substrate()
+    try:
+        sc = load_sc(s)
+        compliance = check(s, {"input": "test", "result": None}, sc=sc)
+        assert compliance["ok"], compliance
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items())
              if k.startswith("test_") and callable(v)]

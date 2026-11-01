@@ -11,6 +11,8 @@ _here = Path(__file__).resolve().parent
 sys.path.insert(0, str(_here.parent))
 sys.path.insert(0, str(_here))
 
+from substrate import Substrate
+
 
 def cmd_stats(args):
     from kg_stats import stats
@@ -31,6 +33,115 @@ def cmd_route_list(args):
             print(f"  {n}")
 
 
+def cmd_ask(args):
+    from kg_hal import ask_gated
+    from kg_gate import load_sc
+    s = Substrate()
+    question = " ".join(args.question)
+    sc = load_sc(s)
+    result = ask_gated(s, question, sc=sc)
+    s.close()
+
+    if result.get("no_intent"):
+        print(f"No intent matched for: {question!r}")
+        print("(nothing to gate, nothing to answer)")
+        return
+
+    if result.get("rejected"):
+        print(f"Gate rejected the answer.")
+        for v in result["check"]["violations"]:
+            print(f"  - {v['rule']}: {v['detail']}")
+        print()
+        print("The answer is withheld. Compliance must pass before any answer is shown.")
+        return
+
+    print(result["answer"])
+
+
+def cmd_gate_check(args):
+    from kg_hal import ask_gated
+    from kg_gate import load_sc
+    s = Substrate()
+    question = " ".join(args.question)
+    sc = load_sc(s)
+    if sc is None:
+        print("No sc capsule loaded — cannot gate.")
+        s.close()
+        return
+    print(f"Gate: {sc.get('name')}")
+    print(f"Rules: {[m['rule'] for m in sc.get('must', [])]}")
+    print()
+
+    result = ask_gated(s, question, sc=sc)
+    s.close()
+
+    if result.get("no_intent"):
+        print(f"Question: {question!r}")
+        print("Result: no intent matched — nothing to check")
+        return
+
+    if result.get("rejected"):
+        print(f"Question: {question!r}")
+        print("Result: REJECTED")
+        for v in result["check"]["violations"]:
+            print(f"  violation [{v['rule']}]: {v['detail']}")
+    else:
+        print(f"Question: {question!r}")
+        print("Result: PASSED")
+        print()
+        print("Answer:")
+        print(result["answer"])
+
+
+def cmd_gate_test(args):
+    from kg_hal import ask_gated
+    from kg_gate import load_sc
+    s = Substrate()
+    sc = load_sc(s)
+    if sc is None:
+        print("No sc capsule loaded — cannot run tests.")
+        s.close()
+        return
+
+    print(f"Gate test: {sc.get('name')}")
+    print(f"Rules: {[m['rule'] for m in sc.get('must', [])]}")
+    print()
+
+    passed, failed = 0, 0
+    for tc in sc.get("test_cases", []):
+        inp = tc["input"]
+        expect_pass = tc["expect_pass"]
+        reason = tc.get("reason", "")
+
+        result = ask_gated(s, inp, sc=sc)
+        if result.get("no_intent"):
+            actual_pass = None  # can't say
+        elif result.get("rejected"):
+            actual_pass = False
+        else:
+            actual_pass = True
+
+        if actual_pass == expect_pass:
+            status = "OK"
+            passed += 1
+        else:
+            status = "FAIL"
+            failed += 1
+
+        print(f"  [{status}] input: {inp!r}")
+        print(f"         expected: {'pass' if expect_pass else 'reject'}, got: {'pass' if actual_pass else 'reject' if actual_pass is False else 'no-intent'}")
+        if reason:
+            print(f"         reason: {reason}")
+        if actual_pass is False and result.get("check"):
+            for v in result["check"]["violations"]:
+                print(f"         violation: [{v['rule']}] {v['detail']}")
+        print()
+
+    s.close()
+    print(f"{passed} passed, {failed} failed")
+    return 0 if failed == 0 else 1
+
+
 def main():
     ap = argparse.ArgumentParser(prog="kg", description="Keystone Gate CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -42,6 +153,20 @@ def main():
     sp_sub = sp.add_subparsers(dest="route_cmd", required=True)
     sp_list = sp_sub.add_parser("list", help="list all neighbours")
     sp_list.set_defaults(func=cmd_route_list)
+
+    sp = sub.add_parser("ask", help="ask the substrate, gated — refuses if compliance fails")
+    sp.add_argument("question", nargs="+")
+    sp.set_defaults(func=cmd_ask)
+
+    sp = sub.add_parser("gate", help="gate operations")
+    sp_sub = sp.add_subparsers(dest="gate_cmd", required=True)
+
+    sp_check = sp_sub.add_parser("check", help="check whether an answer passes the gate")
+    sp_check.add_argument("question", nargs="+")
+    sp_check.set_defaults(func=cmd_gate_check)
+
+    sp_test = sp_sub.add_parser("test", help="run the sc capsule's test cases")
+    sp_test.set_defaults(func=cmd_gate_test)
 
     args = ap.parse_args()
     args.func(args)
