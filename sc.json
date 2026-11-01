@@ -146,6 +146,38 @@
         "schema": {}
       },
       "links": []
+    },
+    {
+      "id": "foundation:cube",
+      "state": {
+        "name": "cube",
+        "description": "A data record whose faces are filled by lenses and validated by humans. The unit of Keystone Gate."
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:lens",
+      "state": {
+        "name": "lens",
+        "description": "One of five ways a cube can be filled: FACT, COUNTER, OPINION, FICTION, CONTEXT. Each contributes 16 percent to completeness. `contradicts` is a separate boolean field."
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:cube-face",
+      "state": {
+        "name": "cube-face",
+        "description": "A cube's filling of one lens, or its human validation. Contributes to the cube's completeness score."
+      },
+      "links": []
+    },
+    {
+      "id": "foundation:neighbour",
+      "state": {
+        "name": "neighbour",
+        "description": "A routing identifier. Neighbours know only IDs and query the ledger for detail."
+      },
+      "links": []
     }
   ]
 }
