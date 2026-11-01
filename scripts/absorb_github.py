@@ -195,10 +195,7 @@ def absorb_github(s, owner, repo, write=False):
         })
         # Link to james if james exists
         if s.get("james"):
-            try:
-                s.link("james", "owns", repo_id)
-            except Exception:
-                pass
+            s.link("james", "owns", repo_id)
 
     # --- File capsules ---
     created = updated = skipped = 0

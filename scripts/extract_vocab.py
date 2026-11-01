@@ -92,8 +92,8 @@ def collect_sources(s):
             data = json.loads(row["state_json"])
             text = " ".join(_walk_json_strings(data))
             yield f"capsule:{row['id']}", text
-        except Exception:
-            pass
+        except json.JSONDecodeError as e:
+            print(f"  skipped {row['id']}: {e}", file=sys.stderr)
 
     # 3. Python docstrings + comments
     code = [p for d in ("src", "scripts", "seeds", "tests") for p in (ROOT / d).glob("*.py")]
@@ -115,8 +115,8 @@ def collect_sources(s):
             )
             if comments:
                 yield f"py:{path.name}:comments", comments
-        except Exception:
-            pass
+        except (OSError, SyntaxError, ValueError) as e:
+            print(f"  skipped {path.name}: {e}", file=sys.stderr)
 
 
 # --- tokenisation -------------------------------------------------------

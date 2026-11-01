@@ -610,6 +610,76 @@ def test_face_change_retracts_attestation():
         s.close()
 
 
+def _answers(*replies):
+    queue = iter(replies)
+    return lambda prompt: next(queue)
+
+
+def _draft_cube(s):
+    from kg_agent import create_cube, propose_face
+    cid = create_cube(s, "test cube")["cube_id"]
+    for lens in ("FACT", "COUNTER", "FICTION", "CONTEXT"):
+        propose_face(s, cid, lens, f"{lens} draft", proposed_by="draft")
+    return cid
+
+
+def test_review_takes_a_cube_to_attested():
+    from kg_agent import show_cube
+    from kg_review import review
+    s = _fresh_kg_substrate()
+    try:
+        cid = _draft_cube(s)
+        review(s, "james", ask=_answers("all", "my view", "looks right", "y"),
+               show=lambda text: None)
+        data = show_cube(s, cid)
+        assert data["completeness"]["complete"] is True, data
+        assert data["faces"]["OPINION"]["filled_by"] == "human", data
+        assert data["validation"]["validator"] == "james", data
+        assert data["attestation"]["source"] == "james", data
+    finally:
+        s.close()
+
+
+def test_review_blank_answers_change_nothing():
+    from kg_agent import completeness, list_proposals
+    from kg_review import review
+    s = _fresh_kg_substrate()
+    try:
+        cid = _draft_cube(s)
+        review(s, "james", ask=_answers("", "", "", "", "", "", "", "", ""),
+               show=lambda text: None)
+        assert completeness(s, cid)["score"] == 0.0
+        assert len(list_proposals(s, cube_id=cid, status="pending")) == 4
+    finally:
+        s.close()
+
+
+def test_review_quit_stops_and_keeps_answers():
+    from kg_agent import completeness, list_proposals
+    from kg_review import review
+    s = _fresh_kg_substrate()
+    try:
+        cid = _draft_cube(s)
+        review(s, "james", ask=_answers("a", "r", "", "q"), show=lambda text: None)
+        assert completeness(s, cid)["filled_lenses"] == ["FACT"]
+        assert len(list_proposals(s, cube_id=cid, status="rejected")) == 1
+        assert len(list_proposals(s, cube_id=cid, status="pending")) == 2
+    finally:
+        s.close()
+
+
+def test_seed_cubes_are_drafts_not_decisions():
+    """Seeds propose only: no face, validation or attestation is written."""
+    import seed_cubes
+    from kg_agent import LENSES
+    assert len(seed_cubes.CUBES) >= 20
+    assert len({c["id"] for c in seed_cubes.CUBES}) == len(seed_cubes.CUBES)
+    assert "OPINION" not in seed_cubes.LENSES
+    for cube in seed_cubes.CUBES:
+        assert all(cube[lens] for lens in seed_cubes.LENSES), cube["id"]
+        assert "OPINION" not in cube, cube["id"]
+
+
 def test_cube_invalid_lens():
     from kg_agent import create_cube, fill_face
     s = _fresh_kg_substrate()

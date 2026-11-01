@@ -60,7 +60,7 @@ Root holds the world (`sc.json`, `sc.db`, `schema.sql`) and the `scps` CLI. Code
 | `keystone-gate/kg_rules.py` | Rules that propose face fills and neighbour links |
 | `keystone-gate/kg_llm.py` | Claude rewords walker answers, gated by `sc/claude-answerer` |
 | `keystone-gate/seed_sc.py` | Seeds `sc/*` capsules |
-| `keystone-gate/test_kg.py` | 68 boundary, gate, Claude, cube and proposal tests |
+| `keystone-gate/test_kg.py` | 72 boundary, gate, Claude, cube and proposal tests |
 
 Keystone Gate shares `sc.db` with the substrate and writes its own capsules through `Substrate`; it does not change substrate code. See `keystone-gate/README.md` for the gate pattern and `docs/SPEC.md §15` for the general specification.
 

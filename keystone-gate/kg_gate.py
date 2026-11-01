@@ -123,20 +123,14 @@ def _actual_trust_values(s, cid):
     stored = capsule["state"].get("score") if capsule else None
     if isinstance(stored, (int, float)) and not isinstance(stored, bool):
         values.append(("stored_score", float(stored)))
-    try:
-        from queries import trust_now
-        tn = trust_now(s, cid)
-        if tn and tn.get("score") is not None:
-            values.append(("trust_now", float(tn["score"])))
-    except Exception:
-        pass
-    try:
-        from trust import fused_trust
-        ft = fused_trust(s, cid)
-        if ft and ft.get("posterior") is not None:
-            values.append(("fused_trust", float(ft["posterior"])))
-    except Exception:
-        pass
+    from queries import trust_now
+    from trust import fused_trust
+    tn = trust_now(s, cid)
+    if tn and tn.get("score") is not None:
+        values.append(("trust_now", float(tn["score"])))
+    ft = fused_trust(s, cid)
+    if ft and ft.get("posterior") is not None:
+        values.append(("fused_trust", float(ft["posterior"])))
     return values
 
 

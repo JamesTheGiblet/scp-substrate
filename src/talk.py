@@ -33,8 +33,9 @@ def _extract_semantic(s, root_id, session_id):
         if isinstance(f, str):
             try:
                 verb_features = json.loads(f)
-            except Exception:
-                pass
+            except json.JSONDecodeError:
+                # Features are optional; a bad blob means none
+                verb_features = {}
         elif isinstance(f, dict):
             verb_features = f
 

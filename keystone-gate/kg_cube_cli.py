@@ -1,0 +1,278 @@
+"""kg cube and kg neighbour commands."""
+from substrate import Substrate
+
+
+def cmd_cube_new(args):
+    from kg_agent import create_cube
+    s = Substrate()
+    tags = args.tag or None
+    result = create_cube(s, args.content, source=args.source, tags=tags)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Created: {result['cube_id']}")
+    print(f"  content: {args.content!r}")
+    if args.source:
+        print(f"  source: {args.source}")
+    print()
+    print("Empty cube. Fill lenses with: kg cube fill <id> <lens> \"<content>\"")
+    print(f"Lenses: {', '.join(__import__('kg_agent').LENSES)}")
+
+
+def cmd_cube_fill(args):
+    from kg_agent import fill_face, LENSES
+    lens = args.lens.upper()
+    if lens not in LENSES:
+        print(f"error: invalid lens {lens!r}; must be one of {LENSES}")
+        return
+    s = Substrate()
+    result = fill_face(s, args.cube_id, lens, args.content,
+                       confidence=args.confidence, filled_by="human")
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Filled: {result['face_id']}")
+    print(f"  {lens}: {args.content!r}")
+
+
+def cmd_cube_validate(args):
+    from kg_agent import validate
+    s = Substrate()
+    result = validate(s, args.cube_id, args.by, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Validated: {args.cube_id}")
+    print(f"  validator: {args.by}")
+    if args.note:
+        print(f"  note: {args.note}")
+
+
+def cmd_cube_attest(args):
+    from kg_agent import attest
+    s = Substrate()
+    result = attest(s, args.cube_id, args.by, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Attested: {args.cube_id}")
+    print(f"  by: {args.by}")
+
+
+def cmd_cube_review(args):
+    from kg_review import review
+    s = Substrate()
+    try:
+        seen = review(s, args.by, cube_id=args.cube_id)
+    except (EOFError, KeyboardInterrupt):
+        seen = None
+    s.close()
+    print("\nStopped. Everything answered so far is saved." if seen is None
+          else f"\nReviewed {seen} cube(s).")
+
+
+def cmd_cube_show(args):
+    from kg_agent import show_cube, LENSES
+    s = Substrate()
+    data = show_cube(s, args.cube_id)
+    s.close()
+    if "error" in data:
+        print(f"error: {data['error']}")
+        return
+
+    print(f"{data['cube_id']}")
+    print(f"  content: {data['content']!r}")
+    if data.get("source"):
+        print(f"  source: {data['source']}")
+    if data.get("tags"):
+        print(f"  tags: {data['tags']}")
+    print(f"  created: {data['created_at']}")
+    if data.get("contradicts"):
+        print(f"  contradicts: {data['contradicts']['other']} ({data['contradicts'].get('note') or 'no note'})")
+    print()
+
+    print("  Faces:")
+    for lens in LENSES:
+        face = data["faces"].get(lens)
+        if face:
+            c = face.get("content", "")
+            if len(c) > 60:
+                c = c[:57] + "..."
+            print(f"    [x] {lens:10} {c}")
+        else:
+            print(f"    [ ] {lens:10} (empty)")
+    print()
+
+    v = data.get("validation")
+    if v:
+        note = v.get("note") or ""
+        if len(note) > 60:
+            note = note[:57] + "..."
+        label = "Validation STALE, was" if v.get("stale") else "Validated"
+        print(f"  {label} by {v.get('validator')} at {v.get('validated_at')}")
+        if v.get("stale"):
+            print(f"    because: {v.get('stale_because')}")
+        if note:
+            print(f"    note: {note}")
+    else:
+        print("  Validation: (not yet validated)")
+    print()
+
+    a = data.get("attestation")
+    if a:
+        state = "RETRACTED, was attested" if a.get("retracted_because") else "Attested"
+        print(f"  {state} by {a.get('source')} at {a.get('attested_at')}")
+    comp = data["completeness"]
+    print(f"  Completeness: {comp['score']:.2f} ({len(comp['filled_lenses'])}/5 lenses"
+          f"{' + validated' if comp['validated'] else ''})")
+    if comp["missing_lenses"]:
+        print(f"  Missing lenses: {', '.join(comp['missing_lenses'])}")
+    print(f"  Attestation eligible: {'YES' if comp['complete'] else 'NO'}")
+
+
+def cmd_cube_list(args):
+    from kg_agent import list_cubes
+    s = Substrate()
+    cubes = list_cubes(s)
+    s.close()
+    if not cubes:
+        print("No cubes yet.")
+        return
+    for c in cubes:
+        marker = "[complete]" if c["complete"] else "[incomplete]"
+        print(f"  {c['id']:45} {c['score']:.2f} {marker}")
+
+
+def cmd_cube_contradicts(args):
+    from kg_agent import set_contradicts
+    s = Substrate()
+    result = set_contradicts(s, args.cube_id, args.other_id, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"{result['cube_id']} contradicts {result['contradicts']}")
+
+
+def cmd_neighbour_link(args):
+    from kg_agent import link_neighbour
+    s = Substrate()
+    result = link_neighbour(s, args.cube_a, args.cube_b, note=args.note)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    print(f"Linked: {result['cube_a']} <-> {result['cube_b']}")
+    if args.note:
+        print(f"  note: {args.note}")
+
+
+def cmd_neighbour_list(args):
+    from kg_agent import list_neighbours
+    s = Substrate()
+    result = list_neighbours(s, args.cube_id)
+    s.close()
+    if "error" in result:
+        print(f"error: {result['error']}")
+        return
+    if not result["neighbours"]:
+        print(f"{result['cube']} has no neighbours.")
+    else:
+        print(f"{result['cube']} neighbours:")
+        for n in result["neighbours"]:
+            print(f"  -> {n}")
+
+
+def cmd_cube_proposals(args):
+    from kg_agent import list_proposals
+    s = Substrate()
+    props = list_proposals(s, cube_id=args.cube_id, status=args.status)
+    s.close()
+    if not props:
+        scope = f" (cube {args.cube_id})" if args.cube_id else ""
+        print(f"No {args.status} proposals.{scope}")
+        return
+    for p in props:
+        ptype = p.get("proposal_type", "?")
+        if ptype == "face":
+            content = p.get("content", "")
+            if len(content) > 60:
+                content = content[:57] + "..."
+            print(f"  {p['id']}")
+            print(f"    face    [{p['lens']}] {content}")
+        elif ptype == "neighbour":
+            print(f"  {p['id']}")
+            print(f"    neigh   -> {p.get('other_cube_id')}")
+        print(f"    by      {p.get('proposed_by', '?')}")
+        if p.get("rationale"):
+            r = p["rationale"]
+            if len(r) > 70:
+                r = r[:67] + "..."
+            print(f"    reason  {r}")
+        print(f"    status  {p.get('status')}")
+        print()
+
+
+def cmd_cube_accept(args):
+    from kg_agent import accept_proposal
+    s = Substrate()
+    r = accept_proposal(s, args.proposal_id, accepted_by=args.by)
+    s.close()
+    if "error" in r:
+        print(f"error: {r['error']}")
+        return
+    print(f"Accepted: {r['proposal_id']}")
+
+
+def cmd_cube_reject(args):
+    from kg_agent import reject_proposal
+    s = Substrate()
+    r = reject_proposal(s, args.proposal_id, rejected_by=args.by, reason=args.reason)
+    s.close()
+    if "error" in r:
+        print(f"error: {r['error']}")
+        return
+    print(f"Rejected: {r['proposal_id']}")
+    if args.reason:
+        print(f"  reason: {args.reason}")
+
+
+def cmd_cube_tick(args):
+    from kg_agent import list_cubes
+    from kg_rules import run_rules
+    s = Substrate()
+    cubes = list_cubes(s)
+    if args.cube_id:
+        cubes = [c for c in cubes if c["id"] == args.cube_id]
+    if not cubes:
+        print("No cubes to tick.")
+        s.close()
+        return
+
+    total_new = total_updated = total_skipped = 0
+    for c in cubes:
+        results = run_rules(s, c["id"])
+        created = [r for r in results if r.get("status") == "created"]
+        updated = [r for r in results if r.get("status") == "updated"]
+        skipped = [r for r in results if r.get("skipped")]
+        errored = [r for r in results if "error" in r]
+        total_new += len(created)
+        total_updated += len(updated)
+        total_skipped += len(skipped)
+        if not (created or updated or errored):
+            continue
+        print(f"{c['id']} (completeness {c['score']:.2f})")
+        for r in created:
+            print(f"  [new] {r.get('rule','?')} -> {r.get('lens') or r.get('other_cube_id')}")
+        for r in updated:
+            print(f"  [upd] {r.get('rule','?')} -> {r.get('lens') or r.get('other_cube_id')}")
+        for r in errored:
+            print(f"  [err] {r.get('rule','?')}: {r['error']}")
+        print()
+
+    s.close()
+    print(f"Tick complete: {total_new} new, {total_updated} updated, {total_skipped} skipped")

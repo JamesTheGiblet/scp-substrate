@@ -47,7 +47,9 @@ Directory
 │   ├── kg_gate.py         gate: rules, checks, refusal
 │   ├── kg_hal.py          HAL: ask substrate, gate the answer
 │   ├── kg_llm.py          Claude rewords answers, gated, falls back to the walker
+│   ├── kg_review.py       guided review of cubes for a person
 │   ├── seed_sc.py         seed sc capsules
+│   ├── seed_cubes.py      real claims as cubes, lenses as proposals
 │   └── test_kg.py         boundary + gate tests
 └── legacy/                pre-SQLite JSON archive (excluded from git)
 ```
@@ -182,7 +184,7 @@ A schema change — the hard one. Requires a numbered migration script, updating
 
 Test coverage
 
-test_substrate.py runs 81 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 68 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
+test_substrate.py runs 81 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 72 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
 
 ```
 foundation:foundation
