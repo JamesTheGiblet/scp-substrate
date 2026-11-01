@@ -56,11 +56,11 @@ Root holds the world (`sc.json`, `sc.db`, `schema.sql`) and the `scps` CLI. Code
 | `keystone-gate/kg` | CLI - stats, route, ask, gate, cube, neighbour |
 | `keystone-gate/kg_gate.py` | The gate - rules, checks, refusal |
 | `keystone-gate/kg_hal.py` | HAL - asks substrate, gates answer |
-| `keystone-gate/kg_agent.py` | Cubes - faces, validation, completeness, neighbours, proposals |
+| `keystone-gate/kg_agent.py` | Public face of `kg_cube.py` (cubes, faces, validation) and `kg_proposals.py` |
 | `keystone-gate/kg_rules.py` | Rules that propose face fills and neighbour links |
 | `keystone-gate/kg_llm.py` | Claude rewords walker answers, gated by `sc/claude-answerer` |
 | `keystone-gate/seed_sc.py` | Seeds `sc/*` capsules |
-| `keystone-gate/test_kg.py` | 72 boundary, gate, Claude, cube and proposal tests |
+| `keystone-gate/test_kg_N.py` | Boundary, gate, Claude, cube and proposal tests |
 
 Keystone Gate shares `sc.db` with the substrate and writes its own capsules through `Substrate`; it does not change substrate code. See `keystone-gate/README.md` for the gate pattern and `docs/SPEC.md §15` for the general specification.
 
@@ -89,7 +89,7 @@ Keystone Gate shares `sc.db` with the substrate and writes its own capsules thro
 | File | Purpose |
 |---|---|
 | `scps` | CLI — see `./scps --help` |
-| `test_substrate.py` | 81 tests, in-memory fixtures, no `sc.db` dependency |
+| `tests/run.py` | Runs every test file, including `test_house_rules.py`, which checks the project's own principles |
 
 ### Docs
 `docs/SPEC.md` (substrate spec), `docs/STRUCTURE.md` (file map, schema, extension points), `docs/REASONING.md` (how rules/trust/why/explain work). `docs/` also holds SCP source documents. `legacy/` holds pre-SQLite JSON.
@@ -99,7 +99,7 @@ Keystone Gate shares `sc.db` with the substrate and writes its own capsules thro
 ```sh
 cd ~/scp-substrate
 python scripts/bootstrap.py         # project sc.json into sc.db
-python tests/test_substrate.py    # confirm 81 tests pass
+python tests/run.py               # confirm everything passes
 ./scps stats                # what's in the substrate
 ```
 

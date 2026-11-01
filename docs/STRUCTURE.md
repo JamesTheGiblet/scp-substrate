@@ -18,7 +18,7 @@ Directory
 │   ├── substrate.py       Substrate class, DB access, decay UDF
 │   ├── ed25519.py         Ed25519 primitive (own, RFC 8032)
 │   ├── signing.py         sign / verify / canonicalise / did:key
-│   ├── rules.py           rule engine (4 condition types)
+│   ├── rules.py           rule engine (4 condition types), rules_sequence.py
 │   ├── trust.py           trust engine (parameter, evidence, fusion)
 │   ├── queries.py         read-only queries
 │   ├── why.py             backward reasoning (why is X trusted?)
@@ -35,14 +35,15 @@ Directory
 │   └── fill_styles.py, extract_vocab.py, learn_frequencies.py
 │
 ├── seeds/                 create-only capsule seeds, reconcile_seeds.py
-├── tests/                 test_substrate.py, 81 tests, in-memory fixtures
+├── tests/                 run.py, test_substrate_N.py, test_house_rules.py
 │
 ├── docs/                  SPEC, STRUCTURE, REASONING, SCP documents (*.scp.json)
 ├── keystone-gate/         Keystone Gate - sibling app, shares sc.db
 │   ├── kg                 CLI entry point
 │   ├── kg_stats.py        count KG capsules
 │   ├── kg_router.py       neighbour listing
-│   ├── kg_agent.py        cubes: faces, validation, proposals
+│   ├── kg_agent.py        public face of kg_cube.py and kg_proposals.py
+│   ├── kg_cube_cli.py     kg cube and kg neighbour commands
 │   ├── kg_rules.py        rules that propose fills and neighbours
 │   ├── kg_gate.py         gate: rules, checks, refusal
 │   ├── kg_hal.py          HAL: ask substrate, gate the answer
@@ -50,7 +51,7 @@ Directory
 │   ├── kg_review.py       guided review of cubes for a person
 │   ├── seed_sc.py         seed sc capsules
 │   ├── seed_cubes.py      real claims as cubes, lenses as proposals
-│   └── test_kg.py         boundary + gate tests
+│   └── test_kg_N.py       boundary, gate, cube and proposal tests
 └── legacy/                pre-SQLite JSON archive (excluded from git)
 ```
 
@@ -98,7 +99,7 @@ keygen.py CLI: generate keypair signing
 sign_doc.py CLI: sign a document signing
 bootstrap.py CLI: project sc.json into sc.db stdlib
 scps CLI all of the above
-test_substrate.py 81 tests all of the above
+tests/run.py runs every test file
 
 ---
 
@@ -144,7 +145,7 @@ caller
     → commit
 ```
 
-Nothing outside substrate.py opens a write transaction. Every engine, every CLI command, every script calls into Substrate. This is the discipline that keeps event logging consistent.
+Capsule writes go through Substrate. Engines that need a change and its event to be atomic (trust.py, rules.py, feedback.py, parse.py, generate.py, scps, fill_styles.py) write SQL directly and log their own event in the same transaction. Those events can be summaries, so the log is an audit trail, not a row-by-row record.
 
 Read path
 
@@ -184,7 +185,7 @@ A schema change — the hard one. Requires a numbered migration script, updating
 
 Test coverage
 
-test_substrate.py runs 81 tests against :memory: SQLite databases. keystone-gate/test_kg.py runs 72 more, using :memory: fixtures and a temporary copy of sc.db. Each test builds a minimal substrate fixture:
+python tests/run.py runs everything. The test_substrate_N.py files use :memory: SQLite databases. The keystone-gate test files use :memory: fixtures and a temporary copy of sc.db. test_house_rules.py fails if a file passes 400 lines or an exception is silently swallowed. Each test builds a minimal substrate fixture:
 
 ```
 foundation:foundation

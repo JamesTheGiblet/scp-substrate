@@ -84,7 +84,10 @@ keystone-gate/
 ├── kg                 CLI entry point (executable)
 ├── kg_stats.py        count KG capsules in substrate
 ├── kg_router.py       list neighbours (no routing logic yet)
-├── kg_agent.py        cubes: faces, validation, neighbours, proposals
+├── kg_agent.py        public face of kg_cube.py and kg_proposals.py
+├── kg_cube.py         cubes: faces, validation, attestation, neighbours
+├── kg_proposals.py    proposals: rules suggest, humans decide
+├── kg_cube_cli.py     kg cube and kg neighbour commands
 ├── kg_rules.py        rules that propose fills and neighbours
 ├── kg_gate.py         the gate - rules, checks, refusal
 ├── kg_llm.py          Claude rewords answers, gated, falls back to the walker
@@ -93,7 +96,7 @@ keystone-gate/
 ├── kg_review.py       guided review of cubes for a person
 ├── seed_sc.py         seed sc capsules (create-or-update)
 ├── seed_cubes.py      real claims as cubes, lenses as proposals (create-only)
-└── test_kg.py         boundary + gate tests
+└── test_kg_N.py       boundary, gate, cube and proposal tests
 
 ```
 
@@ -146,10 +149,10 @@ cd ~/scp-substrate
 Tests
 
 ```bash
-python keystone-gate/test_kg.py
+python tests/run.py
 ```
 
-72 tests covering:
+Tests cover:
 
 · Boundary: foundations exist, boundary imports work, stats counts content, route list runs
 · DataCube: corrected to 5 lenses + contradicts field
@@ -164,7 +167,7 @@ Status
 
 Boundary proven. Four foundations in sc.json, projected into sc.db. kg stats and kg route list cross the boundary cleanly.
 
-Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (4/4 pass). 72 KG tests pass. 81 substrate tests pass - untouched.
+Gate working. sc/symlm-answerer defines the contract. kg_gate.py checks it. kg_hal.py refuses to render answers that fail. kg gate test runs the contract's own test cases (4/4 pass). All tests pass with python tests/run.py.
 
 Cubes working. There are 24 cubes in the substrate. 3 are complete. The other 21 are drafts awaiting review, with OPINION, validation and attestation left to a human. Completeness is computed and decides attestation eligibility. Changing a face after validation marks the validation stale, so the cube drops out of eligibility until a human validates it again.
 

@@ -1,4 +1,4 @@
-"""Seed cubes for real decisions and claims. Create-only.
+"""Seed cubes for real decisions and claims. Re-running refreshes unreviewed drafts.
 
 Lenses arrive as proposals from `claude-draft`, not as faces: nothing counts
 until a human accepts it. OPINION is left empty because it is the human's own
@@ -14,6 +14,7 @@ sys.path.insert(0, str(_here))
 
 from substrate import Substrate
 from kg_agent import create_cube, propose_face
+from kg_cube import _update_state
 
 
 DRAFTED_BY = "claude-draft"
@@ -35,7 +36,7 @@ CUBES = [
         "source": "principle/fail-loud-public",
         "tags": ["principle", "process"],
         "FACT": "Recorded as a principle. The gate follows it: a rule with no checker is a violation, and a refused answer is withheld.",
-        "COUNTER": "The code does not always follow it. At 2026-11-01 there were 9 places that catch Exception and pass silently, including create_cube in kg_agent.py.",
+        "COUNTER": "It took work to make true. Until 2026-11-01 nine places caught Exception and carried on silently. They are fixed and a test now guards it, but a narrow except can still hide a problem.",
         "FICTION": "If failures stayed quiet, a broken gate would look exactly like a healthy one.",
         "CONTEXT": "Sits behind the event log and the gate's fail-closed behaviour.",
     },
@@ -45,9 +46,9 @@ CUBES = [
         "source": "principle/split-400-lines",
         "tags": ["principle", "code"],
         "FACT": "Recorded as a principle.",
-        "COUNTER": "The repo breaks it. At 2026-11-01 these were over 400 lines: src/ask.py, src/rules.py, scripts/absorb_repo.py, keystone-gate/kg_agent.py, keystone-gate/kg and both test files.",
-        "FICTION": "If every file stayed under 400 lines, kg_agent.py would already be split into cubes and proposals.",
-        "CONTEXT": "No check enforces it. Either the rule needs one or it should be read as a guideline.",
+        "COUNTER": "Line count is a blunt measure. The test files were split by size on 2026-11-01, so they are numbered parts, not topics, and the limit was met without making them more modular.",
+        "FICTION": "Without the limit, kg_agent.py would have kept growing past 550 lines, with cubes and proposals tangled together.",
+        "CONTEXT": "Six code files and two test files were over the limit until 2026-11-01. tests/test_house_rules.py now fails if any file passes 400 lines.",
     },
     {
         "id": "cube/british-english-everywhere",
@@ -91,13 +92,13 @@ CUBES = [
     },
     {
         "id": "cube/every-write-goes-through-substrate",
-        "content": "Every write goes through Substrate, so every write is logged.",
+        "content": "Every write is logged, through Substrate or by the engine that makes it.",
         "source": "STRUCTURE write path; SPEC section 5",
         "tags": ["substrate", "ledger"],
-        "FACT": "Stated in docs/STRUCTURE.md: nothing outside substrate.py opens a write transaction.",
-        "COUNTER": "Not fully true. At 2026-11-01 src/trust.py, rules.py, feedback.py, parse.py, generate.py, scps and scripts/fill_styles.py still write SQL directly. Some log their own events and some do not.",
-        "FICTION": "With every write in one place, the event log would be a complete record.",
-        "CONTEXT": "Direct updates were removed from kg_agent.py and the importers on 2026-11-01. The statement in STRUCTURE.md still overclaims.",
+        "FACT": "Capsule writes go through Substrate. trust.py, rules.py, feedback.py, parse.py, generate.py, scps and fill_styles.py write SQL directly and log their own events in the same transaction.",
+        "COUNTER": "Engine events are not uniform. Parse cleanup logs one summary event for a whole session, and trust_scores rows log only when the score changes, so the log is not a row-by-row record.",
+        "FICTION": "If everything went through Substrate.write, an engine could not make a link and its event atomic without a new method.",
+        "CONTEXT": "docs/STRUCTURE.md claimed nothing outside substrate.py writes, corrected on 2026-11-01. Direct updates were also removed from kg_agent.py and the importers that day.",
     },
     {
         "id": "cube/events-are-audit-not-replay",
@@ -141,11 +142,11 @@ CUBES = [
     },
     {
         "id": "cube/trust-is-shown-not-claimed",
-        "content": "Trust the substrate can show counts for more than trust a capsule claims.",
+        "content": "Trust a capsule claims and trust the substrate can show are kept separate, then fused.",
         "source": "src/trust.py evidence section",
         "tags": ["trust"],
         "FACT": "trust_from_evidence walks observations and verifications instead of reading a capsule's own numbers. fused_trust combines both.",
-        "COUNTER": "Evidence is thin and hand-scored: obs-001 is 1.8 from james, and the sigmoid is uncalibrated. Fusion treats prior and evidence equally, so the headline claim is not implemented as a preference.",
+        "COUNTER": "Evidence is thin and hand-scored: obs-001 is 1.8 from james, and the sigmoid is uncalibrated. Fusion does not prefer evidence over the prior, so a high self-claimed prior still dominates weak evidence.",
         "FICTION": "With ground-truth outcomes, the fusion could be calibrated. That is the open adaptive-fusion question.",
         "CONTEXT": "One materialised trust score exists. scp-claim sets age_days to 0, so recomputing resets its decay.",
     },
@@ -205,7 +206,7 @@ CUBES = [
         "source": "default-cube weighting rule",
         "tags": ["gate", "trust"],
         "FACT": "kg cube attest refuses a cube that is not at 100 percent, and changing a face retracts the attestation.",
-        "COUNTER": "The weights are hard-coded in kg_agent.py, not read from default-cube, and its minimum_lenses rule is ignored. Empty-feeling faces also count the same as strong ones.",
+        "COUNTER": "A thin face counts the same as a strong one. Weights and minimum_lenses now come from default-cube, but its unknown_required and forward_only_lens_changes rules are still ignored.",
         "FICTION": "If attestation ignored completeness, a one-lens cube could carry the same trust as a fully examined one.",
         "CONTEXT": "Five lenses at 16 percent plus human validation at 20 percent. Attestation reaches trust as an observation.",
     },
@@ -236,21 +237,24 @@ LENSES = ("FACT", "COUNTER", "FICTION", "CONTEXT")
 
 def main():
     s = Substrate()
-    created = proposed = 0
+    created = 0
     for cube in CUBES:
-        if s.get(cube["id"]):
-            continue
-        r = create_cube(s, cube["content"], source=cube["source"],
-                        tags=cube["tags"], cube_id=cube["id"])
-        if "error" in r:
-            print(f"{cube['id']}: {r['error']}")
-            continue
-        created += 1
+        existing = s.get(cube["id"])
+        if existing:
+            # Keep unreviewed drafts current. Accepted and rejected work is left alone.
+            if existing["state"]["content"] != cube["content"]:
+                _update_state(s, cube["id"], {**existing["state"], "content": cube["content"]})
+        else:
+            r = create_cube(s, cube["content"], source=cube["source"],
+                            tags=cube["tags"], cube_id=cube["id"])
+            if "error" in r:
+                print(f"{cube['id']}: {r['error']}")
+                continue
+            created += 1
         for lens in LENSES:
             propose_face(s, cube["id"], lens, cube[lens], proposed_by=DRAFTED_BY,
                          rationale=f"drafted from {cube['source']}")
-            proposed += 1
-    print(f"cubes: {created} new, {proposed} proposals, {len(CUBES) - created} already present")
+    print(f"cubes: {created} new, {len(CUBES) - created} already present")
     s.close()
 
 

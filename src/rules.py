@@ -119,8 +119,7 @@ def _eval_kind_and_age(s, rule_id, condition, effect):
                     anchor = anchor.replace(tzinfo=None)
                 age_days = (now - anchor).total_seconds() / 86400.0
             except (TypeError, ValueError):
-                # Unreadable date: fall back to the capsule's own age
-                age_days = age_days
+                warnings.append(f"{rule_id}: {r['id']} has unreadable {age_field}, using created_at")
         if age_days is None:
             try:
                 created = datetime.fromisoformat(r["created_at"].replace(" ", "T"))
@@ -167,7 +166,8 @@ def _eval_kind_and_age(s, rule_id, condition, effect):
     return fired, warnings
 
 
-from rules_sequence import _eval_sequence
+from rules_sequence import (_eval_sequence, _leaf_features, _object_semantic_check,
+                            _subject_semantic_check, _sv_agree)
 
 
 
