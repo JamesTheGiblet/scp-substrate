@@ -21,6 +21,8 @@ Foundations are defined in `sc.json`. Run `scripts/bootstrap.py` to copy them in
 
 ## Getting started
 
+To run the cube page and work through drafts, see [docs/STARTUP.md](docs/STARTUP.md).
+
 Commands are shown for Windows. On Linux or macOS the same commands work, and `./scps` and `./keystone-gate/kg` can also be run directly.
 
 ```sh
