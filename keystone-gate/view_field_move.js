@@ -87,7 +87,7 @@
     }
     for (const n of nodes) {
       const q = project(n.p);
-      if (!q) continue;
+      if (!q || !shows(n.c)) continue;
       const gap = Math.hypot(q.x - x, q.y - y);
       if (gap < Math.max(n.r * q.k * 1.5, 11) && gap < bestGap) { best = n; bestGap = gap; }
     }
@@ -219,4 +219,5 @@
     cam.dist = cam.toDist;
     linked.open = 1;
   }
+  loadMoments();
   requestAnimationFrame(frame);

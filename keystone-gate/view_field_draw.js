@@ -2,7 +2,8 @@
   // --- camera --------------------------------------------------------------
   const cam = { yaw: .6, pitch: .34, dist: 1300, t: [...world.c], toDist: 1300 };
   let W = 0, H = 0, F = 800;
-  const view = { filter: "all", query: "" };
+  const view = { filter: "all", query: "", time: null };
+  const shows = c => !view.time || !c.created || c.created <= view.time;
 
   function project(p) {
     const x = p[0] - cam.t[0], y = p[1] - cam.t[1], z = p[2] - cam.t[2];
@@ -104,11 +105,40 @@
     return out;
   };
 
+  // From far away each cluster shows its strongest cubes; the rest wait for a zoom
+  const LEADS = 3;
+  function markLeads() {
+    for (const cl of clusters) {
+      const strong = cl.nodes.filter(n => shows(n.c))
+        .sort((a, b) => b.c.score - a.c.score || b.c.standing - a.c.standing || a.c.id.localeCompare(b.c.id));
+      cl.nodes.forEach(n => { n.lead = false; });
+      strong.slice(0, LEADS).forEach(n => { n.lead = true; });
+    }
+  }
+  const zoomedIn = () => (focus.cluster ? 1 : Math.max(0, Math.min(1, (1 - cam.dist / (world.half * 2.42)) / .45)));
+  // More cubes, smaller cubes, down to half size
+  const crowding = () => Math.max(.5, Math.min(1, Math.sqrt(48 / Math.max(nodes.filter(n => shows(n.c)).length, 1))));
+
+  function orbitClusters(dt) {
+    if (calm || focus.cluster) return;
+    for (const cl of clusters) {
+      const x = cl.home[0] - world.c[0], z = cl.home[2] - world.c[2];
+      // Inner clusters go round faster, so they pass one another
+      const turn = dt * .05 * Math.min(1.6, 300 / Math.max(Math.hypot(x, z), 120));
+      const c = Math.cos(turn), s = Math.sin(turn);
+      cl.home[0] = world.c[0] + x * c - z * s;
+      cl.home[2] = world.c[2] + x * s + z * c;
+    }
+  }
+
   function frame(ms) {
     const time = ms / 1000, dt = Math.min(.04, (time - (frame.last || time)) || .016);
     frame.last = time;
+    orbitClusters(dt);
     physics(dt, time);
     fitBoxes();
+    if (time - (frame.marked || 0) > .5) { markLeads(); frame.marked = time; }
+    const zoom = zoomedIn(), shrink = mix(crowding(), 1, zoom), sifted = view.query || view.filter !== "all";
 
     // Glide to whatever is in focus
     const aim = focus.node ? focus.node.p : focus.cluster ? focus.cluster.c : world.c;
@@ -142,11 +172,12 @@
     // Threads, with a pulse travelling along each
     const lit = focus.node;
     for (const l of links) {
+      if (!shows(l.a.c) || !shows(l.b.c)) continue;
       const a = project(l.a.p), b = project(l.b.p);
       if (!a || !b) continue;
       const touches = lit && (l.a === lit || l.b === lit);
       const base = l.kind === "bridge" ? .08 : l.kind === "neighbour" ? .55 : l.kind === "lens" ? .42 : .2;
-      const alpha = (lit ? (touches ? .7 : .04) : base) * fog((a.d + b.d) / 2);
+      const alpha = (lit ? (touches ? .7 : .04) : base * mix(.35, 1, zoom)) * fog((a.d + b.d) / 2);
       const rgb = l.kind === "lens" ? RGB[l.lens].join(",") : l.kind === "neighbour" ? "242,200,100"
         : l.kind === "contra" ? "240,104,96" : "120,185,255";
       ctx.strokeStyle = `rgba(${rgb},${alpha})`;
@@ -182,8 +213,9 @@
       }
       if (!q) continue;
       const near = !focus.cluster || focus.cluster === n.cluster;
-      const fade = (matches(n.c) ? 1 : .07) * (focus.node && focus.node !== n ? .13 : near ? 1 : .1);
-      items.push({ type: "cube", n, d: q.d, q, p: n.p, size: n.r * (1 + n.hover * .18) * (1 - n.open * .25),
+      const fade = (!shows(n.c) ? 0 : matches(n.c) ? 1 : .07) * (focus.node && focus.node !== n ? .13 : near ? 1 : .1)
+        * (n.lead || sifted || hover === n ? 1 : mix(.16, 1, zoom));
+      items.push({ type: "cube", n, d: q.d, q, p: n.p, size: n.r * shrink * (1 + n.hover * .18) * (1 - n.open * .25),
                    ry: n.ry, rx: n.rx, faces: faceMap(n), alpha: fade * fog(q.d) });
       if (n.open > .02) n.sats.forEach((sat, i) => {
         const dir = OUT[sat.lens], turn = time * .22 + i * .12, c = Math.cos(turn), s = Math.sin(turn);
@@ -230,7 +262,7 @@
       const placed = [];
       focus.cluster.nodes
         .map(n => ({ n, q: project(add(n.p, [0, n.r * 2.1, 0])) }))
-        .filter(x => x.q && matches(x.n.c))
+        .filter(x => x.q && shows(x.n.c) && matches(x.n.c))
         .sort((a, b) => a.q.d - b.q.d)
         .forEach(({ n, q }) => {
           const text = shorten(n.c.content, 34);

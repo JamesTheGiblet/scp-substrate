@@ -108,5 +108,60 @@ def test_the_background_drafter_reports_failure():
     assert "no network" in drafter.error and drafter.waiting() == 0
 
 
+def test_a_suggested_note_counts_for_nothing():
+    from kg_agent import show_cube, validate
+    from kg_fill import suggest_note
+    from kg_view import collect
+    s = Substrate()
+    try:
+        cid = _cube(s, "A claim to vouch for", FACT="known", COUNTER="against")
+
+        def phrase(ask, known, system, schema, read):
+            return read(json.dumps({"note": "I have not tested this."}))
+        assert suggest_note(s, cid, models=[("gemini", phrase)])["by"] == "gemini"
+        assert show_cube(s, cid)["validation"] is None
+        c = next(x for x in collect(s) if x["id"] == cid)
+        assert c["note_draft"] == "I have not tested this." and c["score"] == .32, c["score"]
+        assert suggest_note(s, cid, models=[("gemini", phrase)])["note"] is None
+        validate(s, cid, "james", note="my words")
+        assert show_cube(s, cid)["validation"]["note"] == "my words"
+    finally:
+        s.close()
+
+
+def test_a_private_cube_gets_its_note_locally():
+    from kg_fill import suggest_note
+    from kg_agent import create_cube
+    s = Substrate()
+    try:
+        cid = create_cube(s, "A private claim", tags=["private"])["cube_id"]
+        seen = []
+
+        def phrase(name):
+            def run(ask, known, system, schema, read):
+                seen.append(name)
+                return read(json.dumps({"note": "local"}))
+            return name, run
+        suggest_note(s, cid, models=[phrase("gemini"), phrase("ollama")])
+        assert seen == ["ollama"], seen
+    finally:
+        s.close()
+
+
+def test_the_page_gets_the_dates_the_time_bar_needs():
+    from kg_agent import attest, fill_face, validate
+    from kg_view import collect
+    s = Substrate()
+    try:
+        cid = _cube(s, "A dated claim", **{l: "text" for l in ("FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT")})
+        validate(s, cid, "james", note="holds")
+        attest(s, cid, "james")
+        c = next(x for x in collect(s) if x["id"] == cid)
+        assert c["created"] and c["faces"]["FACT"]["at"], c
+        assert c["validation"]["at"] and c["attestation"]["at"], c
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

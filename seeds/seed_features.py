@@ -2,7 +2,6 @@
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
-import json
 from substrate import Substrate
 
 ANIMACY = {
@@ -85,11 +84,7 @@ def main():
         features["animacy"] = animacy
         state = dict(c["state"])
         state["features"] = features
-        with s.conn:
-            s.conn.execute(
-                "UPDATE capsules SET state_json=?, updated_at=datetime('now') WHERE id=?",
-                (json.dumps(state), cid),
-            )
+        s.write({"id": cid, "foundation": c["foundation"], "state": state})
         updated += 1
     print(f"animacy tags: {created} created, {updated} updated, {skipped} skipped")
     s.close()

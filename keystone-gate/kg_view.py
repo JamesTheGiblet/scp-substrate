@@ -19,7 +19,7 @@ PARTS = {name: _here / file for name, file in {
     "/*BAR*/": "view_bar.js",
     "/*EDIT*/": "view_edit.js",
 }.items()}
-FIELD = [_here / f"view_field_{part}.js" for part in ("world", "draw", "move")]
+FIELD = [_here / f"view_field_{part}.js" for part in ("world", "draw", "time", "move")]
 OUTPUT = _here.parent / "build" / "cubes.html"
 
 
@@ -45,6 +45,7 @@ def _face(face):
         "content": face.get("content"),
         "filled_by": filled_by,
         "unread": "bulk accept" in filled_by,
+        "at": face.get("filled_at"),
     }
 
 
@@ -53,7 +54,7 @@ def _faces(s, cube):
     faces = {lens: _face(cube["faces"].get(lens)) for lens in LENSES}
     for p in list_proposals(s, cube_id=cube["cube_id"], status="pending"):
         if p.get("lens") in faces and not faces[p["lens"]]:
-            faces[p["lens"]] = {"content": p["content"], "filled_by": "draft",
+            faces[p["lens"]] = {"content": p["content"], "filled_by": "draft", "at": p.get("proposed_at"),
                                 "unread": True, "pending": True, "proposal_id": p["id"],
                                 "drafted_by": (p.get("proposed_by") or "").removeprefix("model-draft:")}
     return faces
@@ -88,6 +89,7 @@ def collect(s):
         cubes.append({
             "id": cube["cube_id"],
             "content": cube["content"],
+            "created": s.get(cube["cube_id"])["state"].get("created_at"),
             "source": cube["source"],
             "tags": cube["tags"] or [],
             "group": _group(s, cube["cube_id"]),
@@ -100,12 +102,15 @@ def collect(s):
                 "validator": validation.get("validator"),
                 "note": validation.get("note"),
                 "stale": bool(validation.get("stale")),
+                "at": validation.get("validated_at"),
             },
             "attestation": attestation and {
                 "source": attestation.get("source"),
                 "note": attestation.get("note"),
                 "retracted": attestation.get("retracted_because"),
+                "at": attestation.get("attested_at"),
             },
+            "note_draft": (s.get(f"{cube['cube_id']}/validation-draft") or {"state": {}})["state"].get("content"),
             "neighbours": _links(s, cube["cube_id"], "neighbour"),
             "contradicts": (cube["contradicts"] or {}).get("other"),
         })

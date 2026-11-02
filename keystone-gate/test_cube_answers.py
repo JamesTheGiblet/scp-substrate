@@ -31,7 +31,13 @@ def test_should_i_finds_the_relevant_cube():
 
 
 def test_unwritten_opinion_says_so():
-    r = _ask("what do I think about capsules")
+    from kg_agent import create_cube
+    s = Substrate()
+    try:
+        create_cube(s, "Zebrawidgets hum at dawn")
+    finally:
+        s.close()
+    r = _ask("what do I think about zebrawidgets")
     assert "not written yet" in r["answer"], r
 
 

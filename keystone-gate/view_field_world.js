@@ -100,6 +100,14 @@
         n.v[k] += (pull[k] - n.p[k]) * grip * dt;
         if (!calm) n.v[k] += Math.sin(time * .35 + n.seed + k * 2) * 9 * dt;
       }
+      // Closed clusters turn slowly, each cube round its own tilted axis
+      if (!calm && !open) {
+        const r = [n.p[0] - pull[0], n.p[1] - pull[1], n.p[2] - pull[2]];
+        const tilt = (n.seed % 7 - 3) * .18;
+        n.v[0] += (r[2] + r[1] * tilt) * .16 * dt;
+        n.v[2] -= r[0] * .16 * dt;
+        n.v[1] -= r[0] * tilt * .16 * dt;
+      }
     }
     for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i], b = nodes[j];
@@ -204,6 +212,7 @@
       tagGroups.forEach(g => { if (g.name === c.group) g.list.push(n); });
     }
     tagClusters.forEach(shell);
+    loadMoments();
     applyMode(MODES[mode] || mode === "TAGS" ? mode : "ALL", true);
     if (byId[flyId]) { byId[flyId].fresh = 7; byId[flyId].trail = byId[flyId].trail || []; }
     draw();

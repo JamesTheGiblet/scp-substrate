@@ -109,7 +109,11 @@ python keystone-gate/kg cube view                  # read-only file, build/cubes
 
 Cubes appear as 3D nodes grouped in clusters inside a large cube. Click a cluster to enter it, and a cube to open it. Drag to orbit, scroll to zoom, and press Esc to go back. A grid view lists the same cubes.
 
-**Cluster by** regroups the cubes by tag or by lens. Lens clustering compares each lens only with the same lens on other cubes, and links two cubes that share at least two uncommon words. Thread colour shows which lens. This measures shared vocabulary, so some links are coincidences. Group names are taken from the highest-scoring words and vary in quality, and a single edit can move other cubes between groups.
+To keep a growing set readable, cubes shrink as their number rises, down to half size, and return to full size as you zoom in. From far away each cluster shows its three strongest cubes and dims the rest, and searching or filtering shows them all. Clusters circle slowly and cubes drift around their cluster, which stops for an open cluster and when the system is set to reduce motion.
+
+**Cluster by** regroups the cubes by tag, repo or lens. Lens clustering compares each lens only with the same lens on other cubes, and links two cubes that share at least two uncommon words. Thread colour shows which lens. This measures shared vocabulary, so some links are coincidences. Group names are taken from the highest-scoring words and vary in quality, and a single edit can move other cubes between groups.
+
+The bar at the bottom of the 3D view goes back through time, and **Play** runs it forward. Each step is a moment when something changed, so its spacing is not even in clock time. It uses the dates stored on cubes, faces, validations and attestations. Those dates hold only the latest change, so a face you edited appears at its last edit, with today's wording, and a past validation that later went stale still shows as stale. Retractions are not undone. The grid always shows the present, and editing is not affected by the bar.
 
 Editing happens in the grid view only, under `serve`, after you unlock it. Set the password once:
 
@@ -120,6 +124,8 @@ python keystone-gate/kg cube password
 Then press **Unlock to edit** in the grid. You can add cubes, write and edit faces, accept or reject drafts, write or edit the validation note, and attest. These run the same functions as the CLI. Validating needs all five faces accepted or written. Pending drafts appear hollow and count for nothing, but their text is used for clustering. Editing a validation note leaves an attestation in place.
 
 Models can draft blank faces. A new cube is drafted automatically, and **Fill blanks** drafts the rest, including faces where you rejected a draft. This uses the same order as `kg ask --claude`, so the cube's text goes to Anthropic, then Google if Claude fails, then Ollama. Each draft stays pending until you accept it, so it adds nothing to the score. The page checks every 8 seconds and shows a message, a count in the tab title and a button that lists the drafts. Nothing checks a draft against your data, so reading it is the check. A rejected draft is only offered again if a model writes something different. The drafter runs only while `serve` is running. `kg cube draft` does the same at the terminal.
+
+`kg cube notes` stores a suggested validation note for each cube that has none. The note appears in the **Validate** box and counts for nothing until you save it, and the wording is then yours. Suggestions are told not to claim you tested anything, but read them for that anyway.
 
 Editing locks again when you press Lock, reload the page, stop the server, or leave it idle for 30 minutes. Only a scrypt hash is stored, at `~/.config/scp/cube-edit.json`, outside the repo. If you forget the password, delete that file and set a new one.
 
@@ -152,6 +158,7 @@ kg cube serve --by <name>           run the editable page (--port, --no-open)
 kg cube contradicts <id> <other>    flag a contradiction
 kg cube tick [id]                   run rules, creating proposals
 kg cube draft [id]                  have a model draft blank faces
+kg cube notes [id]                  have a model suggest validation notes
 kg cube proposals [id]              list proposals (--status)
 kg cube accept <proposal> --by <n>  apply a proposal
 kg cube reject <proposal> --by <n>  reject a proposal (--reason)
@@ -186,7 +193,7 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_fill.py` | Models draft blank faces, in the background under `serve` |
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
-| `view_field_world.js`, `view_field_draw.js`, `view_field_move.js` | The 3D view: layout, drawing, moving around |
+| `view_field_world.js`, `view_field_draw.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, the time bar, moving around |
 | `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
 | `seed_sc.py` | Creates and updates `sc` capsules |
 | `seed_cubes.py` | Project claims as draft cubes |

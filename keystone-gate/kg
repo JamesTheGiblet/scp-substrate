@@ -230,6 +230,10 @@ def main():
     sp_draft.add_argument("cube_id", nargs="?")
     sp_draft.set_defaults(func=cmd_cube_draft)
 
+    sp_notes = sp_sub.add_parser("notes", help="suggest validation notes, for you to check and save")
+    sp_notes.add_argument("cube_id", nargs="?")
+    sp_notes.set_defaults(func=cmd_cube_notes)
+
     sp_pass = sp_sub.add_parser("password", help="set the password that unlocks editing in the browser")
     sp_pass.set_defaults(func=cmd_cube_password)
 

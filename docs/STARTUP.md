@@ -69,6 +69,17 @@ Editing locks again when you press Lock, reload the page, stop the server, or le
   python keystone-gate/kg repo add JamesTheGiblet/repo-name
   ```
 
+To draft everything at once at the terminal:
+
+```powershell
+python keystone-gate/kg cube draft     # every blank face
+python keystone-gate/kg cube notes     # a suggested validation note for each cube
+```
+
+## Going back through time
+
+In the 3D view, drag the bar at the bottom or press **Play**. Cubes appear when they were created, and faces fill in as they were written. The far right end of the bar is now.
+
 ## Other useful commands
 
 ```powershell

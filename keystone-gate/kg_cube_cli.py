@@ -115,6 +115,20 @@ def cmd_cube_draft(args):
     print("Check them with: kg cube serve --by <name>, or kg cube proposals")
 
 
+def cmd_cube_notes(args):
+    from kg_agent import list_cubes
+    from kg_fill import suggest_note
+    s = Substrate()
+    made = 0
+    for cube_id in [args.cube_id] if args.cube_id else [row["id"] for row in list_cubes(s)]:
+        result = suggest_note(s, cube_id)
+        made += bool(result["note"])
+        if result["tried"] and not result["note"]:
+            print(f"{cube_id}: no note. {'; '.join(result['tried'])}")
+    s.close()
+    print(f"Suggested {made} validation notes.")
+
+
 def cmd_cube_password(args):
     import getpass
     from kg_lock import load_lock, make_lock, matches, save_lock

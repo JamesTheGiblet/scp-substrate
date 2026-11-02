@@ -117,7 +117,7 @@ def add_repo(s, repo, models=None):
         tags = ["repo", slug] + (["private"] if repo["private"] else [])
         made = []
         for c in claims[:MAX_CLAIMS]:
-            cube_id = create_cube(s, c["claim"].strip(), source=f"{repo['name']} README, written by {name}",
+            cube_id = create_cube(s, c["claim"].strip(), source=f"Worded by {name} from the {repo['name']} README",
                                   tags=tags)["cube_id"]
             s.link(cube_id, "derived-from", repo_id)
             propose_face(s, cube_id, "FACT", f'The README says: "{_flat(c["quote"])}"',
