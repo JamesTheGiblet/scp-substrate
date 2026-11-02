@@ -221,6 +221,9 @@ Run these as `python keystone-gate/kg ...`.
 | `seed_cubes.py` | Project claims as draft cubes |
 | `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals. They are not your views until accepted |
 | `seed_cubes_james.py` | Cubes about James, as drafts in Claude's words, tagged private |
+| `seed_cubes_m5stick.py` | M5StickC Plus2 cubes, cross-referenced across sources, as drafts |
+| `seed_cubes_servos.py` | SG90, MG90S and MG996R cubes, cross-referenced, as drafts |
+| `seed_cubes_batteries.py` | 7.4V 3000mAh Li-ion pack cubes, cross-referenced, as drafts |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
 | `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
 | `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |

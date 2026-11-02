@@ -112,5 +112,53 @@ def test_the_cubes_about_james_are_drafts_and_stay_private():
         s.close()
 
 
+def test_the_m5stick_cubes_are_drafts_with_their_sources():
+    from kg_agent import list_proposals
+    from kg_view import collect
+    from seed_cubes_m5stick import CUBES, SOURCE, seed
+    s = Substrate()
+    try:
+        seed(s)
+        assert seed(s) == []
+        assert s.get(SOURCE["id"])["state"]["urls"]
+        cube = next(c for c in collect(s) if c["id"] == f"cube/{CUBES[0][0]}")
+        assert cube["group"] == "M5StickC Plus2" and cube["score"] == 0 and cube["note_draft"], cube
+        assert len(list_proposals(s, cube_id=cube["id"], status="pending")) >= 5
+    finally:
+        s.close()
+
+
+def test_the_servo_cubes_are_drafts_with_their_sources():
+    from kg_agent import list_proposals
+    from kg_view import collect
+    from seed_cubes_servos import CUBES, SOURCE, seed
+    s = Substrate()
+    try:
+        seed(s)
+        assert seed(s) == []
+        assert s.get(SOURCE["id"])["state"]["urls"]
+        cube = next(c for c in collect(s) if c["id"] == f"cube/{CUBES[0][0]}")
+        assert cube["group"] == "Hobby servos" and cube["score"] == 0 and cube["note_draft"], cube
+        assert len(list_proposals(s, cube_id=cube["id"], status="pending")) >= 5
+    finally:
+        s.close()
+
+
+def test_the_battery_cubes_are_drafts_with_their_sources():
+    from kg_agent import list_proposals
+    from kg_view import collect
+    from seed_cubes_batteries import CUBES, SOURCE, seed
+    s = Substrate()
+    try:
+        seed(s)
+        assert seed(s) == []
+        assert s.get(SOURCE["id"])["state"]["urls"]
+        cube = next(c for c in collect(s) if c["id"] == f"cube/{CUBES[0][0]}")
+        assert cube["group"] == "7.4V Li-ion packs" and cube["score"] == 0 and cube["note_draft"], cube
+        assert len(list_proposals(s, cube_id=cube["id"], status="pending")) >= 5
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())
