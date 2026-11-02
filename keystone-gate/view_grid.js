@@ -5,7 +5,7 @@ const LENSES = ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"];
 const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fiction", CONTEXT: "context", HUMAN: "human" };
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };
 const POSE = { FACT: [-18, -24], COUNTER: [-18, -114], CONTEXT: [-18, -204], FICTION: [-18, 66], OPINION: [-72, -24], HUMAN: [72, -24] };
-const FILTERS = [["all", "All"], ["attested", "Attested"], ["validated", "Validated"], ["needs", "Needs you"], ["drafts", "Drafts to check"]];
+const FILTERS = [["all", "All"], ["attested", "Attested"], ["validated", "Validated"], ["needs", "Needs you"], ["drafts", "Drafts to check"], ["overlaps", "Overlaps"]];
 
 const el = (tag, cls, text) => {
   const node = document.createElement(tag);
@@ -35,6 +35,7 @@ function cubeNode(c, size) {
 function matches(c) {
   if (state.filter === "needs" && ["attested", "validated"].includes(c.status)) return false;
   if (state.filter === "drafts" && !Object.values(c.faces).some(f => f && f.pending)) return false;
+  if (state.filter === "overlaps" && !(c.overlaps || []).length) return false;
   if (["attested", "validated"].includes(state.filter) && c.status !== state.filter) return false;
   if (state.tag && !c.tags.includes(state.tag)) return false;
   if (state.query) {
@@ -127,6 +128,18 @@ function open(c) {
   }
   if (c.neighbours.length) right.append(el("p", "facts", "Neighbours: " + c.neighbours.join(", ")));
   if (c.contradicts) right.append(el("p", "facts", "Contradicts: " + c.contradicts));
+  (c.overlaps || []).forEach(o => {
+    const other = CUBES.find(x => x.id === o.other);
+    const words = o.shared.slice(0, 3).map(s => `${s.lens.toLowerCase()}: ${s.term}`).join(", ");
+    const b = el("button", "lens");
+    b.dataset.other = o.other;
+    b.style.setProperty("--c", "var(--human)");
+    const head = el("b", "", `OVERLAP · λ ${o.lambda.toFixed(2)}`);
+    head.append(el("em", "", ` · ${o.confirmed ? "confirmed, " : ""}${words}`));
+    b.append(head, document.createTextNode(other ? other.content : o.other));
+    if (other) b.addEventListener("click", () => open(other));
+    right.append(b);
+  });
   body.append(left, right);
   if (window.cubeEdit) cubeEdit.decorate(right, c);
   const dialog = document.getElementById("detail");

@@ -107,6 +107,13 @@
     if (!key) return;
     box.querySelectorAll(".lens[data-lens]").forEach(row =>
       (row.dataset.lens === "HUMAN" ? humanTools : lensTools)(row, c));
+    box.querySelectorAll("[data-other]").forEach(row => {
+      const tools = el("div", "tools");
+      const say = verdict => act({ action: "overlap", a: c.id, b: row.dataset.other, verdict }, c.id,
+        verdict === "confirmed" ? "Overlap confirmed" : "Overlap hidden");
+      tools.append(button("Confirm", () => say("confirmed")), button("Not related", () => say("dismissed")));
+      row.after(tools);
+    });
   }
 
   lockButton.hidden = false;

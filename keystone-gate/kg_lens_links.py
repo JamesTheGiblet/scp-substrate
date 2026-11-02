@@ -169,6 +169,9 @@ def all_modes(cubes):
     modes = {"ALL": cluster(cubes, LENSES)}
     if any(c.get("repo") for c in cubes):
         modes["REPOS"] = by_repo(cubes)
+    if any(c.get("overlaps") for c in cubes):
+        from kg_overlaps import by_overlap
+        modes["OVERLAPS"] = by_overlap(cubes)
     for lens in LENSES:
         result = cluster(cubes, (lens,))
         if result["links"]:

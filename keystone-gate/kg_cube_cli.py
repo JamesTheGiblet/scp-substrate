@@ -99,6 +99,21 @@ def cmd_repo_add(args):
     s.close()
 
 
+def cmd_overlaps(args):
+    from kg_overlaps import THRESHOLD, find_overlaps, load_decisions
+    from kg_view import collect
+    s = Substrate()
+    cubes = collect(s)
+    found = find_overlaps(cubes, load_decisions(s), minimum=THRESHOLD if args.min is None else args.min)
+    s.close()
+    words = {c["id"]: c["content"] for c in cubes}
+    for o in found:
+        shared = ", ".join(f"{x['lens']}: {x['term']}" for x in o["shared"])
+        print(f"λ {o['lambda']:.2f}{' confirmed' if o['confirmed'] else ''}  {shared}")
+        print(f"  {words[o['a']]}\n  {words[o['b']]}")
+    print(f"{len(found)} overlaps")
+
+
 def cmd_cube_draft(args):
     from kg_fill import cubes_with_blanks, draft_cube
     s = Substrate()
@@ -151,7 +166,7 @@ def cmd_cube_serve(args):
     lock = load_lock()
     if not lock:
         raise SystemExit("Set an editing password first: python keystone-gate/kg cube password")
-    server = make_server(args.by, lock, args.port)
+    server = make_server(args.by, lock, args.port, hosts=args.host)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"Cube Field at {url} (this machine only). Press Ctrl+C to stop.")
     if not args.no_open:

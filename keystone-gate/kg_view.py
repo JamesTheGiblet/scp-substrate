@@ -8,6 +8,7 @@ from pathlib import Path
 
 from kg_agent import LENSES, list_cubes, list_proposals, show_cube
 from kg_lens_links import all_modes
+from kg_overlaps import attach_overlaps, load_decisions
 from trust import fused_trust
 
 
@@ -56,7 +57,7 @@ def _faces(s, cube):
         if p.get("lens") in faces and not faces[p["lens"]]:
             faces[p["lens"]] = {"content": p["content"], "filled_by": "draft", "at": p.get("proposed_at"),
                                 "unread": True, "pending": True, "proposal_id": p["id"],
-                                "drafted_by": (p.get("proposed_by") or "").removeprefix("model-draft:")}
+                                "drafted_by": (p.get("proposed_by") or "").removeprefix("model-draft:").removesuffix("-draft-opinion")}
     return faces
 
 
@@ -114,7 +115,7 @@ def collect(s):
             "neighbours": _links(s, cube["cube_id"], "neighbour"),
             "contradicts": (cube["contradicts"] or {}).get("other"),
         })
-    return cubes
+    return attach_overlaps(cubes, load_decisions(s))
 
 
 def _safe_json(value):

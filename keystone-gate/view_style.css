@@ -133,7 +133,7 @@ h2 { font-size: 15px; margin: 30px 0 12px; color: var(--muted); font-weight: 600
 .shut { position: absolute; top: 8px; right: 10px; border: 0; background: none; color: #98a5bd; font-size: 22px; cursor: pointer; }
 .hop { display: block; width: 100%; text-align: left; border: 1px solid #2c3448; background: none; color: #c9d5ea; border-radius: 6px; padding: 5px 9px; margin-bottom: 5px; cursor: pointer; font-size: 13px; }
 .hop:hover { border-color: #6d7a93; }
-@media (max-width: 640px) { #panel { top: auto; height: 52vh; } #key { display: none; } #fsearch { width: 120px; } }
+@media (max-width: 640px) { #panel { top: auto; height: 52vh; } #key { display: none; } #fsearch { width: 120px; } #modes { top: 104px; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; } #modes span { display: none; } #modes .chip { flex: none; } #timebar { bottom: 12px; } }
 dialog {
   border: 1px solid var(--line); border-radius: 12px; background: var(--panel); color: var(--ink);
   width: min(880px, calc(100vw - 32px)); max-height: calc(100vh - 48px); padding: 0;

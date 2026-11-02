@@ -20,6 +20,7 @@ from kg_agent import (LENSES, accept_proposal, attest, create_cube, fill_face,
 from kg_fill import Drafter, cubes_with_blanks, draft_cube, pending_drafts
 from kg_lens_links import all_modes
 from kg_lock import matches
+from kg_overlaps import decide
 from kg_view import collect, render
 
 
@@ -82,6 +83,7 @@ ACTIONS = {
     "reject": lambda s, d, by: _proposal(s, d, by, "reject"),
     "validate": lambda s, d, by: validate(s, _text(d, "cube_id"), by, note=_text(d, "note")),
     "attest": lambda s, d, by: attest(s, _text(d, "cube_id"), by),
+    "overlap": lambda s, d, by: decide(s, _text(d, "a"), _text(d, "b"), _text(d, "verdict"), by),
 }
 
 
@@ -98,14 +100,16 @@ def state(s):
     return {"cubes": cubes, "modes": all_modes(cubes)}
 
 
-def make_handler(by, token, port, lock, drafter, writing):
-    allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}"}
-    session = {"key": None, "until": 0}
+def make_handler(by, token, port, lock, drafter, writing, hosts=()):
+    allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}", *hosts}
+    sessions = {}
 
     def unlocked(sent):
-        if not session["key"] or time.time() > session["until"] or not _same(sent, session["key"]):
+        """Each device unlocks on its own, so the phone does not lock the PC."""
+        if time.time() > sessions.get(sent, 0):
+            sessions.pop(sent, None)
             return False
-        session["until"] = time.time() + IDLE_SECONDS
+        sessions[sent] = time.time() + IDLE_SECONDS
         return True
 
     class Handler(BaseHTTPRequestHandler):
@@ -133,8 +137,9 @@ def make_handler(by, token, port, lock, drafter, writing):
                 # One request at a time, so this also slows guessing
                 time.sleep(1)
                 return self._json(403, {"error": "wrong password"})
-            session.update(key=secrets.token_urlsafe(24), until=time.time() + IDLE_SECONDS)
-            return self._json(200, {"key": session["key"]})
+            key = secrets.token_urlsafe(24)
+            sessions[key] = time.time() + IDLE_SECONDS
+            return self._json(200, {"key": key})
 
         def _act(self, s, data):
             if data.get("action") == "draft":
@@ -191,7 +196,7 @@ def make_handler(by, token, port, lock, drafter, writing):
             if self.path == "/api/unlock":
                 return self._unlock(data)
             if self.path == "/api/lock":
-                session["key"] = None
+                sessions.pop(self.headers.get("X-Cube-Key", ""), None)
                 return self._json(200, {"locked": True})
             if self.path == "/api/status":
                 return self._status(data)
@@ -212,11 +217,11 @@ def make_handler(by, token, port, lock, drafter, writing):
     return Handler
 
 
-def make_server(by, lock, port=8765, draft=draft_cube):
+def make_server(by, lock, port=8765, draft=draft_cube, hosts=()):
     token = secrets.token_urlsafe(24)
     server = HTTPServer(("127.0.0.1", port), None)
     writing = threading.Lock()
     server.drafter = Drafter(writing, draft)
-    server.RequestHandlerClass = make_handler(by, token, server.server_address[1], lock, server.drafter, writing)
+    server.RequestHandlerClass = make_handler(by, token, server.server_address[1], lock, server.drafter, writing, hosts)
     server.token = token
     return server

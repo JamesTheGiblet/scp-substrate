@@ -76,6 +76,29 @@ python keystone-gate/kg cube draft     # every blank face
 python keystone-gate/kg cube notes     # a suggested validation note for each cube
 ```
 
+## Using it on your phone
+
+Your phone uses the same page and the same data as this PC, so the PC must be on with `serve` running.
+
+First time only:
+
+1. Install Tailscale on this PC and your phone from tailscale.com, and sign in to the same account on both.
+2. On this PC, in a terminal:
+
+   ```powershell
+   tailscale serve --bg 8765
+   ```
+
+   Keep the `https://....ts.net` address it prints. Only devices on your own Tailscale account can reach it.
+
+Every time, start the server with that name, without `https://`:
+
+```powershell
+python keystone-gate/kg cube serve --by james --host your-pc.your-tailnet.ts.net
+```
+
+Then open the `https://` address on your phone, go to **Grid** and unlock it. The phone and PC unlock separately.
+
 ## Going back through time
 
 In the 3D view, drag the bar at the bottom or press **Play**. Cubes appear when they were created, and faces fill in as they were written. The far right end of the bar is now.
@@ -96,6 +119,7 @@ python tests/run.py                                       # run all tests
 | No Accept or Edit buttons | The read-only page, or still locked | Check the address starts with `http://127.0.0.1:8765`, not `file:///`. Then go to Grid and unlock |
 | `Set an editing password first` | No password yet | Run `kg cube password` |
 | Page says the server has stopped | The terminal was closed or stopped | Run `kg cube serve` again and reload the page |
+| Page says "wrong host" on the phone | `--host` is missing or mistyped | Restart `serve` with the exact name from `tailscale serve` |
 | Forgot the password | | Delete `~/.config/scp/cube-edit.json` and set a new one |
 | Credit error from Claude | No API credit | Nothing needed. The next model takes over |
 | Gemini 503 or timeout | Google is busy | Nothing needed. Ollama takes over, or try later |

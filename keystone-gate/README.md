@@ -100,6 +100,24 @@ This reads the repo's README through `gh` and has a model write 3 to 6 claims. E
 
 Private repos go to Ollama only. Their cubes are tagged `private`, so later drafts stay local, and so does `kg ask --claude` when its evidence contains the text of a private cube's claim or filled face. That check matches text, so it can miss an answer that rewords the cube. These cubes are still stored in `sc.db`, so they travel wherever that file is pushed. A published page also includes them.
 
+## Overlaps
+
+```sh
+python keystone-gate/kg overlaps            # λ 0.60 and above
+python keystone-gate/kg overlaps --min 0.3  # a wider look
+```
+
+An overlap is two cubes from different sources whose accepted faces share unusual words on the same lens. Each one has a Leighton weight, λ, from 0 to 2:
+
+- N₀ is the sum of the lens similarities, capped at 2.
+- λ = N₀ × e^(−kt), where t is the days since either cube last changed.
+- Only λ of 0.60 or more is shown. That is the stack's boundary for λ.
+- **Confirm** adds 0.20 and restarts the clock. **Not related** hides the pair for good.
+
+In the page, **Overlaps** under **Cluster by** joins overlapping cubes into boxes, and a cube opened in the grid lists its overlaps. Pending drafts do not count.
+
+This measures shared vocabulary, not shared meaning, so some overlaps are coincidences. The half-life is set to 60 days as a starting choice, not calibrated against outcomes.
+
 ## The page
 
 ```sh
@@ -131,7 +149,7 @@ Editing locks again when you press Lock, reload the page, stop the server, or le
 
 The password protects the page only. Anyone who can use your account on this machine can still change `sc.db` directly or through the `kg` commands.
 
-The server listens on 127.0.0.1 only. Every request needs a token issued when the server starts, writes also need the unlock key, and requests naming another host or origin are refused. Do not expose it on a network.
+The server listens on 127.0.0.1 only. Every request needs a token issued when the server starts, writes also need the unlock key, and requests naming another host or origin are refused. `--host` adds one name to that list, for use with a private network such as Tailscale. Do not expose it on a public network.
 
 `build/cubes.html` is tracked in git. It holds nothing `sc.db` does not, and `sc.db` is tracked too. The page is a snapshot under `view`, so run the command again to refresh it. The Screenshot button saves the 3D view only, not the text panel.
 
@@ -164,6 +182,7 @@ kg cube accept <proposal> --by <n>  apply a proposal
 kg cube reject <proposal> --by <n>  reject a proposal (--reason)
 
 kg repo add <owner/name> ...        write claim cubes from each repo's README
+kg overlaps                         list overlapping work (--min)
 
 kg neighbour link <a> <b>           link two cubes both ways
 kg neighbour list <id>              list a cube's neighbours
@@ -190,6 +209,7 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_serve.py` | Local server |
 | `kg_lock.py` | Editing password |
 | `kg_repos.py` | Claim cubes from a repo's README |
+| `kg_overlaps.py` | Overlaps valued by Leighton weight |
 | `kg_fill.py` | Models draft blank faces, in the background under `serve` |
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |

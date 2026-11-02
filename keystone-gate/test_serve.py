@@ -9,6 +9,9 @@ PASSWORD = "correct horse"
 
 
 class _Server:
+    def __init__(self, hosts=()):
+        self.hosts = hosts
+
     def __enter__(self):
         from kg_lock import make_lock
         from kg_serve import make_server
@@ -17,7 +20,7 @@ class _Server:
             with lock:
                 propose_face(s, cube_id, "FACT", "a drafted fact", "model-draft:test")
             return {"drafted": ["FACT"], "by": "test", "tried": []}
-        self.server = make_server("james", make_lock(PASSWORD), 0, draft=draft)
+        self.server = make_server("james", make_lock(PASSWORD), 0, draft=draft, hosts=self.hosts)
         self.port = self.server.server_address[1]
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
         self.key = self.unlock(PASSWORD)[1]["key"]
@@ -95,7 +98,7 @@ def test_locking_or_going_idle_ends_editing():
     body = {"action": "fill", "cube_id": "cube/nope", "lens": "FACT", "content": "x"}
     with _Server() as srv:
         assert srv.post(body)[0] == 400
-        assert srv.request("/api/lock", {})[0] == 200
+        assert srv.request("/api/lock", {}, key=srv.key)[0] == 200
         assert srv.post(body)[0] == 401
     idle, kg_serve.IDLE_SECONDS = kg_serve.IDLE_SECONDS, -1
     try:
@@ -154,6 +157,33 @@ def test_a_new_cube_gets_drafts_and_the_page_hears_about_them():
         assert cube["faces"]["FACT"]["pending"] and cube["faces"]["FACT"]["drafted_by"] == "test"
         assert cube["score"] == 0.0
         assert "cubes" not in srv.request("/api/status", {"seen": before + 1})[1]
+
+
+def test_phone_and_pc_stay_unlocked_together():
+    body = {"action": "fill", "cube_id": "cube/nope", "lens": "FACT", "content": "x"}
+    with _Server() as srv:
+        phone = srv.unlock(PASSWORD)[1]["key"]
+        assert srv.post(body)[0] == 400 and srv.post(body, key=phone)[0] == 400
+        srv.request("/api/lock", {}, key=phone)
+        assert srv.post(body, key=phone)[0] == 401
+        assert srv.post(body)[0] == 400
+
+
+def test_a_named_host_is_let_in_and_others_are_not():
+    body = {"action": "fill", "cube_id": "cube/nope", "lens": "FACT", "content": "x"}
+    name = "pc.tailnet.ts.net"
+    with _Server(hosts=[name]) as srv:
+        assert srv.post(body, host=name, origin=f"https://{name}")[0] == 400
+        assert srv.post(body, host="evil.example")[0] == 403
+        assert srv.post(body, host=name, origin="https://evil.example")[0] == 403
+
+
+def test_an_overlap_can_be_confirmed_only_when_unlocked():
+    with _Server() as srv:
+        made = [srv.post({"action": "new", "content": f"Overlap serve {i}"})[1]["result"]["cube_id"] for i in (1, 2)]
+        body = {"action": "overlap", "a": made[0], "b": made[1], "verdict": "confirmed"}
+        assert srv.post(body, key="")[0] == 401
+        assert srv.post(body)[0] == 200
 
 
 def test_asking_for_drafts_needs_the_password():
