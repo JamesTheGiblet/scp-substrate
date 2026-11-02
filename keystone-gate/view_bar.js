@@ -46,3 +46,21 @@
   });
   key.append(document.createTextNode("   ·   Gold glow: attested   ·   Hollow: missing   ·   Dim: unread   ·   Thread colour: the lens two cubes share   ·   Click to go in, Esc to back out, scroll to zoom"));
 })();
+
+  // --- timeline -------------------------------------------------------------
+  const timeSlider = document.getElementById("ftimeline");
+  if (timeSlider && typeof TIME_DATA !== "undefined" && TIME_DATA) {
+    const minMs = new Date(TIME_DATA.min).getTime();
+    const maxMs = new Date(TIME_DATA.max).getTime();
+    
+    timeSlider.addEventListener("input", () => {
+      const val = parseInt(timeSlider.value, 10);
+      if (val === 100) {
+        view.cutoff = null;
+      } else {
+        const ms = minMs + (maxMs - minMs) * (val / 100);
+        view.cutoff = new Date(ms).toISOString().replace("T", " ").substring(0, 19);
+      }
+      if (typeof draw === "function") draw();
+    });
+  }

@@ -45,6 +45,7 @@ def _face(face):
         "content": face.get("content"),
         "filled_by": filled_by,
         "unread": "bulk accept" in filled_by,
+        "filled_at": face.get("filled_at", ""),
     }
 
 
@@ -87,6 +88,7 @@ def collect(s):
         attestation = cube["attestation"]
         cubes.append({
             "id": cube["cube_id"],
+            "created_at": cube.get("created_at", ""),
             "content": cube["content"],
             "source": cube["source"],
             "tags": cube["tags"] or [],
@@ -112,11 +114,18 @@ def collect(s):
     return cubes
 
 
+def _time_range(s):
+    row = s.conn.execute("SELECT MIN(occurred_at), MAX(occurred_at) FROM events").fetchone()
+    if not row or not row[0]:
+        return {"min": "2026-01-01 00:00:00", "max": "2026-12-31 23:59:59"}
+    return {"min": row[0], "max": row[1]}
+
+
 def _safe_json(value):
     return json.dumps(value, ensure_ascii=False).replace("<", "\\u003c")
 
 
-def render(cubes, api=None):
+def render(s, cubes, api=None):
     """Fill the template. '<' is escaped so stored text cannot end the script."""
     data = _safe_json(cubes)
     page = TEMPLATE.read_text(encoding="utf-8")
@@ -125,6 +134,7 @@ def render(cubes, api=None):
     for marker, path in PARTS.items():
         page = page.replace(marker, path.read_text(encoding="utf-8"))
     page = page.replace("/*API*/null", _safe_json(api))
+    page = page.replace("/*TIME*/null", _safe_json(_time_range(s)))
     modes = all_modes(cubes) if cubes and "faces" in cubes[0] else {}
     return page.replace("/*CUBES*/[]", data).replace("/*MODES*/{}", _safe_json(modes))
 
@@ -133,5 +143,5 @@ def write_view(s, path=OUTPUT):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     cubes = collect(s)
-    path.write_text(render(cubes), encoding="utf-8")
+    path.write_text(render(s, cubes), encoding="utf-8")
     return {"path": path, "cubes": len(cubes)}

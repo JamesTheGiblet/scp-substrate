@@ -2,7 +2,7 @@
   // --- camera --------------------------------------------------------------
   const cam = { yaw: .6, pitch: .34, dist: 1300, t: [...world.c], toDist: 1300 };
   let W = 0, H = 0, F = 800;
-  const view = { filter: "all", query: "" };
+  const view = { filter: "all", query: "", cutoff: null };
 
   function project(p) {
     const x = p[0] - cam.t[0], y = p[1] - cam.t[1], z = p[2] - cam.t[2];
@@ -18,6 +18,7 @@
   const fog = d => Math.max(.1, Math.min(1, 1.5 - d / (cam.dist * 2.1)));
 
   function matches(c) {
+    if (view.cutoff && c.created_at > view.cutoff) return false;
     if (view.filter === "attested" && c.status !== "attested") return false;
     if (view.filter === "needs" && c.status === "attested") return false;
     if (!view.query) return true;
@@ -25,8 +26,23 @@
     return text.includes(view.query);
   }
 
+  function getFilteredFaces(faces) {
+    if (!view.cutoff) return faces;
+    const result = {};
+    for (const lens in faces) {
+      const f = faces[lens];
+      if (f && f.filled_at && f.filled_at > view.cutoff) {
+        result[lens] = null;
+      } else {
+        result[lens] = f;
+      }
+    }
+    return result;
+  }
+
   function drawCube(item) {
-    const { p, size, ry, rx, faces, alpha } = item;
+    const { p, size, ry, rx, alpha } = item;
+    const faces = getFilteredFaces(item.faces);
     const cy = Math.cos(ry), sy = Math.sin(ry), cx = Math.cos(rx), sx = Math.sin(rx);
     const pts = CORNERS.map(([a, b, c]) => {
       const x = a * cy + c * sy, z = -a * sy + c * cy, y = b * cx - z * sx, zz = b * sx + z * cx;
