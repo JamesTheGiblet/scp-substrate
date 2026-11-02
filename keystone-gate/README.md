@@ -127,6 +127,8 @@ python keystone-gate/kg cube view                  # read-only file, build/cubes
 
 Cubes appear as 3D nodes grouped in clusters inside a large cube. Click a cluster to enter it, and a cube to open it. Drag to orbit, scroll to zoom, and press Esc to go back. A grid view lists the same cubes.
 
+You are the green glow at the centre. A green strand runs to each cube you have validated, so a cube with no strand has not been vouched for, and the strands grow as you move along the time bar.
+
 To keep a growing set readable, cubes shrink as their number rises, down to half size, and return to full size as you zoom in. From far away each cluster shows its three strongest cubes and dims the rest, and searching or filtering shows them all. Clusters circle slowly and cubes drift around their cluster, which stops for an open cluster and when the system is set to reduce motion.
 
 **Cluster by** regroups the cubes by tag, repo or lens. Lens clustering compares each lens only with the same lens on other cubes, and links two cubes that share at least two uncommon words. Thread colour shows which lens. This measures shared vocabulary, so some links are coincidences. Group names are taken from the highest-scoring words and vary in quality, and a single edit can move other cubes between groups.
@@ -218,6 +220,7 @@ Run these as `python keystone-gate/kg ...`.
 | `seed_sc.py` | Creates and updates `sc` capsules |
 | `seed_cubes.py` | Project claims as draft cubes |
 | `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals. They are not your views until accepted |
+| `seed_cubes_james.py` | Cubes about James, as drafts in Claude's words, tagged private |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
 | `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
 | `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |

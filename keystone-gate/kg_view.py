@@ -69,7 +69,7 @@ def _group(s, cube_id):
     for source_id in _links(s, cube_id, "derived-from"):
         source = s.get(source_id)
         if source:
-            return source["state"].get("name", source_id)
+            return source["state"].get("name") or source["state"].get("owner") or source_id
     return "Project claims"
 
 
@@ -89,6 +89,7 @@ def collect(s):
         attestation = cube["attestation"]
         cubes.append({
             "id": cube["cube_id"],
+            "created_at": cube.get("created_at", ""),
             "content": cube["content"],
             "created": s.get(cube["cube_id"])["state"].get("created_at"),
             "source": cube["source"],
@@ -122,7 +123,14 @@ def _safe_json(value):
     return json.dumps(value, ensure_ascii=False).replace("<", "\\u003c")
 
 
-def render(cubes, api=None):
+def user_name(s):
+    """The first name of the person this store belongs to."""
+    row = s.conn.execute("SELECT json_extract(state_json, '$.owner') AS owner FROM capsules "
+                         "WHERE json_extract(state_json, '$.kind') = 'person' LIMIT 1").fetchone()
+    return row["owner"].split()[0] if row and row["owner"] else "You"
+
+
+def render(cubes, api=None, user="You"):
     """Fill the template. '<' is escaped so stored text cannot end the script."""
     data = _safe_json(cubes)
     page = TEMPLATE.read_text(encoding="utf-8")
@@ -130,7 +138,7 @@ def render(cubes, api=None):
     page = page.replace("/*FIELD*/", "(() => {\n" + field + "})();")
     for marker, path in PARTS.items():
         page = page.replace(marker, path.read_text(encoding="utf-8"))
-    page = page.replace("/*API*/null", _safe_json(api))
+    page = page.replace("/*API*/null", _safe_json(api)).replace('/*USER*/"You"', _safe_json(user))
     modes = all_modes(cubes) if cubes and "faces" in cubes[0] else {}
     return page.replace("/*CUBES*/[]", data).replace("/*MODES*/{}", _safe_json(modes))
 
@@ -139,5 +147,5 @@ def write_view(s, path=OUTPUT):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     cubes = collect(s)
-    path.write_text(render(cubes), encoding="utf-8")
+    path.write_text(render(cubes, user=user_name(s)), encoding="utf-8")
     return {"path": path, "cubes": len(cubes)}

@@ -114,7 +114,7 @@ h2 { font-size: 15px; margin: 30px 0 12px; color: var(--muted); font-weight: 600
 #timebar { position: absolute; left: 16px; right: 16px; bottom: 36px; display: flex; gap: 10px; align-items: center; max-width: 760px; font-size: 13px; color: #c3cbdb; }
 #timerange { flex: 1; min-width: 0; accent-color: #f2be46; }
 #timelabel { white-space: nowrap; font-variant-numeric: tabular-nums; }
-#key { position: absolute; left: 16px; bottom: 12px; font-size: 12px; color: #93a0b8; pointer-events: none; }
+#key { position: absolute; left: 16px; right: 16px; bottom: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; color: #93a0b8; pointer-events: none; }
 #key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 5px 0 12px; }
 #key i:first-child { margin-left: 0; }
 #tip { position: fixed; max-width: 270px; background: rgba(8, 11, 19, .92); border: 1px solid #333c52; border-radius: 6px; padding: 5px 9px; font-size: 13px; pointer-events: none; }

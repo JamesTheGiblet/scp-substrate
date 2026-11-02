@@ -97,5 +97,20 @@ def test_the_page_gets_overlaps_and_a_box_for_them():
     assert "OVERLAPS" not in all_modes(attach_overlaps(_filler(), now=NOW))
 
 
+def test_the_cubes_about_james_are_drafts_and_stay_private():
+    from kg_view import collect, user_name
+    from seed_cubes_james import CUBES, seed
+    s = Substrate()
+    try:
+        cid = f"cube/{CUBES[0][0]}"
+        seed(s, CUBES)
+        assert seed(s, CUBES) == []
+        cube = next(c for c in collect(s) if c["id"] == cid)
+        assert "private" in cube["tags"] and cube["note_draft"], cube
+        assert cube["group"] == "James Gilbert" and user_name(s) == "James"
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

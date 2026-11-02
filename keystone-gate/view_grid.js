@@ -1,6 +1,7 @@
 // The grid view, and the data every view shares.
 const CUBES = /*CUBES*/[];
 const MODES = /*MODES*/{};
+const USER = /*USER*/"You";
 const LENSES = ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"];
 const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fiction", CONTEXT: "context", HUMAN: "human" };
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };

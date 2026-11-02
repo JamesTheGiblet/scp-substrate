@@ -21,7 +21,7 @@ from kg_fill import Drafter, cubes_with_blanks, draft_cube, pending_drafts
 from kg_lens_links import all_modes
 from kg_lock import matches
 from kg_overlaps import decide
-from kg_view import collect, render
+from kg_view import collect, render, user_name
 
 
 MAX_BODY = 64 * 1024
@@ -171,7 +171,7 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
                 return self._json(404, {"error": "not found"})
             s = Substrate()
             try:
-                page = render(collect(s), api={"token": token, "by": by})
+                page = render(collect(s), api={"token": token, "by": by}, user=user_name(s))
             finally:
                 s.close()
             self._send(200, page, "text/html")

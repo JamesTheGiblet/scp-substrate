@@ -191,6 +191,31 @@
       }
     }
 
+    // You, at the centre, with a strand to every cube you have vouched for
+    const you = project(world.c);
+    if (you) {
+      const dim = inside ? .3 : 1;
+      for (const n of nodes) {
+        if (!shows(n.c) || !n.c.validation || n.c.validation.stale) continue;
+        const q = project(n.p);
+        if (!q) continue;
+        const on = lit === n, alpha = (on ? .85 : .26) * dim * fog(q.d);
+        ctx.strokeStyle = `rgba(94,235,130,${alpha})`;
+        ctx.lineWidth = on ? 1.8 : 1;
+        ctx.beginPath(); ctx.moveTo(you.x, you.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+        if (!calm) {
+          const t = (time * .1 + n.seed * .013) % 1;
+          ctx.fillStyle = `rgba(170,255,190,${Math.min(1, alpha * 2.6)})`;
+          ctx.beginPath(); ctx.arc(mix(you.x, q.x, t), mix(you.y, q.y, t), 1.5, 0, 7); ctx.fill();
+        }
+      }
+      const r = 26 * you.k * (calm ? 1 : 1 + Math.sin(time * 1.3) * .07);
+      glow(you, r * 5.5, "94,235,130", .34 * dim);
+      glow(you, r * 2, "150,255,175", .75 * dim);
+      ctx.fillStyle = `rgba(205,255,216,${dim})`;
+      ctx.beginPath(); ctx.arc(you.x, you.y, r * .62, 0, 7); ctx.fill();
+    }
+
     // Cubes and their lenses, furthest first
     const items = [];
     for (const n of nodes) {
@@ -249,6 +274,7 @@
     }
 
     // Names
+    if (you && !inside) label(USER, { x: you.x, y: you.y + 26 * you.k + 20 }, 15, .95, 700);
     if (!focus.node) clusters.forEach(cl => {
       const q = project(add(cl.c, [0, -cl.half - 8, 0]));
       if (q && (!focus.cluster || focus.cluster === cl)) label("#" + cl.topic, q, focus.cluster ? 16 : 13, focus.cluster ? .95 : .85 * fog(q.d));
