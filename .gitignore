@@ -4,4 +4,5 @@ sc.db-wal
 sc.db-shm
 legacy/
 drift-report.txt
+.env
 

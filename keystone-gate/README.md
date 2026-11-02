@@ -6,10 +6,10 @@ It has four parts:
 
 - **Cubes:** one claim examined through five lenses, then validated and attested by a person.
 - **Gate:** checks an answer against a contract, and withholds it if it fails.
-- **Claude layer:** optional. Claude rewords answers the substrate has already found.
+- **Model layer:** optional. Claude, Gemini or a local Ollama model rewords answers the substrate has already found.
 - **Page:** a 3D view of the cubes, with editing when run through the local server.
 
-The rule behind the gate and the Claude layer is that an LLM handles wording, not facts.
+The rule behind the gate and the model layer is that an LLM handles wording, not facts.
 
 ## Boundary with the substrate
 
@@ -63,14 +63,20 @@ The gate checks references, not reasoning. A passing answer can still be wrong. 
 
 To add a rule, add an entry to the `sc` capsule and a checker to `_RULES` in `kg_gate.py`.
 
-## Claude
+## Models
 
-`kg ask --claude "<question>"` is opt-in, because it sends the question and the walker's answer to the Anthropic API.
+`kg ask --claude "<question>"` is opt-in, because it sends the question and the walker's answer to outside services. The flag keeps its name, but the model that answers can be any of three.
 
-1. The walker answers, and the answer must pass the gate. With no facts, Claude is not called.
-2. Claude rewords it. Each claim must quote the exact evidence it rests on.
+1. The walker answers, and the answer must pass the gate. With no facts, no model is called.
+2. A model rewords it. Each claim must quote the exact evidence it rests on.
 3. `sc/claude-answerer` checks the result: quotes must be verbatim, and numbers and capitalised words must come from the evidence or the question.
-4. Any failure or refusal shows the walker's answer and says why.
+4. If the model fails, or the gate refuses its answer, the next model is tried. If they all fail, the walker's answer is shown with the reasons.
+
+| Order | Model | Runs on | Needs |
+|---|---|---|---|
+| 1 | Claude Opus 5.5, low effort | Anthropic | `claude_API_KEY` and the SDK |
+| 2 | `gemini-3.5-flash` | Google | `gemini_API_KEY` |
+| 3 | `llama3.2:latest` | This machine, through Ollama | Ollama running with that model |
 
 Setup:
 
@@ -78,14 +84,26 @@ Setup:
 pip install -r keystone-gate/requirements.txt
 ```
 
-Then set `ANTHROPIC_API_KEY`. It uses Claude Opus 5.5 at low effort, with server-side refusal fallback on, and each call costs a small amount.
+Put the keys in `.env` at the repo root, as `claude_API_KEY=<key>` and `gemini_API_KEY=<key>`. Git ignores that file. `ANTHROPIC_API_KEY` and `GEMINI_API_KEY` override it if set. The SDK is needed for Claude only. Gemini and Ollama use the standard library.
 
-This has been tested with a fake client and a mock server, not against the live API. The gate shows that a claim is anchored to a quote, not that the sentence means the same as the quote, and a new lowercase word can still pass.
+Each paid call costs a small amount. Check Google's terms for how your plan treats what you send. Model names are constants at the top of `kg_llm.py`, and a retired model fails over to the next one.
+
+Gemini and Ollama have answered live, but only a few times. Claude has reached the API and returned a credit error, so a real Claude answer is untested. The gate shows that a claim is anchored to a quote, not that the sentence means the same as the quote, and a new lowercase word can still pass. Ollama's small model can be slow, and it takes longest on the first call after loading.
+
+## Repos
+
+```sh
+python keystone-gate/kg repo add JamesTheGiblet/Replicant
+```
+
+This reads the repo's README through `gh` and has a model write 3 to 6 claims. Each claim must quote a line of the README, and a claim whose quote is not found there is dropped. The quote becomes a draft FACT, worded as what the README says, so accepting it records what the README claims, not that the claim is true. The other lenses stay blank until you press **Fill blanks**. Under **Cluster by**, **Repos** shows one box per repo. A repo that already has cubes is skipped.
+
+Private repos go to Ollama only. Their cubes are tagged `private`, so later drafts stay local, and so does `kg ask --claude` when its evidence contains the text of a private cube's claim or filled face. That check matches text, so it can miss an answer that rewords the cube. These cubes are still stored in `sc.db`, so they travel wherever that file is pushed. A published page also includes them.
 
 ## The page
 
 ```sh
-python keystone-gate/kg cube serve --by james      # edit and add cubes
+python keystone-gate/kg cube serve --by james      # browse, and edit in the grid
 python keystone-gate/kg cube view                  # read-only file, build/cubes.html
 ```
 
@@ -93,11 +111,23 @@ Cubes appear as 3D nodes grouped in clusters inside a large cube. Click a cluste
 
 **Cluster by** regroups the cubes by tag or by lens. Lens clustering compares each lens only with the same lens on other cubes, and links two cubes that share at least two uncommon words. Thread colour shows which lens. This measures shared vocabulary, so some links are coincidences. Group names are taken from the highest-scoring words and vary in quality, and a single edit can move other cubes between groups.
 
-Under `serve` you can add cubes, write and edit faces, accept or reject drafts, validate and attest. These run the same functions as the CLI. Pending drafts appear hollow and count for nothing, but their text is used for clustering.
+Editing happens in the grid view only, under `serve`, after you unlock it. Set the password once:
 
-The server listens on 127.0.0.1 only. Writes need a token issued when the server starts, and requests naming another host or origin are refused. Do not expose it on a network.
+```sh
+python keystone-gate/kg cube password
+```
 
-`build/` is ignored by git because the page contains your opinions. The page is a snapshot under `view`, so run the command again to refresh it. The Screenshot button saves the 3D view only, not the text panel.
+Then press **Unlock to edit** in the grid. You can add cubes, write and edit faces, accept or reject drafts, write or edit the validation note, and attest. These run the same functions as the CLI. Validating needs all five faces accepted or written. Pending drafts appear hollow and count for nothing, but their text is used for clustering. Editing a validation note leaves an attestation in place.
+
+Models can draft blank faces. A new cube is drafted automatically, and **Fill blanks** drafts the rest, including faces where you rejected a draft. This uses the same order as `kg ask --claude`, so the cube's text goes to Anthropic, then Google if Claude fails, then Ollama. Each draft stays pending until you accept it, so it adds nothing to the score. The page checks every 8 seconds and shows a message, a count in the tab title and a button that lists the drafts. Nothing checks a draft against your data, so reading it is the check. A rejected draft is only offered again if a model writes something different. The drafter runs only while `serve` is running. `kg cube draft` does the same at the terminal.
+
+Editing locks again when you press Lock, reload the page, stop the server, or leave it idle for 30 minutes. Only a scrypt hash is stored, at `~/.config/scp/cube-edit.json`, outside the repo. If you forget the password, delete that file and set a new one.
+
+The password protects the page only. Anyone who can use your account on this machine can still change `sc.db` directly or through the `kg` commands.
+
+The server listens on 127.0.0.1 only. Every request needs a token issued when the server starts, writes also need the unlock key, and requests naming another host or origin are refused. Do not expose it on a network.
+
+`build/cubes.html` is tracked in git. It holds nothing `sc.db` does not, and `sc.db` is tracked too. The page is a snapshot under `view`, so run the command again to refresh it. The Screenshot button saves the 3D view only, not the text panel.
 
 ## Commands
 
@@ -105,7 +135,7 @@ The server listens on 127.0.0.1 only. Writes need a token issued when the server
 kg stats                            count cubes, lenses, faces, neighbour pairs
 kg route list                       list all neighbours
 kg ask "<question>"                 gated answer
-kg ask --claude "<question>"        reworded by Claude; uses the Anthropic API
+kg ask --claude "<question>"        reworded by Claude, Gemini or Ollama
 kg gate check "<question>"          show the rules and the result
 kg gate test                        run the contract's test cases
 
@@ -117,12 +147,16 @@ kg cube review --by <name>          work through cubes at the terminal (--tag)
 kg cube show <id>                   faces, validation, completeness
 kg cube list                        all cubes with scores
 kg cube view                        write and open the read-only page
+kg cube password                    set the password that unlocks editing
 kg cube serve --by <name>           run the editable page (--port, --no-open)
 kg cube contradicts <id> <other>    flag a contradiction
 kg cube tick [id]                   run rules, creating proposals
+kg cube draft [id]                  have a model draft blank faces
 kg cube proposals [id]              list proposals (--status)
 kg cube accept <proposal> --by <n>  apply a proposal
 kg cube reject <proposal> --by <n>  reject a proposal (--reason)
+
+kg repo add <owner/name> ...        write claim cubes from each repo's README
 
 kg neighbour link <a> <b>           link two cubes both ways
 kg neighbour list <id>              list a cube's neighbours
@@ -143,10 +177,13 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_review.py` | Terminal review |
 | `kg_gate.py` | Gate rules and checkers |
 | `kg_hal.py` | Asks the substrate and gates the answer |
-| `kg_llm.py` | Claude layer |
+| `kg_llm.py` | Model layer: Claude, Gemini, Ollama |
 | `kg_lens_links.py` | Lens links and clusters |
 | `kg_view.py` | Builds the page |
 | `kg_serve.py` | Local server |
+| `kg_lock.py` | Editing password |
+| `kg_repos.py` | Claim cubes from a repo's README |
+| `kg_fill.py` | Models draft blank faces, in the background under `serve` |
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
 | `view_field_world.js`, `view_field_draw.js`, `view_field_move.js` | The 3D view: layout, drawing, moving around |
@@ -156,7 +193,7 @@ Run these as `python keystone-gate/kg ...`.
 | `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals. They are not your views until accepted |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
 | `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
-| `requirements.txt` | Anthropic SDK, needed only for `--claude` |
+| `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |
 | `support_kg.py`, `test_*.py` | Tests |
 
 ## Tests
@@ -165,7 +202,7 @@ Run these as `python keystone-gate/kg ...`.
 python tests/run.py
 ```
 
-Gate and boundary tests read a temporary copy of `sc.db`, so they cannot write to the live one. The Claude tests use a fake client.
+Gate and boundary tests read a temporary copy of `sc.db`, so they cannot write to the live one. The model tests use fake replies, so they make no network calls.
 
 Browser behaviour is not covered by the test suite. It has been checked by hand and with scripted runs in Edge.
 

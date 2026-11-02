@@ -42,14 +42,18 @@ def cmd_ask(args):
     s = Substrate()
     question = " ".join(args.question)
     if args.claude:
-        from kg_llm import ask_claude
-        result = ask_claude(s, question)
+        from kg_llm import ask_llm
+        result = ask_llm(s, question)
     else:
         result = ask_gated(s, question, sc=load_sc(s))
     s.close()
 
+    if result.get("tried"):
+        print(f"(Worded by {result['source']}. Passed over: {'; '.join(result['tried'])})")
+        print()
+
     if result.get("fallback_reason"):
-        print(f"(Claude not used: {result['fallback_reason']}. Showing the walker's answer.)")
+        print(f"(No model used: {result['fallback_reason']}. Showing the walker's answer.)")
         for v in result.get("refused", {}).get("violations", []):
             print(f"  - {v['rule']}: {v['detail']}")
         print()
@@ -166,10 +170,16 @@ def main():
     sp_list = sp_sub.add_parser("list", help="list all neighbours")
     sp_list.set_defaults(func=cmd_route_list)
 
+    sp = sub.add_parser("repo", help="repos as boxes of cubes")
+    sp_sub = sp.add_subparsers(dest="repo_cmd", required=True)
+    sp_add = sp_sub.add_parser("add", help="read each repo's README and write claim cubes; private repos stay local")
+    sp_add.add_argument("repos", nargs="+", help="owner/name")
+    sp_add.set_defaults(func=cmd_repo_add)
+
     sp = sub.add_parser("ask", help="ask the substrate, gated — refuses if compliance fails")
     sp.add_argument("question", nargs="+")
     sp.add_argument("--claude", action="store_true",
-                    help="have Claude reword the answer; sends it to the Anthropic API")
+                    help="have a model reword the answer: Claude, then Gemini, then local Ollama")
     sp.set_defaults(func=cmd_ask)
 
     sp = sub.add_parser("gate", help="gate operations")
@@ -215,6 +225,13 @@ def main():
     sp_rev.add_argument("--by", required=True)
     sp_rev.add_argument("--tag", default=None, help="only cubes with this tag")
     sp_rev.set_defaults(func=cmd_cube_review)
+
+    sp_draft = sp_sub.add_parser("draft", help="have a model draft blank faces, for you to confirm")
+    sp_draft.add_argument("cube_id", nargs="?")
+    sp_draft.set_defaults(func=cmd_cube_draft)
+
+    sp_pass = sp_sub.add_parser("password", help="set the password that unlocks editing in the browser")
+    sp_pass.set_defaults(func=cmd_cube_password)
 
     sp_serve = sp_sub.add_parser("serve", help="work on cubes in the browser, on this machine only")
     sp_serve.add_argument("--by", required=True)

@@ -98,17 +98,19 @@ h2 { font-size: 15px; margin: 30px 0 12px; color: var(--muted); font-weight: 600
 #modes { position: absolute; top: 56px; left: 16px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: #93a0b8; max-width: calc(100vw - 32px); }
 #modes .chip { font-size: 12px; padding: 2px 10px; }
 .tools { display: flex; flex-wrap: wrap; gap: 6px; margin: -3px 0 10px 15px; align-items: center; }
-.tool { border: 1px solid #333c52; background: none; color: #c3cbdb; border-radius: 6px; padding: 2px 9px; cursor: pointer; font-size: 12px; }
-.tool:hover { border-color: #9fb4d8; color: #fff; }
-.tools textarea, .tools input { width: 100%; background: #0b0e17; color: #e6eaf3; border: 1px solid #333c52; border-radius: 6px; padding: 6px 8px; font-size: 14px; }
-.tools .warn { color: #f0b23a; font-size: 12px; }
-#toast { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); background: rgba(8, 11, 19, .94); border: 1px solid #333c52; border-radius: 8px; padding: 7px 14px; font-size: 14px; }
-#toast[hidden], #addcube[hidden] { display: none; }
-#newcube { background: #10131d; color: #e6eaf3; border-color: #2c3448; width: min(560px, calc(100vw - 32px)); padding: 20px; }
-#newcube h3 { margin: 0 0 12px; font-size: 18px; }
-#newcube label { display: block; font-size: 12px; color: #98a5bd; margin-bottom: 9px; }
-#newcube textarea, #newcube input { display: block; width: 100%; margin-top: 3px; background: #0b0e17; color: #e6eaf3; border: 1px solid #333c52; border-radius: 6px; padding: 6px 8px; font-size: 14px; }
-#newcube .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+.tool { border: 1px solid var(--line); background: none; color: var(--ink); border-radius: 6px; padding: 2px 9px; cursor: pointer; font-size: 12px; }
+.tool:hover { border-color: var(--muted); }
+.tools textarea, .tools input { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 14px; }
+.tools .warn { color: var(--muted); font-size: 12px; }
+#toast { position: fixed; z-index: 5; left: 50%; bottom: 44px; transform: translateX(-50%); background: rgba(8, 11, 19, .94); color: #e6eaf3; border: 1px solid #333c52; border-radius: 8px; padding: 7px 14px; font-size: 14px; }
+#toast[hidden], #addcube[hidden], #fillblanks[hidden], #checkdrafts[hidden], #lock[hidden], #unlockwrong[hidden] { display: none; }
+#newcube, #unlock { --ink: #e6eaf3; --line: #333c52; --muted: #9fb4d8; background: #10131d; color: #e6eaf3; border-color: #2c3448; width: min(560px, calc(100vw - 32px)); padding: 20px; }
+#unlock { width: min(360px, calc(100vw - 32px)); }
+#unlockwrong { color: #f0b23a; font-size: 13px; margin: 0; }
+#newcube h3, #unlock h3 { margin: 0 0 12px; font-size: 18px; }
+#newcube label, #unlock label { display: block; font-size: 12px; color: #98a5bd; margin-bottom: 9px; }
+#newcube textarea, #newcube input, #unlock input { display: block; width: 100%; margin-top: 3px; background: #0b0e17; color: #e6eaf3; border: 1px solid #333c52; border-radius: 6px; padding: 6px 8px; font-size: 14px; }
+#newcube .actions, #unlock .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 #key { position: absolute; left: 16px; bottom: 12px; font-size: 12px; color: #93a0b8; pointer-events: none; }
 #key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin: 0 5px 0 12px; }
 #key i:first-child { margin-left: 0; }

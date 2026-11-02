@@ -76,10 +76,10 @@ class _FakeClient:
 
 
 def _claude(client, question="who is james"):
-    from kg_llm import ask_claude
+    from kg_llm import ask_llm
     s = Substrate()
     try:
-        return ask_claude(s, question, client=client)
+        return ask_llm(s, question, client=client)
     finally:
         s.close()
 

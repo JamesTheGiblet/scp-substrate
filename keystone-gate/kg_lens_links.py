@@ -155,9 +155,20 @@ def cluster(cubes, lenses):
     return {"clusters": sorted(groups, key=lambda g: g["name"]), "links": _plain(links)}
 
 
+def by_repo(cubes):
+    """One box per repo, and one for every cube that belongs to none."""
+    boxes = defaultdict(list)
+    for c in sorted(cubes, key=lambda c: c["id"]):
+        boxes[c.get("repo") or "not from a repo"].append(c["id"])
+    return {"clusters": [{"name": name, "members": members} for name, members in sorted(boxes.items())],
+            "links": []}
+
+
 def all_modes(cubes):
-    """One clustering for all lenses together, and one per lens that has links."""
+    """One clustering for all lenses together, one per lens that has links, and one per repo."""
     modes = {"ALL": cluster(cubes, LENSES)}
+    if any(c.get("repo") for c in cubes):
+        modes["REPOS"] = by_repo(cubes)
     for lens in LENSES:
         result = cluster(cubes, (lens,))
         if result["links"]:

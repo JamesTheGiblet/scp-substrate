@@ -1,33 +1,50 @@
-"""The browser's way in: writes need the token. Run: python tests/run.py"""
+"""The browser's way in: writes need the token and the password. Run: python tests/run.py"""
 import http.client
 import json
 import threading
 
 from support_kg import *
 
+PASSWORD = "correct horse"
+
 
 class _Server:
     def __enter__(self):
+        from kg_lock import make_lock
         from kg_serve import make_server
-        self.server = make_server("james", 0)
+        def draft(s, cube_id, lock):
+            from kg_agent import propose_face
+            with lock:
+                propose_face(s, cube_id, "FACT", "a drafted fact", "model-draft:test")
+            return {"drafted": ["FACT"], "by": "test", "tried": []}
+        self.server = make_server("james", make_lock(PASSWORD), 0, draft=draft)
         self.port = self.server.server_address[1]
         threading.Thread(target=self.server.serve_forever, daemon=True).start()
+        self.key = self.unlock(PASSWORD)[1]["key"]
         return self
 
     def __exit__(self, *args):
         self.server.shutdown()
         self.server.server_close()
 
-    def post(self, data, token=None, host=None, origin=None):
+    def request(self, path, data, token=None, host=None, origin=None, key=None):
         conn = http.client.HTTPConnection("127.0.0.1", self.port)
         headers = {"Content-Type": "application/json", "Host": host or f"127.0.0.1:{self.port}"}
         if token is not False:
             headers["X-Cube-Token"] = token or self.server.token
+        if key:
+            headers["X-Cube-Key"] = key
         if origin:
             headers["Origin"] = origin
-        conn.request("POST", "/api/do", json.dumps(data), headers)
+        conn.request("POST", path, json.dumps(data), headers)
         res = conn.getresponse()
         return res.status, json.loads(res.read())
+
+    def post(self, data, key=None, **kw):
+        return self.request("/api/do", data, key=self.key if key is None else key, **kw)
+
+    def unlock(self, password, **kw):
+        return self.request("/api/unlock", {"password": password}, **kw)
 
     def page(self):
         conn = http.client.HTTPConnection("127.0.0.1", self.port)
@@ -48,6 +65,7 @@ def test_writes_are_refused_without_the_right_token():
         body = {"action": "new", "content": "should not exist"}
         assert srv.post(body, token=False)[0] == 403
         assert srv.post(body, token="wrong")[0] == 403
+        assert srv.post(body, token="wrongé")[0] in (400, 403)
         s = Substrate()
         try:
             assert s.get("cube/should-not-exist") is None
@@ -60,6 +78,90 @@ def test_writes_are_refused_from_other_sites():
         body = {"action": "new", "content": "should not exist"}
         assert srv.post(body, origin="https://evil.example")[0] == 403
         assert srv.post(body, host="evil.example")[0] == 403
+
+
+def test_writes_are_refused_until_unlocked():
+    with _Server() as srv:
+        body = {"action": "new", "content": "should not exist"}
+        assert srv.post(body, key="")[0] == 401
+        assert srv.post(body, key="guess")[0] == 401
+        assert srv.unlock("wrong password")[0] == 403
+        assert srv.unlock(PASSWORD, token="wrong")[0] == 403
+        assert srv.unlock(PASSWORD, origin="https://evil.example")[0] == 403
+
+
+def test_locking_or_going_idle_ends_editing():
+    import kg_serve
+    body = {"action": "fill", "cube_id": "cube/nope", "lens": "FACT", "content": "x"}
+    with _Server() as srv:
+        assert srv.post(body)[0] == 400
+        assert srv.request("/api/lock", {})[0] == 200
+        assert srv.post(body)[0] == 401
+    idle, kg_serve.IDLE_SECONDS = kg_serve.IDLE_SECONDS, -1
+    try:
+        with _Server() as srv:
+            assert srv.post(body)[0] == 401
+    finally:
+        kg_serve.IDLE_SECONDS = idle
+
+
+def test_the_password_never_reaches_the_page_or_the_file():
+    from kg_lock import make_lock, matches
+    lock = make_lock(PASSWORD)
+    assert PASSWORD not in json.dumps(lock)
+    assert matches(PASSWORD, lock) and not matches("wrong password", lock)
+    try:
+        make_lock("short")
+        assert False, "short passwords are refused"
+    except ValueError:
+        pass
+    with _Server() as srv:
+        assert srv.key not in srv.page()[1]
+
+
+def test_lock_file_round_trip():
+    import tempfile
+    from pathlib import Path
+    from kg_lock import load_lock, make_lock, save_lock
+    with tempfile.TemporaryDirectory() as folder:
+        path = Path(folder) / "new" / "lock.json"
+        assert load_lock(path) is None
+        lock = make_lock(PASSWORD)
+        save_lock(lock, path)
+        assert load_lock(path) == lock
+
+
+def test_a_validation_can_be_rewritten():
+    with _Server() as srv:
+        cid = "cube/esp32-logic-is-3v3"
+        assert srv.post({"action": "fill", "cube_id": cid, "lens": "OPINION", "content": "mine"})[0] == 200
+        assert srv.post({"action": "validate", "cube_id": cid, "note": "first"})[0] == 200
+        status, reply = srv.post({"action": "validate", "cube_id": cid, "note": "second"})
+        assert status == 200, reply
+        assert next(c for c in reply["cubes"] if c["id"] == cid)["validation"]["note"] == "second"
+
+
+def test_a_new_cube_gets_drafts_and_the_page_hears_about_them():
+    with _Server() as srv:
+        before = srv.request("/api/status", {})[1]["pending"]
+        status, reply = srv.post({"action": "new", "content": "A blank cube for the drafter"})
+        assert status == 200, reply
+        cid = reply["result"]["cube_id"]
+        srv.server.drafter.jobs.join()
+        status, heard = srv.request("/api/status", {"seen": before})
+        assert status == 200 and heard["pending"] == before + 1, heard
+        cube = next(c for c in heard["cubes"] if c["id"] == cid)
+        assert cube["faces"]["FACT"]["pending"] and cube["faces"]["FACT"]["drafted_by"] == "test"
+        assert cube["score"] == 0.0
+        assert "cubes" not in srv.request("/api/status", {"seen": before + 1})[1]
+
+
+def test_asking_for_drafts_needs_the_password():
+    with _Server() as srv:
+        assert srv.post({"action": "draft"}, key="")[0] == 401
+        assert srv.request("/api/status", {}, token=False)[0] == 403
+        status, reply = srv.post({"action": "draft"})
+        assert status == 200 and "queued" in reply["result"], reply
 
 
 def test_new_cube_returns_fresh_clusters():
@@ -86,15 +188,17 @@ def test_filling_a_face_replaces_its_draft():
 
 def test_accept_validate_and_attest_flow_through_the_rules():
     with _Server() as srv:
-        cid = "cube/torque-falls-with-arm-length"
+        faces = {lens: "text" for lens in ("FACT", "COUNTER", "FICTION", "CONTEXT")}
+        status, reply = srv.post({"action": "new", "content": "A claim to walk through", "faces": faces})
+        cid = reply["result"]["cube_id"]
         assert srv.post({"action": "attest", "cube_id": cid})[0] == 400
-        from kg_view import collect
+        from kg_agent import propose_face
         s = Substrate()
         try:
-            cube = next(c for c in collect(s) if c["id"] == cid)
+            proposal = propose_face(s, cid, "OPINION", "a suggested view", "test")
         finally:
             s.close()
-        assert srv.post({"action": "accept", "proposal_id": cube["faces"]["OPINION"]["proposal_id"]})[0] == 200
+        assert srv.post({"action": "accept", "proposal_id": proposal["proposal_id"]})[0] == 200
         assert srv.post({"action": "validate", "cube_id": cid, "note": "holds"})[0] == 200
         status, reply = srv.post({"action": "attest", "cube_id": cid})
         assert status == 200, reply

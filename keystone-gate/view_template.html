@@ -17,7 +17,7 @@
     <button class="chip" data-f="all" aria-pressed="true">All</button>
     <button class="chip" data-f="attested" aria-pressed="false">Attested</button>
     <button class="chip" data-f="needs" aria-pressed="false">Needs you</button>
-    <button class="chip" id="addcube" hidden>+ New cube</button>
+    <button class="chip" id="checkdrafts" hidden></button>
     <button class="chip" id="snap">Screenshot</button>
     <button class="chip" id="togrid">Grid</button>
   </div>
@@ -25,8 +25,16 @@
   <div id="key"></div>
   <div id="tip" hidden></div>
   <aside id="panel" hidden></aside>
-  <div id="toast" role="status" hidden></div>
 </div>
+<div id="toast" role="status" hidden></div>
+<dialog id="unlock">
+  <form>
+    <h3>Unlock editing</h3>
+    <label>Password<input type="password" autocomplete="current-password" required></label>
+    <p id="unlockwrong" hidden>That password is wrong.</p>
+    <div class="actions"><button type="button" class="tool" id="unlockcancel">Cancel</button><button type="submit" class="tool">Unlock</button></div>
+  </form>
+</dialog>
 <dialog id="newcube">
   <form>
     <h3>New cube</h3>
@@ -41,7 +49,7 @@
   </form>
 </dialog>
 <main id="grid" hidden>
-  <p><button class="chip" id="tofield">Back to the field</button></p>
+  <p><button class="chip" id="tofield">Back to the field</button> <button class="chip" id="lock" hidden>Unlock to edit</button> <button class="chip" id="addcube" hidden>+ New cube</button> <button class="chip" id="fillblanks" hidden>Fill blanks</button></p>
   <h1>Data Cubes</h1>
   <p class="sub">Each side is a lens. Solid means filled, hollow means missing, and striped means accepted without being read. The bar shows all six sides at once.</p>
   <div class="stats" id="stats"></div>

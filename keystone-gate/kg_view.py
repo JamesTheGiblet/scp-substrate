@@ -1,8 +1,7 @@
 """See the cubes as a 3D field. Writes one self-contained HTML page.
 
 The page is a snapshot: run `kg cube view` again after a review. It loads
-nothing from the network, and build/ is ignored by git because the page holds
-your opinions.
+nothing from the network.
 """
 import json
 from pathlib import Path
@@ -55,7 +54,8 @@ def _faces(s, cube):
     for p in list_proposals(s, cube_id=cube["cube_id"], status="pending"):
         if p.get("lens") in faces and not faces[p["lens"]]:
             faces[p["lens"]] = {"content": p["content"], "filled_by": "draft",
-                                "unread": True, "pending": True, "proposal_id": p["id"]}
+                                "unread": True, "pending": True, "proposal_id": p["id"],
+                                "drafted_by": (p.get("proposed_by") or "").removeprefix("model-draft:")}
     return faces
 
 
@@ -71,6 +71,13 @@ def _group(s, cube_id):
     return "Project claims"
 
 
+def _repo(s, cube_id):
+    for source_id in _links(s, cube_id, "derived-from"):
+        if source_id.startswith("repo/"):
+            return s.get(source_id)["state"].get("name", source_id)
+    return None
+
+
 def collect(s):
     """Everything the page shows, one dict per cube."""
     cubes = []
@@ -84,6 +91,7 @@ def collect(s):
             "source": cube["source"],
             "tags": cube["tags"] or [],
             "group": _group(s, cube["cube_id"]),
+            "repo": _repo(s, cube["cube_id"]),
             "score": cube["completeness"]["score"],
             "status": _status(cube),
             "standing": round(fused_trust(s, cube["cube_id"]).get("posterior", 0.5), 2),

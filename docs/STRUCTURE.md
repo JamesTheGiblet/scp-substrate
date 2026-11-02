@@ -42,7 +42,7 @@ scp-substrate/
 ├── seeds/                 scripts that create starting capsules
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
 ├── docs/                  SPEC, STRUCTURE, REASONING, SCP documents (*.scp.json)
-├── build/                 generated page, ignored by git
+├── build/                 generated page, tracked in git
 ├── keystone-gate/         see keystone-gate/README.md for its files
 └── legacy/                pre-SQLite JSON archive, ignored by git
 ```
@@ -171,4 +171,4 @@ python tests/run.py runs everything.
 
 The test files split by size, so numbered files are not grouped by topic.
 
-Not covered: bootstrap.py, most scps subcommands, the live paths in absorb_github.py, the live Claude API, and browser behaviour. The page has been checked by hand and with scripted runs in Edge.
+Not covered: bootstrap.py, most scps subcommands, the live paths in absorb_github.py, the live model APIs, and browser behaviour. The page has been checked by hand and with scripted runs in Edge.

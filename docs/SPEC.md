@@ -519,7 +519,7 @@ What the pattern does and does not do:
 
 ### Gating a real LLM
 
-`sc/claude-answerer` is the contract for `kg ask --claude`. The walker finds the facts and Claude only rewords them. Each claim must carry a verbatim quote from the walker's evidence, so two rules join the four above:
+`sc/claude-answerer` is the contract for `kg ask --claude`, whichever model answers. The walker finds the facts and the model only rewords them. Each claim must carry a verbatim quote from the walker's evidence, so two rules join the four above:
 
 - `claims_quote_evidence` - every claim's quote must appear in the evidence
 - `no_unsourced_terms` - numbers and capitalised words must come from the evidence or the question
@@ -533,7 +533,7 @@ Keystone Gate is the first implementation of this pattern:
 - `keystone-gate/seed_sc.py` - seeds `sc/symlm-answerer`
 - `keystone-gate/kg_gate.py` - `check()` and one `_check_*` function per rule
 - `keystone-gate/kg_hal.py` - `ask_gated()` - asks substrate, gates answer, returns pass or reject
-- `keystone-gate/kg_llm.py` - `ask_claude()` - walker, then Claude, then the gate, with fallback
+- `keystone-gate/kg_llm.py` - `ask_llm()` - walker, then Claude, Gemini and Ollama in turn, each through the gate, with fallback
 - `keystone-gate/kg gate test` - runs the sc capsule's own test cases against the live substrate
 
 The substrate does not depend on the gate. The gate depends on capsule lookups, stored content and trust values.
@@ -567,4 +567,4 @@ Needs a complete cube. It writes the attestation observation, which `fused_trust
 
 ### Browser access
 
-`kg cube serve` runs an HTTP server bound to 127.0.0.1. `POST /api/do` applies one action and returns the updated cubes and clusters. Each write needs the `X-Cube-Token` header, issued when the server starts and embedded in the page. Requests with another `Host` or `Origin` are refused.
+`kg cube serve` runs an HTTP server bound to 127.0.0.1. `POST /api/do` applies one action and returns the updated cubes and clusters. Each POST needs the `X-Cube-Token` header, issued when the server starts and embedded in the page. `POST /api/unlock` checks the editing password against the scrypt hash in `~/.config/scp/cube-edit.json` and returns a key. `/api/do` also needs that key in `X-Cube-Key`, otherwise it returns 401. The key is held in memory, lapses after 30 idle minutes, and `POST /api/lock` ends it. `POST /api/status` reports the pending drafts and sends the cubes when that count has moved. The `new` action queues the cube for `kg_fill.py`, and the `draft` action queues every cube with a blank, one at a time on a background thread. Drafts are proposals with `proposed_by` set to `model-draft:<model>`. Requests with another `Host` or `Origin` are refused.

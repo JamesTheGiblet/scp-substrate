@@ -53,7 +53,7 @@
     };
     LENSES.forEach(lens => {
       const f = c.faces[lens];
-      panel.append(row(lens, lens, f && f.content, f && f.pending ? "draft, not accepted" : f && f.unread ? "accepted without reading" : ""));
+      panel.append(row(lens, lens, f && f.content, faceNote(f)));
     });
     const v = c.validation;
     panel.append(row("HUMAN", "HUMAN VALIDATION", v && (v.note || "Validated"), v ? (v.stale ? "stale, a face changed" : "by " + v.validator) : ""));
@@ -72,7 +72,11 @@
         panel.append(b);
       });
     }
-    if (window.cubeEdit) cubeEdit.decorate(panel, c);
+    if (window.cubeEdit) {
+      const edit = el("button", "hop", "Open in the grid to edit");
+      edit.addEventListener("click", () => { document.getElementById("togrid").click(); open(c); });
+      panel.append(edit);
+    }
     panel.hidden = false;
   }
 

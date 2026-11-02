@@ -86,10 +86,58 @@ def cmd_cube_view(args):
         webbrowser.open(result["path"].as_uri())
 
 
+def cmd_repo_add(args):
+    from kg_repos import add_repo, fetch_repo
+    s = Substrate()
+    for name in args.repos:
+        repo = fetch_repo(name)
+        result = add_repo(s, repo)
+        where = "private, local model only" if repo["private"] else "public"
+        print(f"{name} ({where}): {len(result['cubes'])} cubes by {result['by']}")
+        for why in result["tried"]:
+            print(f"  passed over {why}")
+    s.close()
+
+
+def cmd_cube_draft(args):
+    from kg_fill import cubes_with_blanks, draft_cube
+    s = Substrate()
+    cubes = [args.cube_id] if args.cube_id else cubes_with_blanks(s)
+    if not cubes:
+        print("Every face is filled or has a draft waiting.")
+    for cube_id in cubes:
+        result = draft_cube(s, cube_id)
+        if result["drafted"]:
+            print(f"{cube_id}: {', '.join(result['drafted'])} drafted by {result['by']}")
+        elif result["tried"]:
+            print(f"{cube_id}: no draft. {'; '.join(result['tried'])}")
+    s.close()
+    print("Check them with: kg cube serve --by <name>, or kg cube proposals")
+
+
+def cmd_cube_password(args):
+    import getpass
+    from kg_lock import load_lock, make_lock, matches, save_lock
+    lock = load_lock()
+    if lock and not matches(getpass.getpass("Current password: "), lock):
+        raise SystemExit("That is not the current password.")
+    password = getpass.getpass("New password: ")
+    if password != getpass.getpass("Same again: "):
+        raise SystemExit("Those did not match. Nothing changed.")
+    try:
+        print(f"Saved to {save_lock(make_lock(password))}")
+    except ValueError as e:
+        raise SystemExit(f"Nothing changed: {e}.")
+
+
 def cmd_cube_serve(args):
     import webbrowser
+    from kg_lock import load_lock
     from kg_serve import make_server
-    server = make_server(args.by, args.port)
+    lock = load_lock()
+    if not lock:
+        raise SystemExit("Set an editing password first: python keystone-gate/kg cube password")
+    server = make_server(args.by, lock, args.port)
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"Cube Field at {url} (this machine only). Press Ctrl+C to stop.")
     if not args.no_open:

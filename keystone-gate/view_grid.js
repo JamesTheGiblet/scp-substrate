@@ -5,7 +5,7 @@ const LENSES = ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"];
 const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fiction", CONTEXT: "context", HUMAN: "human" };
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };
 const POSE = { FACT: [-18, -24], COUNTER: [-18, -114], CONTEXT: [-18, -204], FICTION: [-18, 66], OPINION: [-72, -24], HUMAN: [72, -24] };
-const FILTERS = [["all", "All"], ["attested", "Attested"], ["validated", "Validated"], ["needs", "Needs you"]];
+const FILTERS = [["all", "All"], ["attested", "Attested"], ["validated", "Validated"], ["needs", "Needs you"], ["drafts", "Drafts to check"]];
 
 const el = (tag, cls, text) => {
   const node = document.createElement(tag);
@@ -14,6 +14,7 @@ const el = (tag, cls, text) => {
   return node;
 };
 const state = { filter: "all", tag: null, query: "" };
+const faceNote = f => !f ? "" : f.pending ? `draft by ${f.drafted_by || "a model"}, not accepted` : f.unread ? "accepted without reading" : "";
 
 function cubeNode(c, size) {
   const stage = el("div", "stage" + (c.status === "attested" ? " sealed" : ""));
@@ -33,6 +34,7 @@ function cubeNode(c, size) {
 
 function matches(c) {
   if (state.filter === "needs" && ["attested", "validated"].includes(c.status)) return false;
+  if (state.filter === "drafts" && !Object.values(c.faces).some(f => f && f.pending)) return false;
   if (["attested", "validated"].includes(state.filter) && c.status !== state.filter) return false;
   if (state.tag && !c.tags.includes(state.tag)) return false;
   if (state.query) {
@@ -104,6 +106,7 @@ function open(c) {
 
   const row = (lens, title, text, note) => {
     const b = el("button", "lens" + (text ? "" : " missing"));
+    b.dataset.lens = lens;
     b.style.setProperty("--c", `var(--${VAR[lens]})`);
     const head = el("b", "", title);
     if (note) head.append(el("em", "", " · " + note));
@@ -113,7 +116,7 @@ function open(c) {
   };
   for (const lens of LENSES) {
     const f = c.faces[lens];
-    right.append(row(lens, lens, f && f.content, f && f.pending ? "draft, not accepted" : f && f.unread ? "accepted without reading" : ""));
+    right.append(row(lens, lens, f && f.content, faceNote(f)));
   }
   const v = c.validation;
   right.append(row("HUMAN", "HUMAN VALIDATION", v && (v.note || "Validated"),
@@ -125,7 +128,9 @@ function open(c) {
   if (c.neighbours.length) right.append(el("p", "facts", "Neighbours: " + c.neighbours.join(", ")));
   if (c.contradicts) right.append(el("p", "facts", "Contradicts: " + c.contradicts));
   body.append(left, right);
-  document.getElementById("detail").showModal();
+  if (window.cubeEdit) cubeEdit.decorate(right, c);
+  const dialog = document.getElementById("detail");
+  if (!dialog.open) dialog.showModal();
 }
 
 function setup() {
@@ -172,6 +177,7 @@ function setupControls() {
     controls.append(chip);
   });
   chips.forEach(([b, v]) => b.setAttribute("aria-pressed", v === "all"));
+  window.gridFilter = value => chips.find(([, v]) => v === value)[0].click();
   const seen = t => CUBES.filter(c => c.tags.includes(t)).length;
   const tags = [...new Set(CUBES.flatMap(c => c.tags))].filter(t => seen(t) >= 3).sort();
   tags.forEach(tag => {

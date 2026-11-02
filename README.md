@@ -9,7 +9,7 @@ It is a single-user project and it is early. Read [Limits](#limits) and [Known i
 - **Substrate:** stores capsules (JSON records), links between them, and a log of events.
 - **Engines:** derive links from rules, and compute trust scores.
 - **SymLM:** a small rule-based language layer that answers questions by walking the graph. It uses no model weights.
-- **Keystone Gate:** cubes, a gate that checks answers, an optional Claude layer, and a 3D page for browsing and editing cubes. See [keystone-gate/README.md](keystone-gate/README.md).
+- **Keystone Gate:** cubes, a gate that checks answers, an optional model layer, and a 3D page for browsing and editing cubes. See [keystone-gate/README.md](keystone-gate/README.md).
 
 ## How data is organised
 
@@ -56,9 +56,12 @@ A cube is one claim examined through five lenses: FACT, COUNTER, OPINION, FICTIO
 To work on cubes in the browser:
 
 ```sh
-python keystone-gate/kg cube serve --by james      # edit and add cubes; Ctrl+C to stop
+python keystone-gate/kg cube password              # set the editing password, once
+python keystone-gate/kg cube serve --by james      # edit in the grid view; Ctrl+C to stop
 python keystone-gate/kg cube view                  # read-only snapshot, build/cubes.html
 ```
+
+Press **Unlock to edit** in the grid view to change anything. The password protects the page only, not `sc.db` or the `kg` commands.
 
 To review them at the terminal:
 
@@ -133,14 +136,14 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 | `scripts/` | Bootstrap, keys, importers, indexers, vocabulary tools |
 | `seeds/` | Scripts that create starting capsules. Most are create-only, so capsules are authoritative after the first run |
 | `tests/` | `run.py` runs every test file. `test_house_rules.py` checks the line limit on code and page files, and silent exception handlers |
-| `keystone-gate/` | Cubes, gate, Claude layer, page and server |
+| `keystone-gate/` | Cubes, gate, model layer, page and server |
 | `docs/` | `SPEC.md`, `STRUCTURE.md`, `REASONING.md`, and signed SCP documents |
 
 `docs/STRUCTURE.md` has the full file list.
 
 ## Limits
 
-- **Network:** nothing runs as a hosted service. Two things reach the internet, only when you run them: `absorb_github.py`, and `kg ask --claude`, which sends your question and the walker's answer to the Anthropic API. `kg cube serve` listens on 127.0.0.1 only.
+- **Network:** nothing runs as a hosted service. Two things reach the internet, only when you run them: `absorb_github.py`, and `kg ask --claude`, which sends your question and the walker's answer to Anthropic, then to Google if Claude fails. `kg cube serve` listens on 127.0.0.1 only.
 - **Single user:** one SQLite file and one writer. Concurrent writers are not supported.
 - **Language:** SymLM has 12 grammar rules and 478 words. It answers what its 13 intents cover and nothing else.
 - **Search:** there is no content search. Use grep for that.
@@ -154,7 +157,7 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 
 ## Known issues
 
-- `kg ask --claude` has been tested with a fake client and a mock server, not against the live API.
+- `kg ask --claude` has not yet had a real answer from Claude. It has reached the API and got a credit error. Gemini and Ollama have answered live.
 - `default-cube` rules `unknown_required` and `forward_only_lens_changes` are not enforced.
 - `kg_router.py` only lists neighbours. There is no routing.
 - Foundation schemas are descriptive. Nothing validates capsule state against them.

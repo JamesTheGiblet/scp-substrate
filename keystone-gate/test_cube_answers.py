@@ -188,12 +188,15 @@ def test_every_cube_lands_in_exactly_one_cluster():
 
 
 def test_pending_drafts_are_not_filled_faces():
+    from kg_agent import create_cube, propose_face
     from kg_view import collect
     s = Substrate()
     try:
-        cube = next(c for c in collect(s) if c["id"] == "cube/esp32-logic-is-3v3")
+        cid = create_cube(s, "A claim with only a draft")["cube_id"]
+        propose_face(s, cid, "OPINION", "a suggested view", "test")
+        cube = next(c for c in collect(s) if c["id"] == cid)
         assert cube["faces"]["OPINION"]["pending"] is True
-        assert abs(cube["score"] - 0.64) < 1e-6, cube["score"]
+        assert cube["score"] == 0.0, cube["score"]
     finally:
         s.close()
 
