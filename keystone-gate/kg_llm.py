@@ -172,7 +172,7 @@ def _ollama(question, evidence, system=SYSTEM, schema=SCHEMA, read=_claims):
         "options": {"temperature": 0},
         "messages": [{"role": "system", "content": system},
                      {"role": "user", "content": _prompt(question, evidence)}],
-    }, timeout=180)
+    }, timeout=420)
     return read((reply.get("message") or {}).get("content"))
 
 
