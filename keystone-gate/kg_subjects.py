@@ -118,11 +118,6 @@ def missing_subject(s, subject_ids):
     return None
 
 
-def add_claims(s, cube_id, subject_ids):
-    for sid in subject_ids:
-        s.link(cube_id, ABOUT, sid)
-
-
 def list_subjects(s):
     """Every subject with the claims about it."""
     out = []

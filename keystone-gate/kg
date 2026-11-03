@@ -206,6 +206,9 @@ def main():
     sp_new.add_argument("--source", default=None)
     sp_new.add_argument("--tag", action="append", default=None)
     sp_new.add_argument("--subject", action="append", default=None, help="subject/<slug> this claim is about")
+    sp_new.add_argument("--entity", action="append", default=None, help="an entity this claim is about, such as james")
+    sp_new.add_argument("--from", dest="evidence", action="append", default=None,
+                        help="a capsule this claim is derived from, such as a document")
     sp_new.set_defaults(func=cmd_cube_new)
 
     sp_fill = sp_sub.add_parser("fill", help="fill one lens face")

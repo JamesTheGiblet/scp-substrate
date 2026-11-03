@@ -143,5 +143,22 @@ def test_entities_and_relations():
         s.close()
 
 
+def test_a_claim_can_be_about_a_person_and_cite_a_document():
+    from kg_agent import create_cube
+    from kg_entities import claim_link_error, link_claim
+    from trust import trust_from_evidence
+    s = _store()
+    try:
+        assert "entity" in claim_link_error(s, entities=["tool/esp32"])
+        assert "evidence" in claim_link_error(s, evidence=["docs/nope"])
+        cid = create_cube(s, "James finishes what he is pointed at", tags=["private"])["cube_id"]
+        link_claim(s, cid, entities=["james"], evidence=["person/james-gilbert"])
+        links = {(l["type"], l["target"]) for l in s.links_from(cid)}
+        assert {("about-entity", "james"), ("derived-from", "person/james-gilbert")} <= links
+        assert "error" not in trust_from_evidence(s, cid)
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

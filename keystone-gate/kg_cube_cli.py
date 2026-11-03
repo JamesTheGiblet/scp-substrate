@@ -4,22 +4,22 @@ from substrate import Substrate
 
 def cmd_cube_new(args):
     from kg_agent import create_cube
-    from kg_subjects import add_claims, missing_subject
+    from kg_entities import claim_link_error, link_claim
     s = Substrate()
-    if missing := missing_subject(s, args.subject or []):
+    links = {"subjects": args.subject or [], "entities": args.entity or [], "evidence": args.evidence or []}
+    if error := claim_link_error(s, **links):
         s.close()
-        print(f"error: subject {missing} not found; see kg subject list")
+        print(f"error: {error}")
         return
     result = create_cube(s, args.content, source=args.source, tags=args.tag or None)
-    if "error" not in result:
-        add_claims(s, result["cube_id"], args.subject or [])
+    made = link_claim(s, result["cube_id"], **links) if "error" not in result else []
     s.close()
     if "error" in result:
         print(f"error: {result['error']}")
         return
     print(f"Created: {result['cube_id']}")
-    for subject_id in args.subject or []:
-        print(f"  about: {subject_id}")
+    for type_, target in made:
+        print(f"  {type_}: {target}")
     print(f"  content: {args.content!r}")
     if args.source:
         print(f"  source: {args.source}")

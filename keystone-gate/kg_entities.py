@@ -134,6 +134,34 @@ def relate(s, source, relation, target):
 ENTITY_FOUNDATIONS = ("foundation:entity", "foundation:person", "foundation:project")
 
 
+ABOUT_ENTITY = "about-entity"
+
+
+def claim_link_error(s, subjects=(), entities=(), evidence=()):
+    """Why a new claim's links cannot be made, or None if they all can."""
+    from kg_subjects import missing_subject
+    if missing := missing_subject(s, subjects):
+        return f"subject {missing} not found; see kg subject list"
+    for eid in entities:
+        row = s.get(eid)
+        if not row or row["foundation"] not in ENTITY_FOUNDATIONS:
+            return f"entity {eid} not found; see kg entity list"
+    for cid in evidence:
+        if not s.get(cid):
+            return f"evidence {cid} not found"
+    return None
+
+
+def link_claim(s, cube_id, subjects=(), entities=(), evidence=()):
+    """Say what a claim is about and what it rests on. Returns the links made."""
+    from kg_subjects import ABOUT
+    made = [(ABOUT, t) for t in subjects] + [(ABOUT_ENTITY, t) for t in entities] + \
+           [("derived-from", t) for t in evidence]
+    for type_, target in made:
+        s.link(cube_id, type_, target)
+    return made
+
+
 def list_entities(s):
     ph = ",".join("?" * len(ENTITY_FOUNDATIONS))
     rows = s.conn.execute(f"SELECT id, foundation, state_json FROM capsules WHERE is_meta = 0 "
