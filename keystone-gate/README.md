@@ -255,7 +255,7 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_fill.py` | Models draft blank faces, in the background under `serve` |
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
-| `view_field_world.js`, `view_field_draw.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, the time bar, moving around |
+| `view_field_world.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, cluster forms, the time bar, moving around |
 | `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
 | `seed_sc.py` | Creates and updates `sc` capsules |
 | `seed_cubes.py` | Project claims as draft cubes |
