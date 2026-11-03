@@ -6,11 +6,12 @@ browser can reach localhost, so every request needs the token issued with the
 page, and requests naming another host or origin are refused. Writes also need
 the key handed out for the editing password, which lapses when left idle.
 """
+import gzip
 import json
 import secrets
 import threading
 import time
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
 from substrate import Substrate
@@ -27,6 +28,8 @@ from kg_view import collect, render, user_name
 MAX_BODY = 64 * 1024
 MAX_TEXT = 5000
 IDLE_SECONDS = 30 * 60
+# A phone on a slow relay must not hold a request open for ever
+SOCKET_SECONDS = 60
 
 
 def _same(sent, expected):
@@ -103,6 +106,7 @@ def state(s):
 def make_handler(by, token, port, lock, drafter, writing, hosts=()):
     allowed_hosts = {f"127.0.0.1:{port}", f"localhost:{port}", *hosts}
     sessions = {}
+    guessing = threading.Lock()
 
     def unlocked(sent):
         """Each device unlocks on its own, so the phone does not lock the PC."""
@@ -113,6 +117,8 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
         return True
 
     class Handler(BaseHTTPRequestHandler):
+        timeout = SOCKET_SECONDS
+
         def log_message(self, *args):
             pass
 
@@ -120,6 +126,11 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
             raw = body.encode("utf-8")
             self.send_response(code)
             self.send_header("Content-Type", f"{kind}; charset=utf-8")
+            # The page is large, and the phone may reach it through a relay
+            if "gzip" in self.headers.get("Accept-Encoding", ""):
+                raw = gzip.compress(raw, 6)
+                self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
             self.send_header("Content-Length", str(len(raw)))
             self.send_header("Cache-Control", "no-store")
             self.end_headers()
@@ -133,10 +144,11 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
 
         def _unlock(self, data):
             password = data.get("password")
-            if not isinstance(password, str) or not matches(password, lock):
-                # One request at a time, so this also slows guessing
-                time.sleep(1)
-                return self._json(403, {"error": "wrong password"})
+            # One try at a time, so the pause also slows guessing
+            with guessing:
+                if not isinstance(password, str) or not matches(password, lock):
+                    time.sleep(1)
+                    return self._json(403, {"error": "wrong password"})
             key = secrets.token_urlsafe(24)
             sessions[key] = time.time() + IDLE_SECONDS
             return self._json(200, {"key": key})
@@ -219,7 +231,9 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
 
 def make_server(by, lock, port=8765, draft=draft_cube, hosts=()):
     token = secrets.token_urlsafe(24)
-    server = HTTPServer(("127.0.0.1", port), None)
+    # Each request opens its own Substrate and writes share one lock, so
+    # requests can run side by side and a slow phone does not stall the PC
+    server = ThreadingHTTPServer(("127.0.0.1", port), None)
     writing = threading.Lock()
     server.drafter = Drafter(writing, draft)
     server.RequestHandlerClass = make_handler(by, token, server.server_address[1], lock, server.drafter, writing, hosts)

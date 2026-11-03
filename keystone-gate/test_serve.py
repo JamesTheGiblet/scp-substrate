@@ -169,6 +169,29 @@ def test_phone_and_pc_stay_unlocked_together():
         assert srv.post(body)[0] == 400
 
 
+def test_the_page_is_compressed_for_the_phone():
+    import gzip
+    with _Server() as srv:
+        conn = http.client.HTTPConnection("127.0.0.1", srv.port)
+        conn.request("GET", "/", headers={"Accept-Encoding": "gzip, deflate, br"})
+        res = conn.getresponse()
+        raw = res.read()
+        assert res.status == 200 and res.getheader("Content-Encoding") == "gzip"
+        page = gzip.decompress(raw).decode("utf-8")
+        assert srv.server.token in page and len(raw) < len(page.encode("utf-8")) / 2
+
+
+def test_a_stalled_phone_does_not_block_the_pc():
+    import socket
+    with _Server() as srv:
+        stalled = socket.create_connection(("127.0.0.1", srv.port))
+        stalled.sendall(b"GET / HTTP/1.1\r\n")
+        try:
+            assert srv.page()[0] == 200
+        finally:
+            stalled.close()
+
+
 def test_a_named_host_is_let_in_and_others_are_not():
     body = {"action": "fill", "cube_id": "cube/nope", "lens": "FACT", "content": "x"}
     name = "pc.tailnet.ts.net"
