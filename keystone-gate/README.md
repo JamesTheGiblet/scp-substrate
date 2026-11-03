@@ -123,6 +123,14 @@ This reads the repo's README through `gh` and has a model write 3 to 6 claims. E
 
 Private repos go to Ollama only. Their cubes are tagged `private`, so later drafts stay local, and so does `kg ask --claude` when its evidence contains the text of a private cube's claim or filled face. That check matches text, so it can miss an answer that rewords the cube. These cubes are still stored in `sc.db`, so they travel wherever that file is pushed. A published page also includes them.
 
+## Subjects
+
+A subject is what a claim is about, such as Li-ion packs or the PCA9685. It exists once, as `subject/<slug>`, and each claim about it links to it with `about-subject`. See [docs/VOCABULARY.md](../docs/VOCABULARY.md).
+
+Subjects arrive as proposals naming the subject and the claims it would gather. `kg subject accept` creates it, and `--name` and `--only` let you rename it or keep fewer claims. A rejected proposal stays rejected unless its claims or reason change. `seed_subjects.py` proposes subjects for the claims kept after the archive.
+
+The page does not show subjects yet.
+
 ## Overlaps
 
 ```sh
@@ -227,6 +235,12 @@ kg overlaps                         list overlapping work (--min)
 
 kg neighbour link <a> <b>           link two cubes both ways
 kg neighbour list <id>              list a cube's neighbours
+
+kg subject proposals                list suggested subjects (--status)
+kg subject accept <p> --by <name>   create the subject and link its claims (--name, --only)
+kg subject reject <p> --by <name>   reject a suggested subject (--reason)
+kg subject add <cube> <subject>     say a claim is about an existing subject
+kg subject list                     list subjects and their claims
 ```
 
 Run these as `python keystone-gate/kg ...`.
@@ -253,6 +267,8 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_repos.py` | Claim cubes from a repo's README |
 | `kg_overlaps.py` | Overlaps valued by Leighton weight |
 | `kg_fill.py` | Models draft blank faces, in the background under `serve` |
+| `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
+| `seed_subjects.py` | Suggested subjects for the kept claims, as proposals |
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
 | `view_field_world.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, cluster forms, the time bar, moving around |

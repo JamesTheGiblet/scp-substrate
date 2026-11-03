@@ -13,6 +13,7 @@ sys.path.insert(0, str(_here))
 
 from substrate import Substrate
 from kg_cube_cli import *
+from kg_subject_cli import add_subject_parser
 
 
 def cmd_stats(args):
@@ -304,6 +305,8 @@ def main():
     sp_n_list = sp_sub.add_parser("list", help="list neighbours of a cube")
     sp_n_list.add_argument("cube_id")
     sp_n_list.set_defaults(func=cmd_neighbour_list)
+
+    add_subject_parser(sub)
 
     args = ap.parse_args()
     args.func(args)

@@ -40,9 +40,9 @@ Something one or more entities know about. A component, a topic, a measure.
 
 - **ID:** `subject/<slug>`, such as `subject/pca9685`.
 - **Exists once.** If James, SCPBot and the robot arm all use a PCA9685, there is one `subject/pca9685` and three links to it. Knowledge about it is written once and reused.
-- **Links:** claims are *about* a subject. Subjects can be *part of* other subjects, and *depend on* them.
+- **Links:** a claim links to its subject with `about-subject`. Plain `about` is taken: `trust.py` reads it as marking a trust record. Subjects can be *part of* other subjects, and *depend on* them.
 
-**Status: not built.** Today, tags such as `pca9685` and `servo` stand in for subjects. Tags will stay as labels for filtering, but a subject is a capsule with its own ID and links.
+**Status: partly built.** `foundation:subject`, subject proposals and `about-subject` links exist, through `kg subject` and `keystone-gate/kg_subjects.py`. Links between subjects, and showing subjects on the page, are not built. Tags stay as labels for filtering.
 
 ## Claim
 
@@ -121,7 +121,7 @@ Between entities and subjects, the link types already used in the store carry th
 | entity | `part-of` | entity |
 | entity | `owns` | entity |
 | subject | `part-of` | subject |
-| claim | `about` | subject |
+| claim | `about-subject` | subject |
 | claim | `derived-from` | evidence |
 
 A relationship records who made it and, if it came from a suggestion, the reason given. A link a model suggests stays a proposal until James accepts it and picks the word.

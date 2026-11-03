@@ -54,7 +54,7 @@ A foundation is a capsule with:
 · foundation = "foundation:foundation" (self-hosting)
 · state containing at least name; optionally description, schema, allowed_links
 
-The 18 foundations loaded at v0.1.0:
+The 19 foundations loaded at v0.1.0:
 
 ```
 foundation:foundation
@@ -75,6 +75,7 @@ foundation:cube
 foundation:lens
 foundation:cube-face
 foundation:neighbour
+foundation:subject
 ```
 
 Foundations are the invariant of the system. Adding one is a versioned edit to sc.json; removing one soft-deprecates it (state.deprecated = true) but does not delete it, since instances may still reference it.
