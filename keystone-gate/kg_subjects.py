@@ -109,6 +109,20 @@ def add_claim(s, cube_id, subject_id):
     return {"cube_id": cube_id, "subject_id": subject_id}
 
 
+def missing_subject(s, subject_ids):
+    """The first id that is not a subject, or None."""
+    for sid in subject_ids:
+        row = s.get(sid)
+        if not row or row["foundation"] != "foundation:subject":
+            return sid
+    return None
+
+
+def add_claims(s, cube_id, subject_ids):
+    for sid in subject_ids:
+        s.link(cube_id, ABOUT, sid)
+
+
 def list_subjects(s):
     """Every subject with the claims about it."""
     out = []

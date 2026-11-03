@@ -131,6 +131,14 @@ Subjects arrive as proposals naming the subject and the claims it would gather. 
 
 The page does not show subjects yet.
 
+`kg cube new "<claim>" --subject subject/<slug>` makes a claim about a subject in one step.
+
+## Entities
+
+An entity is a thing that exists: a person, a project, a robot, an organisation, a place. Projects live at `project/<slug>`, everything else but people at `entity/<slug>`. `kg entity link` joins an entity to another entity or a subject, using one of `uses`, `part-of`, `owns`, `building`, `works-at`, `at` or `can`.
+
+The capsules that already linked to James are sorted into entities and subjects by proposals, which `seed_entity_sorting.py` writes and `kg entity accept` applies. See [docs/VOCABULARY.md](../docs/VOCABULARY.md) for what each action does.
+
 ## Overlaps
 
 ```sh
@@ -241,6 +249,14 @@ kg subject accept <p> --by <name>   create the subject and link its claims (--na
 kg subject reject <p> --by <name>   reject a suggested subject (--reason)
 kg subject add <cube> <subject>     say a claim is about an existing subject
 kg subject list                     list subjects and their claims
+
+kg entity add <name> --kind <k> --by <name>   create an entity
+kg entity link <from> <relation> <to>        link an entity to an entity or subject
+kg entity list                      list entities
+kg entity show <id>                 an entity and its links
+kg entity proposals                 list sort proposals (--status)
+kg entity accept <p> --by <name>    apply one (--as, --kind, --id, --name, --into)
+kg entity reject <p> --by <name>    leave the capsule as it is (--reason)
 ```
 
 Run these as `python keystone-gate/kg ...`.
@@ -268,6 +284,8 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_overlaps.py` | Overlaps valued by Leighton weight |
 | `kg_fill.py` | Models draft blank faces, in the background under `serve` |
 | `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
+| `kg_entities.py`, `kg_entity_cli.py` | Entities, sorting old capsules, and `kg entity` |
+| `seed_entity_sorting.py` | Suggested sorting of what `james` links to, as proposals |
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
 | `view_field_world.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, cluster forms, the time bar, moving around |

@@ -43,6 +43,8 @@ def _summarise_state(state, foundation):
         return state.get("role") or state.get("name") or "person"
     if foundation == "foundation:project":
         return f"project ({state.get('status', '?')})"
+    if foundation in ("foundation:entity", "foundation:subject"):
+        return f"{kind}: {state.get('name', '?')}" if kind else state.get("name", "?")
     if kind == "conversation-turn":
         layer = state.get("layer")
         kindc = state.get("kind_class") or "?"
@@ -130,7 +132,8 @@ def explain(s: Substrate, capsule_id: str) -> str:
 
     summary = _summarise_state(state, c["foundation"])
     out.append(f"{c['id']}")
-    out.append(f"  is a {c['foundation'].replace('foundation:', '')} — {summary}")
+    noun = c['foundation'].replace('foundation:', '')
+    out.append(f"  is {'an' if noun[0] in 'aeiou' else 'a'} {noun} — {summary}")
     out.append("")
 
     # Author / subject (via 'declares' link)

@@ -127,6 +127,8 @@ capsule.written the capsule {"foundation": "..."}
 capsule.imported the capsule {"source": "<path>"}
 capsule.superseded the old capsule {"new_id": "<id>"}
 capsule.renamed the capsule {"from": "<old id>"}
+capsule.reclassified the capsule {"foundation": "..."}, from kg entity accept
+capsule.merged the kept capsule {"from": "<old id>", "state": {...}}
 capsule.deleted the capsule {"reason": "..."}, from absorb_repo.py --prune
 capsule.filled the capsule {"from": "placeholder"}
 link.added the source {"type": "...", "target": "..."}

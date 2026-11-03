@@ -28,11 +28,27 @@ The same rules apply at every scale. James, SCPBot, a company and a world are al
 
 A thing that exists, with identity. People, robots, projects, places, organisations, vehicles.
 
-- **ID:** `entity/<slug>`. People keep `person/<slug>` and projects `project/<slug>`, since those foundations already exist. Both count as entities.
+- **ID:** `entity/<slug>`, stored under `foundation:entity`. Projects are `project/<slug>` under `foundation:project`, and people `foundation:person`. All three count as entities. James stays `james`, since the walkers look for that id, and repos keep `repo/...`, so re-indexing still finds them.
 - **Kind:** a field saying what sort of entity it is, such as `person`, `robot`, `project` or `place`.
 - **Links:** an entity *uses* or *knows about* subjects, and *is part of* or *owns* other entities.
 
-**Status: partly built.** `foundation:entity`, `foundation:person` and `foundation:project` exist, and `person/james-gilbert` is in the store. No entity is linked to subjects yet.
+**Status: partly built.** `kg entity add`, `link`, `list` and `show` exist, in `keystone-gate/kg_entities.py`. James is the one entity so far; everything he links to is still waiting to be sorted (below). The page does not show entities.
+
+### Sorting what was already there
+
+Before this model, the capsules around James were stored as plain knowledge. A **sort proposal** says what one should become, and changes nothing until James accepts it, with `kg entity accept`. He can correct it while accepting, with `--as`, `--kind`, `--id`, `--name` and `--into`.
+
+| Action | What it does |
+|---|---|
+| entity | Gives it an entity foundation and a kind, and a new id if one is named |
+| subject | Moves it to `subject/<slug>`, and turns `<subject> used-in <entity>` into `<entity> uses <subject>` |
+| merge | Folds a duplicate into another capsule, moving its links. Its state is kept in the `capsule.merged` event |
+| drop | Deletes it, keeping its state in the `capsule.deleted` event |
+| describe | Marks a document as describing an entity: `same-as` becomes `<entity> described-by <document>` |
+
+A rename moves every link with the capsule and logs `capsule.renamed`. Older events keep the old id.
+
+`seed_entity_sorting.py` proposes a sorting of everything `james` links to: projects, organisations, a place and repos as entities, tools, ESP32, Claude and carpentry as subjects, two duplicates merged, a stray capsule dropped, and `person/james-gilbert` as the signed document that describes James. Its content is not folded into `james`, because that would break its signature.
 
 ## Subject
 
@@ -118,15 +134,20 @@ Between entities and subjects, the link types already used in the store carry th
 | From | Link | To |
 |---|---|---|
 | entity | `uses` | subject |
+| entity | `can` | subject, for a skill |
+| entity | `building` | entity |
 | entity | `part-of` | entity |
 | entity | `owns` | entity |
+| entity | `works-at` | entity |
+| entity | `at` | entity, for a place |
+| entity | `described-by` | a document about it |
 | subject | `part-of` | subject |
 | claim | `about-subject` | subject |
 | claim | `derived-from` | evidence |
 
 A relationship records who made it and, if it came from a suggestion, the reason given. A link a model suggests stays a proposal until James accepts it and picks the word.
 
-**Status: partly built.** Connecting words between claims are built (`kg cube accept --word`), but none has been used yet. The entity and subject links are not built.
+**Status: partly built.** Connecting words between claims are built (`kg cube accept --word`), but none has been used yet. `kg entity link` makes the entity links and allows only the ones in this table, apart from `described-by`, which sorting makes. Links between subjects are not built.
 
 ---
 
@@ -224,7 +245,8 @@ The repo index, SymLM's language data, the foundations and `person/james-gilbert
 | neighbour link | relationship between claims, with a connecting word |
 | validated | Observed |
 | `contradicts` | Disputed |
-| person, project | entities, of kind person or project |
+| person, project, and plain knowledge of kind project, organisation, place or repo | entities |
+| plain knowledge of kind tool or skill | subjects |
 
 ## Not yet decided
 
