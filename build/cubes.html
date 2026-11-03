@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Cube Field</title>
+<link rel="icon" href="data:,">
 <style>
 :root {
   --bg: #f4f3ef; --panel: #ffffff; --ink: #1d1f24; --muted: #62666f; --line: #d9d7d0;
@@ -210,7 +211,8 @@ dialog::backdrop { background: rgba(10, 12, 16, .6); }
 <dialog id="unlock">
   <form>
     <h3>Unlock editing</h3>
-    <label>Password<input type="password" autocomplete="current-password" required></label>
+    <input type="text" name="username" autocomplete="username" hidden>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
     <p id="unlockwrong" hidden>That password is wrong.</p>
     <div class="actions"><button type="button" class="tool" id="unlockcancel">Cancel</button><button type="submit" class="tool">Unlock</button></div>
   </form>
@@ -1566,6 +1568,8 @@ setup();
   const fill = $("fillblanks"), check = $("checkdrafts"), title = document.title;
   const lockButton = $("lock"), unlock = $("unlock"), wrong = $("unlockwrong");
   let key = null, shown = null, seen = null, lastError = null;
+  // Lets a password manager tell this page's password apart
+  unlock.querySelector('input[name="username"]').value = api.by;
 
   const say = text => {
     (detail.open ? detail : document.body).append(toast);
@@ -1620,6 +1624,7 @@ setup();
   function writer(tools, c, label, current, warning, save) {
     tools.replaceChildren();
     const box = el("textarea");
+    box.name = "text";
     box.value = current || "";
     box.rows = 3;
     box.setAttribute("aria-label", label);
@@ -1694,7 +1699,7 @@ setup();
   $("unlockcancel").addEventListener("click", () => unlock.close());
   unlock.querySelector("form").addEventListener("submit", async e => {
     e.preventDefault();
-    const input = unlock.querySelector("input");
+    const input = unlock.querySelector('input[name="password"]');
     let res, reply;
     try {
       [res, reply] = await post("/api/unlock", { password: input.value });
