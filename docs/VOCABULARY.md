@@ -32,7 +32,7 @@ A thing that exists, with identity. People, robots, projects, places, organisati
 - **Kind:** a field saying what sort of entity it is, such as `person`, `robot`, `project` or `place`.
 - **Links:** an entity *uses* or *knows about* subjects, and *is part of* or *owns* other entities.
 
-**Status: partly built.** `kg entity add`, `link`, `list` and `show` exist, in `keystone-gate/kg_entities.py`. James and SCPBot are the entities so far; the rest of what James links to is still waiting to be sorted (below). On the page, an entity that uses subjects is a smaller green dot with its parts circling it, and each claim gathers round the first of its parts. In the grid, every entity and subject has a card; opening one shows what it is, its parts or who uses it, and only its claims.
+**Status: partly built.** `kg entity add`, `link`, `list` and `show` exist, in `keystone-gate/kg_entities.py`. The entities so far are James, SCPBot, and the projects the Forge Stack, the SCP substrate, Replicant, LLLM, Canon and JIG; the rest of what James links to is still waiting to be sorted (below). The SCP substrate describes itself against the Forge Stack's five layers, gaps included, as claims about project/scp-substrate. On the page, an entity that uses subjects is a smaller green dot with its parts circling it, and each claim gathers round the first of its parts. In the grid, every entity and subject has a card; opening one shows what it is, its parts or who uses it, and only its claims.
 
 ### Sorting what was already there
 
