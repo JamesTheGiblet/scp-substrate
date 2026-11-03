@@ -112,8 +112,8 @@ def _flip_used_in(s, subject_id):
 
 # --- Entities -------------------------------------------------------------
 
-def add_entity(s, name, kind, by, **fields):
-    eid = entity_id(name, kind)
+def add_entity(s, name, kind, by, eid=None, **fields):
+    eid = eid or entity_id(name, kind)
     if s.get(eid):
         return {"error": f"{eid} already exists"}
     s.write({"id": eid, "foundation": entity_foundation(kind),

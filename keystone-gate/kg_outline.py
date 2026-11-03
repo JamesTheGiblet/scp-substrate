@@ -9,6 +9,7 @@
 
     ### claim Each agent's λ is computed from a ledger of decaying events.
     source: Replicant README
+    also: subject/replicant-benchmarks
     from: repo/jamesthegiblet/replicant
     tags: needs-check
     FACT: The README says λ is computed on read, never stored.
@@ -16,7 +17,7 @@
 Lines under a heading are `key: value`. Under an entity, a key from
 RELATIONS links the entity to that id; `building: james` links the other way.
 Under a subject, `uses: yes` says the entity uses it, and `kind:` names its
-kind. A claim before any subject is about the entity as a whole. A lens line
+kind. Under a claim, `also:` names more subjects it is about. A claim before any subject is about the entity as a whole. A lens line
 is offered as a draft for the person to confirm, never as a filled face.
 Imported by kg. See docs/VOCABULARY.md.
 """
@@ -57,7 +58,9 @@ def parse(text):
         if not pair or entity is None:
             raise ValueError(f"line {n}: expected a heading or key: value, got {line[:60]!r}")
         key, value = pair.group(1), pair.group(2).strip()
-        if claim is not None and key.upper() in LENSES:
+        if key.upper() in LENSES:
+            if claim is None:
+                raise ValueError(f"line {n}: a {key.upper()} line belongs under a ### claim")
             claim["lenses"][key.upper()] = value
         else:
             (claim or subject or entity)["keys"][key.lower()] = value
@@ -84,7 +87,9 @@ def problems(s, entities):
     """Every id the outline points at that isn't in the store, checked before
     anything is written, so an outline goes in whole or not at all."""
     from kg_entities import RELATIONS
+    from kg_subjects import _slug
     out = []
+    coming = {f"subject/{_slug(sub['name'])}" for e in entities for sub in e["subjects"]}
     for e in entities:
         for key, value in e["keys"].items():
             if key in RELATIONS:
@@ -92,6 +97,8 @@ def problems(s, entities):
         for c in e["claims"] + [c for sub in e["subjects"] for c in sub["claims"]]:
             out += [f"{c['text'][:40]!r}: evidence {v} not found" for v in _ids(c["keys"].get("from", ""))
                     if not s.get(v)]
+            out += [f"{c['text'][:40]!r}: subject {v} not found" for v in _ids(c["keys"].get("also", ""))
+                    if not s.get(v) and v not in coming]
     return out
 
 
@@ -112,7 +119,7 @@ def apply(s, entities, by):
         kind = e["keys"].get("kind", "entity")
         eid = e["keys"].get("id") or entity_id(e["name"], kind)
         if not s.get(eid):
-            add_entity(s, e["name"], kind, by, **{k: v for k, v in e["keys"].items()
+            add_entity(s, e["name"], kind, by, eid=eid, **{k: v for k, v in e["keys"].items()
                                                   if k not in RELATIONS and k not in ("kind", "id")})
             made["entities"].append(eid)
         for key, value in e["keys"].items():
@@ -149,12 +156,13 @@ def _claim(s, c, eid, sid, by, made):
         made["skipped"].append(cid)
         return None
     evidence = _ids(keys.get("from", ""))
-    if error := claim_link_error(s, subjects=[sid] if sid else [], entities=[eid], evidence=evidence):
+    subjects = ([sid] if sid else []) + _ids(keys.get("also", ""))
+    if error := claim_link_error(s, subjects=subjects, entities=[eid], evidence=evidence):
         raise ValueError(f"{c['text'][:50]!r}: {error}")
     tags = _ids(keys.get("tags", ""))
     create_cube(s, c["text"], source=keys.get("source") or f"From an outline imported by {by}",
                 tags=tags, cube_id=cid)
-    link_claim(s, cid, subjects=[sid] if sid else [], entities=[eid], evidence=evidence)
+    link_claim(s, cid, subjects=subjects, entities=[eid], evidence=evidence)
     made["claims"].append(cid)
     return cid
 

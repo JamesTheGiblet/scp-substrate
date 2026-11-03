@@ -15,7 +15,7 @@ Without `--write` nothing is written. The import checks every id the outline poi
 |---|---|---|
 | `# entity <name>` | the thing being modelled | `kind:` (project, robot, person, ...), `id:` to choose the id, and any relation: `part-of:`, `uses:`, `owns:`, `at:`, `works-at:`, `can:`. `building: james` links the other way: James is building it. |
 | `## subject <name>` | a part, concept or topic of the entity | `kind:`, and `uses: yes` when the entity uses it (it then circles the entity's dot on the page) |
-| `### claim <sentence>` | a claim, about the subject above it, or about the entity as a whole if it comes before any subject | `source:`, `from:` (evidence ids), `tags:`, `id:`, and lens lines |
+| `### claim <sentence>` | a claim, about the subject above it, or about the entity as a whole if it comes before any subject | `source:`, `from:` (evidence ids), `also:` (more subject ids it is about), `tags:`, `id:`, and lens lines |
 
 A subject that already exists is reused, never copied, so `## subject PCA9685` in a new robot's outline joins the PCA9685 that SCPBot already uses.
 

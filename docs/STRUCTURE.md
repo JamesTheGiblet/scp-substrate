@@ -43,6 +43,7 @@ scp-substrate/
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
 ├── docs/                  SPEC, VOCABULARY, OUTLINE, STRUCTURE, STARTUP, FAQ, REASONING, SCP documents (*.scp.json)
 ├── archive/               archived capsules, links and events, one sc-archive-<date>.db per archive
+├── outlines/              outlines that kg import built entities from, kept as the record
 ├── images/                screenshots used in the README
 ├── build/                 cubes.html, the generated page, tracked in git
 │   └── public/            the public snapshot, its own repo (JamesTheGiblet/cubes), ignored here
