@@ -69,6 +69,31 @@ def test_the_next_model_drafts_when_one_fails():
         s.close()
 
 
+def test_lllm_drafts_fact_and_the_next_model_fills_the_rest():
+    from kg_fill import draft_cube
+    s = Substrate()
+    try:
+        cid = _cube(s)
+        rest = _draft(*[(l, "drafted") for l in ("COUNTER", "OPINION", "FICTION", "CONTEXT")], name="ollama")
+        r = draft_cube(s, cid, models=[_draft(("FACT", "from my writing"), name="lllm"), rest])
+        assert r["by"] == "lllm, ollama" and r["drafted"] == ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"], r
+        assert "FACT" not in rest[1].ask, "the next model is asked only for what is left"
+    finally:
+        s.close()
+
+
+def test_lllm_says_why_it_cannot_draft():
+    from kg_lllm import lllm, seed_of
+    from kg_llm import LLMUnavailable
+    assert seed_of("The PCA9685 is controlled over I2C.") == "the pca9685 is"
+    assert seed_of("Eight servos stall together") == "eight servos stall"
+    try:
+        lllm("Draft these lenses: COUNTER", "Claim: x")
+        raise AssertionError("should have refused")
+    except LLMUnavailable as e:
+        assert "FACT only" in str(e)
+
+
 def test_a_rejected_draft_is_not_offered_again_unchanged():
     from kg_agent import list_proposals, reject_proposal
     from kg_fill import draft_cube

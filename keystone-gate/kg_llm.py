@@ -181,7 +181,7 @@ def _claude(question, evidence, client=None, **how):
 
 
 MODELS = [("claude", _claude), ("gemini", _gemini), ("ollama", _ollama)]
-LOCAL = ("ollama",)
+LOCAL = ("lllm", "ollama")
 
 
 def local_only(models):

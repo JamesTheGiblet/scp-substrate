@@ -14,6 +14,7 @@ from substrate import Substrate
 from kg_agent import LENSES, list_cubes, list_proposals, propose_face, show_cube
 from kg_cube import is_foundational
 from kg_llm import MODELS, LLMUnavailable, local_only
+from kg_lllm import lllm
 
 
 DRAFT_SYSTEM = """You draft notes on one claim for a person to check. They will accept, edit or reject each note.
@@ -96,9 +97,10 @@ def _known(s, cube_id):
 
 
 def draft_cube(s, cube_id, models=None, lock=None):
-    """Ask each model in turn to draft the cube's blanks.
+    """Ask each model in turn to draft the cube's blanks. LLLM goes first and
+    drafts FACT from James's own writing; the rest fill what is left.
 
-    Returns {drafted: [lenses], by: model, tried: [why others failed]}.
+    Returns {drafted: [lenses], by: models, tried: [why others failed]}.
     The model call happens outside the lock, which guards writes only.
     """
     if is_foundational(s, cube_id):
@@ -106,30 +108,35 @@ def draft_cube(s, cube_id, models=None, lock=None):
     missing = blanks(s, cube_id)
     if not missing:
         return {"drafted": [], "by": None, "tried": []}
-    tried = []
-    ask = "Draft these lenses: " + ", ".join(missing)
+    tried, drafted, by = [], [], []
     known = _known(s, cube_id)
-    chain = models or MODELS
+    chain = models or [("lllm", lllm)] + MODELS
     if "private" in (s.get(cube_id)["state"].get("tags") or []):
         chain = local_only(chain)
     for name, phrase in chain:
+        left = [lens for lens in missing if lens not in drafted]
+        if not left:
+            break
         try:
-            drafts = phrase(ask, known, system=DRAFT_SYSTEM, schema=DRAFT_SCHEMA, read=_read)
+            drafts = phrase("Draft these lenses: " + ", ".join(left), known,
+                            system=DRAFT_SYSTEM, schema=DRAFT_SCHEMA, read=_read)
         except LLMUnavailable as e:
             tried.append(f"{name}: {' '.join(str(e).split())[:200]}")
             continue
-        drafted = []
+        new = []
         with lock or contextlib.nullcontext():
             for d in drafts:
-                if d["lens"] in missing and d["lens"] not in drafted:
+                if d["lens"] in left and d["lens"] not in new:
                     made = propose_face(s, cube_id, d["lens"], d["content"].strip()[:MAX_DRAFT],
                                         f"model-draft:{name}", rationale=f"suggested by {name}, not checked")
                     if "proposal_id" in made and not made.get("skipped"):
-                        drafted.append(d["lens"])
-        if drafted:
-            return {"drafted": drafted, "by": name, "tried": tried}
-        tried.append(f"{name}: nothing new to offer")
-    return {"drafted": [], "by": None, "tried": tried}
+                        new.append(d["lens"])
+        if new:
+            drafted += new
+            by.append(name)
+        else:
+            tried.append(f"{name}: nothing new to offer")
+    return {"drafted": drafted, "by": ", ".join(by) or None, "tried": tried}
 
 
 def _read_note(text):
