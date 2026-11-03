@@ -67,17 +67,6 @@
     ctx.globalAlpha = 1;
   }
 
-  function wire(c, half, rgb, alpha, angle) {
-    const pts = CORNERS.map(v => project(add(c, turned(v, angle), half)));
-    ctx.strokeStyle = `rgba(${rgb},${alpha})`;
-    ctx.lineWidth = 1.4;
-    ctx.beginPath();
-    for (const [a, b] of EDGES) {
-      if (pts[a] && pts[b]) { ctx.moveTo(pts[a].x, pts[a].y); ctx.lineTo(pts[b].x, pts[b].y); }
-    }
-    ctx.stroke();
-  }
-
   // Each cluster grows its own form: its cubes joined by their shortest links, with
   // a soft skin around them. The shape comes from where the cubes are, so it changes
   // as they move, and a cluster with no cubes yet has no shape at all.
@@ -216,10 +205,10 @@
     sk.clearRect(0, 0, skin.width, skin.height);
     clusters.forEach(cl => {
       const on = focus.cluster === cl;
-      if (!cl.rigid) growForm(cl, on ? "150,215,255" : "110,160,215", on ? .6 : inside ? .1 : .34, time);
+      if (cl.loose) growForm(cl, AMBER, on ? .7 : inside ? .12 : .45, time);
+      else if (!cl.rigid) growForm(cl, on ? "150,215,255" : "110,160,215", on ? .6 : inside ? .1 : .34, time);
     });
     ctx.drawImage(skin, 0, 0, W, H);
-    if (core.nodes.length) wire(core.home, core.reach, AMBER, inside && focus.cluster !== core ? .25 : .85, core.angle);
     if (self.nodes.length) {
       ctx.strokeStyle = `rgba(94,235,130,${inside && focus.cluster !== self ? .2 : .8})`;
       ctx.lineWidth = 2;
@@ -282,7 +271,7 @@
     // Cubes and their lenses, furthest first
     const items = [];
     for (const n of nodes) {
-      const still = calm || n.cluster.rigid;
+      const still = calm || (n.cluster.rigid && !n.cluster.loose);
       n.ry += dt * n.spin * (still ? 0 : 1);
       n.rx += dt * n.spin * .4 * (still ? 0 : 1);
       n.open = mix(n.open, focus.node === n ? 1 : 0, 1 - Math.exp(-dt * 5));

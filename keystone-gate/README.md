@@ -65,14 +65,14 @@ To add a rule, add an entry to the `sc` capsule and a checker to `_RULES` in `kg
 
 ## Foundational cubes
 
-Safety and security cubes are tagged `foundational`. They appear in amber in a rigid lattice around you at the centre, with amber strands that brighten once validated. Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
+Safety and security cubes are tagged `foundational`. They appear in amber, gathered loosely around you at the centre, with amber strands that brighten once validated. Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
 
 - A face cannot be bulk accepted.
 - All five faces must be accepted before validating, where other cubes need two.
 - The validation note must be your own, and a suggested note is refused word for word.
 - Models cannot draft faces or suggest notes for them.
 
-The lattice turns around you as one solid piece. Cubes tagged `defining`, such as the ones about you, form a green ring outside it, turning the other way. Both stop turning while you have them open.
+The amber cluster grows its own form like the others, and its cubes drift and spin while the whole cluster turns around you. Cubes tagged `defining`, such as the ones about you, form a green ring outside it, turning the other way. Both stop turning while you have them open.
 
 These rules check the process, not the truth, and they work through the code only. Someone with direct access to `sc.db` can bypass them.
 
@@ -168,6 +168,19 @@ The server listens on 127.0.0.1 only. Every request needs a token issued when th
 
 `build/cubes.html` is tracked in git. It holds nothing `sc.db` does not, and `sc.db` is tracked too. The page is a snapshot under `view`, so run the command again to refresh it. The Screenshot button saves the 3D view only, not the text panel.
 
+### Public snapshot
+
+`kg cube snapshot` writes a read-only copy for the open web to `build/public/index.html`. It leaves out cubes tagged private, cubes from a private repo, and any cube whose text names a private repo, matching the name as a whole word. Pending model drafts and suggested notes are left out too, and links to hidden cubes are cut. The list of private repos comes from `gh`, and if GitHub cannot be reached no snapshot is written. The finished page is checked again before it is saved.
+
+`build/public` is a separate git repo, published at <https://jamesthegiblet.github.io/cubes/>. To refresh it:
+
+```sh
+python keystone-gate/kg cube snapshot
+cd build/public && git commit -am "Refresh the snapshot" && git push
+```
+
+The name match is by word, so a cube that describes a private project without naming it would still go out. Read what a new cube says before refreshing. Your own notes can carry your full name, and those do go out.
+
 ## Commands
 
 ```
@@ -186,6 +199,7 @@ kg cube review --by <name>          work through cubes at the terminal (--tag)
 kg cube show <id>                   faces, validation, completeness
 kg cube list                        all cubes with scores
 kg cube view                        write and open the read-only page
+kg cube snapshot                    write the public copy, without private cubes or drafts
 kg cube password                    set the password that unlocks editing
 kg cube serve --by <name>           run the editable page (--port, --no-open)
 kg cube contradicts <id> <other>    flag a contradiction

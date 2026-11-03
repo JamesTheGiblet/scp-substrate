@@ -86,6 +86,16 @@ def cmd_cube_view(args):
         webbrowser.open(result["path"].as_uri())
 
 
+def cmd_cube_snapshot(args):
+    from kg_public import write_snapshot
+    s = Substrate()
+    try:
+        result = write_snapshot(s)
+    finally:
+        s.close()
+    print(f"Wrote {result['cubes']} public cubes to {result['path']} ({result['left_out']} left out)")
+
+
 def cmd_repo_add(args):
     from kg_repos import add_repo, fetch_repo
     s = Substrate()

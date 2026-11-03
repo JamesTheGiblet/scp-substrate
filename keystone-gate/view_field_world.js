@@ -60,17 +60,18 @@
   });
 
   // Each cube's own place on a shell, used while its cluster is open
-  // Foundational cubes hold a fixed lattice around you, with the centre left clear
-  const lattice = cl => {
-    const side = Math.ceil(Math.cbrt(cl.nodes.length + 1)), gap = 84, mid = (side - 1) / 2, cells = [];
-    for (let z = 0; z < side; z++) for (let y = 0; y < side; y++) for (let x = 0; x < side; x++) {
-      if (x !== mid || y !== mid || z !== mid) cells.push([(x - mid) * gap, (y - mid) * gap, (z - mid) * gap]);
-    }
-    cl.spread = side * gap;
-    cl.reach = mid * gap + 46;
-    cl.nodes.forEach((n, i) => { n.slot = cells[i]; });
+  // Foundational cubes gather loosely around you, with the centre left clear
+  const cloud = cl => {
+    const count = cl.nodes.length;
+    cl.reach = 80 + Math.sqrt(count) * 18;
+    cl.spread = cl.reach * 2;
+    cl.nodes.forEach((n, i) => {
+      const y = count > 1 ? 1 - (2 * i) / (count - 1) : 0, r = Math.sqrt(1 - y * y), a = i * 2.399963;
+      const out = cl.reach * (.75 + rand(n.seed, 8) * .5);
+      n.slot = [Math.cos(a) * r * out, y * out * .8, Math.sin(a) * r * out];
+    });
   };
-  const core = { group: "", topic: "Foundations", rigid: true, turn: .05, angle: 0, home: [0, 0, 0], nodes: [], c: [0, 0, 0], half: 40, reach: 46 };
+  const core = { group: "", topic: "Foundations", rigid: true, loose: true, turn: .05, angle: 0, home: [0, 0, 0], nodes: [], c: [0, 0, 0], half: 40, reach: 80 };
 
   // What defines you circles just outside, the other way round
   const ring = cl => {
@@ -86,7 +87,7 @@
 
   const shell = cl => {
     if (cl.circle) return ring(cl);
-    if (cl.rigid) return lattice(cl);
+    if (cl.loose) return cloud(cl);
     const count = cl.nodes.length;
     cl.spread = 60 + count * 24;
     cl.nodes.forEach((n, i) => {
@@ -121,7 +122,8 @@
     for (const n of nodes) {
       const open = focus.cluster === n.cluster || n.cluster.rigid;
       const pull = open ? add(n.cluster.home, n.cluster.rigid ? turned(n.slot, n.cluster.angle) : n.slot) : n.cluster.home;
-      const grip = open ? 7 : n.fresh > 0 ? 2.4 : .3;
+      // Loose clusters keep only a light hold on their places, so their cubes wander
+      const grip = n.cluster.loose ? 1.1 : open ? 7 : n.fresh > 0 ? 2.4 : .3;
       for (let k = 0; k < 3; k++) {
         n.v[k] += (pull[k] - n.p[k]) * grip * dt;
         if (!calm) n.v[k] += Math.sin(time * .35 + n.seed + k * 2) * 9 * dt;
@@ -137,7 +139,7 @@
     }
     for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i], b = nodes[j];
-      if (a.cluster.rigid && b.cluster.rigid) continue;
+      if (a.cluster.rigid && b.cluster.rigid && !(a.cluster.loose && b.cluster.loose)) continue;
       const d = [a.p[0] - b.p[0], a.p[1] - b.p[1], a.p[2] - b.p[2]];
       const dist = Math.max(Math.hypot(...d), 1);
       if (dist > 240) continue;

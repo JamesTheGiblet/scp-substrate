@@ -253,6 +253,9 @@ def main():
     sp_view.add_argument("--no-open", action="store_true", help="write the page only")
     sp_view.set_defaults(func=cmd_cube_view)
 
+    sp_snap = sp_sub.add_parser("snapshot", help="write a read-only public copy, without private cubes or drafts")
+    sp_snap.set_defaults(func=cmd_cube_snapshot)
+
     sp_show = sp_sub.add_parser("show", help="show cube state")
     sp_show.add_argument("cube_id")
     sp_show.set_defaults(func=cmd_cube_show)
