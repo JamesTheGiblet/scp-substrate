@@ -1,6 +1,6 @@
 # Vocabulary
 
-The words this project uses for what it knows, and how they fit together. Agreed on 3 November 2026, when the store was archived down to 44 cubes to start again on this structure.
+The words this project uses for what it knows, and how they fit together. Agreed on 3 November 2026, when every cube was archived to start again on this structure.
 
 `SPEC.md` describes what is built. This file describes the agreed model, and marks each part as **built**, **partly built** or **not built**. When a part is built, `SPEC.md` gains the detail and this file keeps the meaning.
 
@@ -94,7 +94,7 @@ What a claim rests on. Datasheets, guides, test logs, videos, papers, forum thre
 - **Fields:** `kind` (datasheet, test-log, observation, paper and so on), `title`, and `url` or `path` where there is one.
 - **Links:** a claim is *derived from* evidence. A face can name the evidence it quotes, mostly FACT.
 
-**Status: partly built.** Four `source/<slug>` capsules do this job today, linked by `derived-from` from 29 cubes. The 7 cubes about James are `derived-from` `person/james-gilbert`, which is an entity, not evidence. They are to become `evidence/<slug>`.
+**Status: not built.** Before the archive, `source/<slug>` capsules did this job, linked by `derived-from`. They went with the cubes that cited them. They are to become `evidence/<slug>`.
 
 ## Relationship
 
@@ -205,7 +205,12 @@ An archive is a separate database, `archive/sc-archive-<date>.db`, with the same
 
 This is the one exception to events never being deleted. The ledger is `sc.db` and its archives together.
 
-The first archive, on 3 November 2026, kept the cubes tagged `james`, `defining`, `principle` or `foundational`, and moved the other 162 cubes, including 38 attested ones, with their faces, drafts and links. The repo index and SymLM's language data stayed. `scripts/archive_cubes.py` did it.
+On 3 November 2026 every cube was archived, in two steps by `scripts/archive_cubes.py`:
+
+- `sc-archive-2026-11-03.db`: 162 cubes, including 38 attested ones, with their faces, drafts and links. Cubes tagged `james`, `defining`, `principle` or `foundational` stayed.
+- `sc-archive-2026-11-03-2.db`: those 44 cubes, with the 11 subject proposals made for them and the 4 sources they cited (`--keep-none`).
+
+The repo index, SymLM's language data, the foundations and `person/james-gilbert` stayed in `sc.db`.
 
 ---
 

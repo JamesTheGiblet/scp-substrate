@@ -127,7 +127,7 @@ Private repos go to Ollama only. Their cubes are tagged `private`, so later draf
 
 A subject is what a claim is about, such as Li-ion packs or the PCA9685. It exists once, as `subject/<slug>`, and each claim about it links to it with `about-subject`. See [docs/VOCABULARY.md](../docs/VOCABULARY.md).
 
-Subjects arrive as proposals naming the subject and the claims it would gather. `kg subject accept` creates it, and `--name` and `--only` let you rename it or keep fewer claims. A rejected proposal stays rejected unless its claims or reason change. `seed_subjects.py` proposes subjects for the claims kept after the archive.
+Subjects arrive as proposals naming the subject and the claims it would gather. `kg subject accept` creates it, and `--name` and `--only` let you rename it or keep fewer claims. A rejected proposal stays rejected unless its claims or reason change.
 
 The page does not show subjects yet.
 
@@ -268,7 +268,6 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_overlaps.py` | Overlaps valued by Leighton weight |
 | `kg_fill.py` | Models draft blank faces, in the background under `serve` |
 | `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
-| `seed_subjects.py` | Suggested subjects for the kept claims, as proposals |
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
 | `view_field_world.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, cluster forms, the time bar, moving around |

@@ -2,6 +2,38 @@
 from support_kg import *
 
 
+def _seed():
+    """The cubes these tests ask about, written into this run's copy of sc.db,
+    so the tests do not depend on what the live store holds."""
+    from kg_agent import attest, create_cube, fill_face, validate
+    s = Substrate()
+    try:
+        signed = create_cube(s, "Signed means provenance, not trust.", tags=["principle"])["cube_id"]
+        fill_face(s, signed, "OPINION", "A signature says who, not whether it is right.")
+        fill_face(s, signed, "COUNTER", "A trusted signer makes a signature feel like trust.")
+        create_cube(s, "Pulling OE high disables all outputs at once.", tags=["pca9685"],
+                    cube_id="cube/pca9685-oe-pin-disables-outputs")
+        create_cube(s, "Split files over 400 lines; modular.", cube_id="cube/split-files-over-400-lines")
+        stop = create_cube(s, "An emergency stop should cut actuator power in hardware.",
+                           cube_id="cube/emergency-stop-cuts-power")["cube_id"]
+        s.write({"id": "source/test-notes", "foundation": "foundation:knowledge", "state": {"kind": "source"}})
+        s.link(stop, "derived-from", "source/test-notes")
+        fill_face(s, stop, "FACT", "Bulk accepted text", filled_by="claude (bulk accept, not read line by line)")
+        # Two attested cubes, since one test retracts the first
+        for content, cid in (("British English everywhere, identifiers included.", "cube/british-english-everywhere"),
+                             ("Log everything; fail loud and public.", "cube/log-everything-fail-loud")):
+            create_cube(s, content, cube_id=cid)
+            for lens in ("FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"):
+                fill_face(s, cid, lens, f"{lens.lower()} text")
+            validate(s, cid, "james", note="holds")
+            assert "error" not in attest(s, cid, "james")
+    finally:
+        s.close()
+
+
+_seed()
+
+
 def _ask(question):
     from kg_hal import ask_gated
     s = Substrate()
