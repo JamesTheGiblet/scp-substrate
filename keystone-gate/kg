@@ -278,6 +278,8 @@ def main():
     sp_c_acc = sp_sub.add_parser("accept", help="accept a proposal")
     sp_c_acc.add_argument("proposal_id")
     sp_c_acc.add_argument("--by", required=True)
+    sp_c_acc.add_argument("--word", help="connecting word for a link, such as protects or depends on")
+    sp_c_acc.add_argument("--reverse", action="store_true", help="read the link from the other cube")
     sp_c_acc.set_defaults(func=cmd_cube_accept)
 
     sp_c_rej = sp_sub.add_parser("reject", help="reject a proposal")

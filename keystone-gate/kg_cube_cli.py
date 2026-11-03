@@ -333,7 +333,7 @@ def cmd_cube_proposals(args):
 def cmd_cube_accept(args):
     from kg_agent import accept_proposal
     s = Substrate()
-    r = accept_proposal(s, args.proposal_id, accepted_by=args.by)
+    r = accept_proposal(s, args.proposal_id, accepted_by=args.by, word=args.word, reverse=args.reverse)
     s.close()
     if "error" in r:
         print(f"error: {r['error']}")

@@ -105,6 +105,9 @@ h2 { font-size: 15px; margin: 30px 0 12px; color: var(--muted); font-weight: 600
 .tool:hover { border-color: var(--muted); }
 .tools textarea, .tools input { width: 100%; background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font-size: 14px; }
 .tools .warn { color: var(--muted); font-size: 12px; }
+.tools select { background: var(--bg); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; font-size: 12px; }
+.tool:disabled { opacity: .45; cursor: default; }
+.tools select + .tool ~ .warn { flex-basis: 100%; color: var(--ink); font-size: 13px; }
 #toast { position: fixed; z-index: 5; left: 50%; bottom: 76px; transform: translateX(-50%); background: rgba(8, 11, 19, .94); color: #e6eaf3; border: 1px solid #333c52; border-radius: 8px; padding: 7px 14px; font-size: 14px; }
 #toast[hidden], #addcube[hidden], #fillblanks[hidden], #checkdrafts[hidden], #lock[hidden], #unlockwrong[hidden] { display: none; }
 #newcube, #unlock { --ink: #e6eaf3; --line: #333c52; --muted: #9fb4d8; background: #10131d; color: #e6eaf3; border-color: #2c3448; width: min(560px, calc(100vw - 32px)); padding: 20px; }

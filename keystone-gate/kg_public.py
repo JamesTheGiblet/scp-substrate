@@ -59,6 +59,7 @@ def _scrub(cube, kept):
     return {**cube, "faces": faces, "note_draft": None, "link_drafts": [],
             "neighbours": [n for n in cube["neighbours"] if n in kept],
             "link_reasons": {k: v for k, v in cube.get("link_reasons", {}).items() if k in kept},
+            "link_words": {k: v for k, v in cube.get("link_words", {}).items() if k in kept},
             "contradicts": cube["contradicts"] if cube["contradicts"] in kept else None}
 
 

@@ -21,6 +21,10 @@ const el = (tag, cls, text) => {
   return node;
 };
 const state = { filter: "all", tag: null, query: "" };
+const shorten = (text, n) => (text.length > n ? text.slice(0, n - 1).trimEnd() + "…" : text);
+// “A” protects “B”: each claim quoted without its full stop, cut to n characters
+const quoted = (c, n) => `“${c ? shorten(c.content.replace(/\.$/, ""), n) : "?"}”`;
+const linkSentence = (a, word, b, n = 70) => `${quoted(a, n)} ${word} ${quoted(b, n)}`;
 const faceNote = f => !f ? "" : f.pending ? `draft by ${f.drafted_by || "a model"}, not accepted` : f.unread ? "accepted without reading" : "";
 
 function cubeNode(c, size) {
@@ -137,11 +141,23 @@ function open(c) {
     const a = c.attestation;
     right.append(el("p", "facts", a.retracted ? "Attestation retracted: " + a.retracted : "Attested by " + a.source + (a.note ? ". " + a.note : "")));
   }
-  if (c.neighbours.length) right.append(el("p", "facts", "Neighbours: " + c.neighbours.join(", ")));
+  c.neighbours.forEach(id => {
+    // Your link, read as a sentence when it has a connecting word
+    const other = CUBES.find(x => x.id === id), said = (c.link_words || {})[id];
+    const b = el("button", "lens");
+    b.style.setProperty("--c", "rgb(242,200,100)");
+    b.append(el("b", "", said ? "LINKED · " + said.word.toUpperCase() : "LINKED · no connecting word yet"),
+      document.createTextNode(said ? linkSentence(said.from === c.id ? c : other, said.word, said.from === c.id ? other : c)
+        : (other ? other.content : id)));
+    if (other) b.addEventListener("click", () => open(other));
+    right.append(b);
+  });
   (c.link_drafts || []).forEach(d => {
     const other = CUBES.find(x => x.id === d.other);
     const b = el("button", "lens");
     b.dataset.link = d.proposal_id;
+    b.dataset.peer = d.other;
+    b.dataset.from = d.from;
     const tint = foundationOf(c) || (other && foundationOf(other));
     b.style.setProperty("--c", tint ? `rgb(${tint[2]})` : "var(--context)");
     const head = el("b", "", "SUGGESTED LINK");

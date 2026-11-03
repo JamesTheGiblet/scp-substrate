@@ -202,12 +202,14 @@ def test_a_suggested_link_can_be_accepted_from_the_page():
         finally:
             s.close()
         assert srv.post({"action": "accept", "proposal_id": pid}, key="")[0] == 401
-        status, reply = srv.post({"action": "accept", "proposal_id": pid})
+        assert srv.post({"action": "accept", "proposal_id": pid, "word": "sort of"})[0] == 400
+        status, reply = srv.post({"action": "accept", "proposal_id": pid, "word": "limits", "reverse": True})
         assert status == 200, reply
         cube = next(c for c in reply["cubes"] if c["id"] == made[0])
         assert made[1] in cube["neighbours"] and cube["link_drafts"] == []
-        # The reason stays, so the page can say why they are linked
+        # The reason and the connecting word stay, so the page can say why they are linked
         assert cube["link_reasons"] == {made[1]: "test"}
+        assert cube["link_words"] == {made[1]: {"word": "limits", "from": made[1]}}
 
 
 def test_a_named_host_is_let_in_and_others_are_not():

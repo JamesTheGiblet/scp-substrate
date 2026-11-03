@@ -205,6 +205,8 @@
       if (proposed) ctx.setLineDash([4, 5]);
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
       ctx.setLineDash([]);
+      // A pulled link names its connecting word halfway along
+      if (held && saidOf(l)) label(saidOf(l).word, { x: mix(a.x, b.x, .5), y: mix(a.y, b.y, .5) - 10 }, 15, 1, 700);
       if (!calm && l.kind !== "bridge" && !proposed) {
         const t = (time * .16 + l.seed) % 1;
         const dot = { x: mix(a.x, b.x, t), y: mix(a.y, b.y, t) };
@@ -346,5 +348,4 @@
     if (it.present) glow(it.q, it.size * it.q.k * 2.4, rgb.join(","), .22);
   }
 
-  const shorten = (text, n) => (text.length > n ? text.slice(0, n - 1).trimEnd() + "…" : text);
 

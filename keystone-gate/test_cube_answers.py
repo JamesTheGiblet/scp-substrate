@@ -125,9 +125,13 @@ def test_view_stored_text_cannot_break_out_of_the_script():
 
 def test_view_needs_no_network():
     from kg_view import render
+    import re
     page = render([])
-    for marker in ("http://", "https://", "<link", " src="):
+    for marker in ("http://", "https://", " src="):
         assert marker not in page, marker
+    # A <link> may only carry inline data, such as the empty tab icon
+    for tag in re.findall(r"<link[^>]*>", page):
+        assert 'href="data:' in tag, tag
 
 
 def test_view_has_a_screenshot_button():

@@ -118,12 +118,31 @@
       tools.append(button("Confirm", () => say("confirmed")), button("Not related", () => say("dismissed")));
       row.after(tools);
     });
-    box.querySelectorAll("[data-link]").forEach(row => {
-      const tools = el("div", "tools"), proposal_id = row.dataset.link;
-      tools.append(button("Link them", () => act({ action: "accept", proposal_id }, c.id, "Linked")),
-        button("Not related", () => act({ action: "reject", proposal_id }, c.id, "Link rejected")));
-      row.after(tools);
-    });
+    box.querySelectorAll("[data-link]").forEach(row => linkTools(row, c));
+  }
+
+  // Choose the connecting word, and which way the sentence reads, before linking
+  function linkTools(row, c) {
+    const tools = el("div", "tools"), proposal_id = row.dataset.link;
+    const find = id => CUBES.find(x => x.id === id);
+    const pair = [find(row.dataset.from), find(row.dataset.from === c.id ? row.dataset.peer : c.id)];
+    let reverse = false;
+    const pick = el("select");
+    pick.name = "word";
+    pick.setAttribute("aria-label", "Connecting word");
+    pick.append(new Option("Choose a connecting word", ""), ...api.words.map(w => new Option(w, w)));
+    const said = el("span", "warn"), link = button("Link them", () =>
+      act({ action: "accept", proposal_id, word: pick.value, reverse }, c.id, "Linked"));
+    const show = () => {
+      const [a, b] = reverse ? [pair[1], pair[0]] : pair;
+      said.textContent = pick.value ? linkSentence(a, pick.value, b) : "Pick the word that says how they connect.";
+      link.disabled = !pick.value;
+    };
+    pick.addEventListener("change", show);
+    tools.append(pick, button("Swap", () => { reverse = !reverse; show(); }), link,
+      button("Not related", () => act({ action: "reject", proposal_id }, c.id, "Link rejected")), said);
+    show();
+    row.after(tools);
   }
 
   lockButton.hidden = false;

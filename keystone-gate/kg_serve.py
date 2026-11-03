@@ -16,7 +16,7 @@ from urllib.parse import urlsplit
 
 from substrate import Substrate
 
-from kg_agent import (LENSES, accept_proposal, attest, create_cube, fill_face,
+from kg_agent import (CONNECTING_WORDS, LENSES, accept_proposal, attest, create_cube, fill_face,
                       list_proposals, reject_proposal, validate)
 from kg_fill import Drafter, cubes_with_blanks, draft_cube, pending_drafts
 from kg_lens_links import all_modes
@@ -75,7 +75,8 @@ def _new(s, data, by):
 def _proposal(s, data, by, act):
     pid = _text(data, "proposal_id")
     if act == "accept":
-        return accept_proposal(s, pid, accepted_by=by)
+        word = _text(data, "word", required=False) or None
+        return accept_proposal(s, pid, accepted_by=by, word=word, reverse=data.get("reverse") is True)
     return reject_proposal(s, pid, rejected_by=by, reason=_text(data, "reason", required=False) or None)
 
 
@@ -183,7 +184,7 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
                 return self._json(404, {"error": "not found"})
             s = Substrate()
             try:
-                page = render(collect(s), api={"token": token, "by": by}, user=user_name(s))
+                page = render(collect(s), api={"token": token, "by": by, "words": CONNECTING_WORDS}, user=user_name(s))
             finally:
                 s.close()
             self._send(200, page, "text/html")

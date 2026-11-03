@@ -50,12 +50,18 @@
     p.append(text.slice(0, at), el("mark", "", text.slice(at, at + word.length)), text.slice(at + word.length));
     return p;
   }
+  // The connecting word on one of your links, and which cube the sentence starts from
+  function saidOf(l) {
+    return l.kind === "neighbour" ? (l.a.c.link_words || {})[l.b.c.id] || null : null;
+  }
   function reasonOf(l) {
-    const { a, b } = l;
+    const { a, b } = l, said = saidOf(l);
     if (l.kind === "lens") return `Both cubes use the word "${l.term}" on their ${l.lens.toLowerCase()} side. This is a match on words, so it can be a coincidence.`;
     if (l.kind === "neighbour") {
       const why = (a.c.link_reasons || {})[b.c.id] || (b.c.link_reasons || {})[a.c.id];
-      return "You linked these." + (why ? ` The reason given: ${why}.` : "");
+      const [from, to] = said && said.from === b.c.id ? [b, a] : [a, b];
+      return (said ? `You linked these: ${linkSentence(from.c, said.word, to.c, 400)}.` : "You linked these, without a connecting word.")
+        + (why ? ` The reason given: ${why}.` : "");
     }
     if (l.kind === "proposed") {
       const d = [...(a.c.link_drafts || []), ...(b.c.link_drafts || [])].find(x => x.other === b.c.id || x.other === a.c.id);
@@ -125,7 +131,8 @@
       panel.append(el("p", "facts", "Linked cubes"));
       near.slice(0, 7).forEach(l => {
         const m = l.a === n ? l.b : l.a;
-        const why = l.lens ? `${l.lens}, "${l.term}": ` : "";
+        const said = saidOf(l);
+        const why = l.lens ? `${l.lens}, "${l.term}": ` : said ? (said.from === n.c.id ? `${said.word} → ` : `← ${said.word}: `) : "";
         const b = el("button", "hop", why + shorten(m.c.content, 52));
         b.title = "See why these are linked";
         b.addEventListener("click", () => goLink(l));
@@ -213,7 +220,8 @@
     tip.hidden = !hover && !hoverLink;
     if (hover || hoverLink) {
       tip.textContent = hover ? `${hover.c.content} (${LABEL[hover.c.status]})`
-        : hoverLink === focus.link ? "Click to let go" : "Pull to see why these are linked";
+        : hoverLink === focus.link ? "Click to let go"
+        : (saidOf(hoverLink) ? `"${saidOf(hoverLink).word}" · ` : "") + "Pull to see why these are linked";
       tip.style.left = Math.min(e.clientX + 14, W - 280) + "px";
       tip.style.top = e.clientY + 14 + "px";
     }
@@ -283,8 +291,12 @@
     clusterOf(id) { return project(byId[id].cluster.c); },
     state() { return { cluster: focus.cluster && focus.cluster.topic, node: focus.node && focus.node.c.id, panel: !panel.hidden,
                        link: focus.link && [focus.link.a.c.id, focus.link.b.c.id, focus.link.kind] }; },
-    // For checks: pull the first strand of a kind
-    pull(kind) { const l = links.find(x => x.kind === kind); if (l) goLink(l); return Boolean(l); },
+    // For checks: pull the first strand of a kind, touching a given cube if named
+    pull(kind, id) {
+      const l = links.find(x => x.kind === kind && (!id || x.a.c.id === id || x.b.c.id === id));
+      if (l) goLink(l);
+      return Boolean(l);
+    },
     strandScreen(kind) { const l = links.find(x => x.kind === kind); return l && [project(l.a.p), project(l.b.p)]; },
   };
 

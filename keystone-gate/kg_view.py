@@ -81,24 +81,28 @@ def _repo(s, cube_id):
 
 
 def _link_notes(s):
-    """Suggested neighbour links waiting for you, and the reasons behind ones you
-    accepted, listed on both cubes."""
-    drafts, reasons = {}, {}
+    """Suggested neighbour links waiting for you, and the reasons and connecting
+    words behind ones you accepted, listed on both cubes."""
+    drafts, reasons, words = {}, {}, {}
     for p in list_proposals(s, status="any"):
         if p.get("proposal_type") != "neighbour" or p.get("status") not in ("pending", "accepted"):
             continue
         for this, other in ((p["cube_id"], p["other_cube_id"]), (p["other_cube_id"], p["cube_id"])):
             if p["status"] == "pending":
-                drafts.setdefault(this, []).append({"other": other, "proposal_id": p["id"], "why": p.get("rationale") or ""})
-            elif p.get("rationale"):
+                drafts.setdefault(this, []).append({"other": other, "proposal_id": p["id"],
+                                                    "why": p.get("rationale") or "", "from": p["cube_id"]})
+                continue
+            if p.get("rationale"):
                 reasons.setdefault(this, {})[other] = p["rationale"]
-    return drafts, reasons
+            if p.get("word"):
+                words.setdefault(this, {})[other] = {"word": p["word"], "from": p["from"]}
+    return drafts, reasons, words
 
 
 def collect(s):
     """Everything the page shows, one dict per cube."""
     cubes = []
-    link_drafts, link_reasons = _link_notes(s)
+    link_drafts, link_reasons, link_words = _link_notes(s)
     for row in list_cubes(s):
         cube = show_cube(s, row["id"])
         validation = cube["validation"]
@@ -132,6 +136,7 @@ def collect(s):
             "neighbours": _links(s, cube["cube_id"], "neighbour"),
             "link_drafts": link_drafts.get(cube["cube_id"], []),
             "link_reasons": link_reasons.get(cube["cube_id"], {}),
+            "link_words": link_words.get(cube["cube_id"], {}),
             "contradicts": (cube["contradicts"] or {}).get("other"),
         })
     return attach_overlaps(cubes, load_decisions(s))

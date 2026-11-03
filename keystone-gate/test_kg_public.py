@@ -58,7 +58,7 @@ def test_suggested_links_reach_the_page_but_not_the_snapshot():
         a, b = _cube(s, "Link test one, snapshot"), _cube(s, "Link test two, snapshot")
         pid = propose_neighbour(s, a, b, "model-draft:test", rationale="a test reason")["proposal_id"]
         cubes = {c["id"]: c for c in collect(s)}
-        assert cubes[a]["link_drafts"] == [{"other": b, "proposal_id": pid, "why": "a test reason"}]
+        assert cubes[a]["link_drafts"] == [{"other": b, "proposal_id": pid, "why": "a test reason", "from": a}]
         assert cubes[b]["link_drafts"][0]["other"] == a
         assert "a test reason" not in _snapshot(s)[1]
     finally:

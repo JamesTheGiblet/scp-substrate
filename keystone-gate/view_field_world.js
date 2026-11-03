@@ -115,11 +115,17 @@
   const OWN = ["neighbour", "contra", "proposed"];
   const relate = into => {
     for (let i = into.length - 1; i >= 0; i--) if (OWN.includes(into[i].kind)) into.splice(i, 1);
+    // One thread per pair, and a link you made or were offered beats a word match
+    const own = (a, b, kind) => {
+      const i = into.findIndex(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
+      if (i >= 0 && !OWN.includes(into[i].kind)) into.splice(i, 1);
+      link(a, b, kind, into);
+    };
     nodes.forEach(n => {
-      n.c.neighbours.forEach(id => byId[id] && link(n, byId[id], "neighbour", into));
-      if (n.c.contradicts && byId[n.c.contradicts]) link(n, byId[n.c.contradicts], "contra", into);
+      n.c.neighbours.forEach(id => byId[id] && own(n, byId[id], "neighbour"));
+      if (n.c.contradicts && byId[n.c.contradicts]) own(n, byId[n.c.contradicts], "contra");
     });
-    nodes.forEach(n => (n.c.link_drafts || []).forEach(d => byId[d.other] && link(n, byId[d.other], "proposed", into)));
+    nodes.forEach(n => (n.c.link_drafts || []).forEach(d => byId[d.other] && own(n, byId[d.other], "proposed")));
   };
   relate(links);
   clusters.forEach(cl => cl.nodes.forEach((n, i) => {
