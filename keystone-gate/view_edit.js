@@ -7,6 +7,8 @@
   const fill = $("fillblanks"), check = $("checkdrafts"), title = document.title;
   const lockButton = $("lock"), unlock = $("unlock"), wrong = $("unlockwrong");
   let key = null, shown = null, seen = null, lastError = null;
+  // Lets a password manager tell this page's password apart
+  unlock.querySelector('input[name="username"]').value = api.by;
 
   const say = text => {
     (detail.open ? detail : document.body).append(toast);
@@ -61,6 +63,7 @@
   function writer(tools, c, label, current, warning, save) {
     tools.replaceChildren();
     const box = el("textarea");
+    box.name = "text";
     box.value = current || "";
     box.rows = 3;
     box.setAttribute("aria-label", label);
@@ -135,7 +138,7 @@
   $("unlockcancel").addEventListener("click", () => unlock.close());
   unlock.querySelector("form").addEventListener("submit", async e => {
     e.preventDefault();
-    const input = unlock.querySelector("input");
+    const input = unlock.querySelector('input[name="password"]');
     let res, reply;
     try {
       [res, reply] = await post("/api/unlock", { password: input.value });

@@ -35,7 +35,8 @@
 <dialog id="unlock">
   <form>
     <h3>Unlock editing</h3>
-    <label>Password<input type="password" autocomplete="current-password" required></label>
+    <input type="text" name="username" autocomplete="username" hidden>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
     <p id="unlockwrong" hidden>That password is wrong.</p>
     <div class="actions"><button type="button" class="tool" id="unlockcancel">Cancel</button><button type="submit" class="tool">Unlock</button></div>
   </form>
