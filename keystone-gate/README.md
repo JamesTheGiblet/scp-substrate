@@ -82,7 +82,7 @@ Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
 - The validation note must be your own, and a suggested note is refused word for word.
 - Models cannot draft faces or suggest notes for them.
 
-Each group grows its own form like the other clusters, and its cubes drift and spin while the three groups turn around you together. Cubes tagged `defining` form a green ring outside them, turning the other way. A claim linked to you with `about-entity` glows green wherever it clusters. A group stops turning while you have it open.
+Each group grows its own form like the other clusters, and its cubes drift and spin while the three groups turn around you together. Cubes tagged `defining` form a green ring outside them, turning the other way. A claim linked to you with `about-entity` glows green wherever it clusters. An entity that uses subjects, such as SCPBot, is a smaller green dot out from you, its parts circling it, and each claim about a part gathers round that part. A group stops turning while you have it open.
 
 These rules check the process, not the truth, and they work through the code only. Someone with direct access to `sc.db` can bypass them.
 

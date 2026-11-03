@@ -15,6 +15,7 @@ from substrate import Substrate
 from kg_cube_cli import *
 from kg_subject_cli import add_subject_parser
 from kg_entity_cli import add_entity_parser
+from kg_wiring import add_wiring_parser
 
 
 def cmd_stats(args):
@@ -313,6 +314,7 @@ def main():
 
     add_subject_parser(sub)
     add_entity_parser(sub)
+    add_wiring_parser(sub)
 
     args = ap.parse_args()
     args.func(args)

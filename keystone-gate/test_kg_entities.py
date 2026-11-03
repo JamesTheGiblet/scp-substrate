@@ -177,5 +177,57 @@ def test_the_page_knows_a_claim_is_about_you():
         s.close()
 
 
+def test_a_claim_sits_by_the_part_it_is_about():
+    from kg_agent import create_cube
+    from kg_entities import add_entity, link_claim, relate
+    from kg_view import collect, hubs
+    s = _store()
+    try:
+        s.write({"id": "person/james-gilbert", "foundation": "foundation:knowledge",
+                 "state": {"kind": "person", "owner": "James Gilbert"}})
+        bot = add_entity(s, "SCPBot", "robot", "james")["id"]
+        s.write({"id": "subject/pca9685", "foundation": "foundation:subject", "state": {"name": "PCA9685"}})
+        relate(s, bot, "uses", "subject/pca9685")
+        part = create_cube(s, "The PCA9685 drives 16 channels")["cube_id"]
+        whole = create_cube(s, "SCPBot stands on four legs")["cube_id"]
+        link_claim(s, part, subjects=["subject/pca9685"])
+        link_claim(s, whole, entities=[bot])
+        relate(s, "james", "building", bot)
+        [hub] = hubs(s)
+        assert hub["parts"] == [{"id": "subject/pca9685", "name": "PCA9685"}] and hub["kind"] == "robot"
+        assert hub["builders"] == ["James"] and hub["nets"] == []
+        from kg_view import things
+        found = things(s)
+        assert [e["name"] for e in found["entities"]][:1] == ["James"]
+        bot_row = next(e for e in found["entities"] if e["id"] == bot)
+        assert bot_row["parts"] == ["subject/pca9685"] and {"word": "building", "other": "James", "out": False} in bot_row["links"]
+        assert next(x for x in found["subjects"] if x["id"] == "subject/pca9685")["used_by"] == ["SCPBot"]
+        cubes = {c["id"]: c for c in collect(s)}
+        assert cubes[part]["subjects"] == ["subject/pca9685"] and cubes[whole]["entities"] == [bot]
+        where = {cid: c["hub"] for cid, c in cubes.items()}
+        assert where[part] == {"entity": bot, "part": "subject/pca9685"}
+        assert where[whole] == {"entity": bot, "part": None}
+    finally:
+        s.close()
+
+
+def test_a_shared_part_keeps_each_claim_with_its_own_entity():
+    from kg_agent import create_cube
+    from kg_entities import add_entity, link_claim, relate
+    from kg_view import collect
+    s = _store()
+    try:
+        a = add_entity(s, "Alpha", "robot", "james")["id"]
+        b = add_entity(s, "Beta", "robot", "james")["id"]
+        s.write({"id": "subject/lambda", "foundation": "foundation:subject", "state": {"name": "λ"}})
+        relate(s, a, "uses", "subject/lambda")
+        relate(s, b, "uses", "subject/lambda")
+        cid = create_cube(s, "Beta scores trust with λ")["cube_id"]
+        link_claim(s, cid, subjects=["subject/lambda"], entities=[b])
+        assert next(c for c in collect(s) if c["id"] == cid)["hub"] == {"entity": b, "part": "subject/lambda"}
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

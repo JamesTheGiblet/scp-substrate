@@ -2,8 +2,8 @@
   // --- camera --------------------------------------------------------------
   const cam = { yaw: .6, pitch: .34, dist: 1300, t: [...world.c], toDist: 1300 };
   let W = 0, H = 0, F = 800;
-  const view = { filter: "all", query: "", time: null };
-  const shows = c => !view.time || !c.created || c.created <= view.time;
+  const view = { filter: "all", query: "", time: null, entity: null };
+  const shows = c => (!view.time || !c.created || c.created <= view.time) && (!view.entity || inEntity(c, view.entity));
 
   function project(p) {
     const x = p[0] - cam.t[0], y = p[1] - cam.t[1], z = p[2] - cam.t[2];
@@ -107,6 +107,7 @@
   const crowding = () => Math.max(.5, Math.min(1, Math.sqrt(48 / Math.max(nodes.filter(n => shows(n.c)).length, 1))));
 
   function orbitClusters(dt) {
+    orbitHubs(dt);
     placeCores();
     self.home = [...world.c];
     if (calm) return;
@@ -135,12 +136,12 @@
 
     // Glide to whatever is in focus
     const pulled = focus.link;
-    const aim = focus.node ? focus.node.p : focus.cluster ? focus.cluster.c
+    const aim = focus.node ? focus.node.p : focus.cluster ? focus.cluster.c : focus.hub ? focus.hub.home
       : pulled ? pulled.a.p.map((v, k) => (v + pulled.b.p[k]) / 2) : world.c;
     const ease = 1 - Math.exp(-dt * 3.4);
     cam.t = cam.t.map((v, k) => mix(v, aim[k], ease));
     cam.dist = mix(cam.dist, cam.toDist, ease);
-    if (!calm && !drag && !focus.node && !pulled) cam.yaw += dt * .05;
+    if (!calm && !drag && !focus.node && !focus.hub && !pulled) cam.yaw += dt * .05;
     // While a strand is pulled, its two cubes and their clusters stay, and the rest fades
     const end = n => pulled && (n === pulled.a || n === pulled.b);
     const kin = cl => pulled && (cl === pulled.a.cluster || cl === pulled.b.cluster);
@@ -221,7 +222,7 @@
       const dim = pulled ? .12 : inside ? .3 : 1;
       for (const n of nodes) {
         const valid = n.c.validation && !n.c.validation.stale, amber = n.cluster.loose ? n.cluster.rgb : null;
-        if (!shows(n.c) || (!valid && !n.cluster.rigid)) continue;
+        if (!shows(n.c) || (!valid && (!n.cluster.rigid || n.cluster.hub))) continue;
         const q = project(n.p);
         if (!q) continue;
         const on = lit === n, alpha = (on ? .85 : valid ? .26 : .1) * dim * fog(q.d);
@@ -240,6 +241,8 @@
       ctx.fillStyle = `rgba(205,255,216,${dim})`;
       ctx.beginPath(); ctx.arc(you.x, you.y, r * .62, 0, 7); ctx.fill();
     }
+
+    drawHubs(you, pulled ? .12 : inside ? .3 : 1, time);
 
     // Cubes and their lenses, furthest first
     const items = [];
@@ -306,6 +309,7 @@
 
     // Names
     if (you && !inside) label(USER, { x: you.x, y: you.y + 26 * you.k + 20 }, 15, .95, 700);
+    if (!inside) nameHubs(1);
     if (!focus.node) clusters.forEach(cl => {
       const q = project(add(cl.c, [0, -cl.half - 8, 0]));
       if (pulled && !kin(cl)) return;

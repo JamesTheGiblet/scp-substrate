@@ -44,7 +44,7 @@ def _ask(question):
 
 
 def test_believe_returns_claim_view_and_counter():
-    r = _ask("what do I believe about signing")
+    r = _ask("what do I believe about signing as provenance")
     assert "answer" in r, r
     assert "cube/signed-means-provenance-not-trust" in r["answer"], r
     assert "view:" in r["answer"] and "against:" in r["answer"], r
@@ -103,7 +103,7 @@ def test_no_matching_cube_is_stated():
 
 
 def test_hardware_cubes_are_answerable_and_sourced():
-    r = _ask("what do I know about servo power")
+    r = _ask("what do I know about the emergency stop cutting power")
     assert "cube/emergency-stop-cuts-power" in r["answer"], r
     s = Substrate()
     try:

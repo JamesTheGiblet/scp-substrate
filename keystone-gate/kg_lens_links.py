@@ -164,9 +164,20 @@ def by_repo(cubes):
             "links": []}
 
 
+def by_place(cubes):
+    """One box per entity and subject, as each cube's place names it."""
+    boxes = defaultdict(list)
+    for c in sorted(cubes, key=lambda c: c["id"]):
+        boxes[c["place"]].append(c["id"])
+    return {"clusters": [{"name": name, "members": members} for name, members in sorted(boxes.items())],
+            "links": []}
+
+
 def all_modes(cubes):
     """One clustering for all lenses together, one per lens that has links, and one per repo."""
     modes = {"ALL": cluster(cubes, LENSES)}
+    if any(c.get("place") for c in cubes):
+        modes["PLACES"] = by_place(cubes)
     if any(c.get("repo") for c in cubes):
         modes["REPOS"] = by_repo(cubes)
     if any(c.get("overlaps") for c in cubes):

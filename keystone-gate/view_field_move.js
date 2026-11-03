@@ -5,7 +5,10 @@
 
   function setCrumbs() {
     const parts = [["Everything", goHome]];
+    if (focus.hub) parts.push([focus.hub.name, null]);
     if (focus.link) parts.push([`Why #${focus.link.a.cluster.topic} meets #${focus.link.b.cluster.topic}`, null]);
+    const owner = ownerOf(focus.cluster);
+    if (owner) parts.push([owner.name, () => goHub(owner)]);
     if (focus.cluster) parts.push(["#" + focus.cluster.topic, () => goCluster(focus.cluster)]);
     if (focus.node) parts.push([shorten(focus.node.c.content, 30), null]);
     crumbs.replaceChildren();
@@ -16,31 +19,33 @@
       if (go) b.addEventListener("click", go); else b.disabled = true;
       crumbs.append(b);
     });
+    renderPicker();
   }
   function goHome() {
-    focus.cluster = focus.node = focus.lens = focus.link = null;
+    focus.cluster = focus.node = focus.lens = focus.link = focus.hub = null;
     cam.toDist = world.half * 2.42;
     panel.hidden = true; setCrumbs();
   }
   function goCluster(cl) {
-    focus.cluster = cl; focus.node = focus.lens = focus.link = null;
+    focus.cluster = cl; focus.node = focus.lens = focus.link = focus.hub = null;
     cam.toDist = cl.spread * 3 + 150;
     panel.hidden = true; setCrumbs();
   }
   function goNode(n) {
-    focus.cluster = n.cluster; focus.node = n; focus.lens = focus.link = null;
+    focus.cluster = n.cluster; focus.node = n; focus.lens = focus.link = focus.hub = null;
     cam.toDist = n.r * 11;
     fillPanel(n); setCrumbs();
   }
   function goLink(l) {
-    focus.cluster = focus.node = focus.lens = null;
+    focus.cluster = focus.node = focus.lens = focus.hub = null;
     focus.link = l;
     tip.hidden = true;
     const gap = Math.hypot(...l.a.p.map((v, k) => v - l.b.p[k]));
     cam.toDist = Math.max(420, Math.min(1400, gap * .9 + 380));
     linkPanel(l); setCrumbs();
   }
-  const back = () => focus.node ? goCluster(focus.node.cluster) : goHome();
+  const ownerOf = cl => cl && hubs.find(h => h.own === cl || h.parts.some(p => p.cl === cl));
+  const back = () => focus.node ? goCluster(focus.node.cluster) : ownerOf(focus.cluster) ? goHub(ownerOf(focus.cluster)) : goHome();
 
   // Why two cubes are linked, in plain words, with the shared word marked
   function marked(text, word) {
@@ -216,8 +221,14 @@
     const found = pick(e.clientX, e.clientY);
     hover = found && found.node || null;
     hoverLink = hover || focus.node ? null : strandAt(e.clientX, e.clientY, 7);
-    canvas.style.cursor = found || hoverLink || clusterAt(e.clientX, e.clientY) ? "pointer" : "grab";
-    tip.hidden = !hover && !hoverLink;
+    const overHub = !found && hubAt(e.clientX, e.clientY);
+    canvas.style.cursor = found || hoverLink || overHub || clusterAt(e.clientX, e.clientY) ? "pointer" : "grab";
+    tip.hidden = !hover && !hoverLink && !overHub;
+    if (overHub) {
+      tip.textContent = `${overHub.name}: click for an overview`;
+      tip.style.left = Math.min(e.clientX + 14, W - 280) + "px";
+      tip.style.top = e.clientY + 14 + "px";
+    }
     if (hover || hoverLink) {
       tip.textContent = hover ? `${hover.c.content} (${LABEL[hover.c.status]})`
         : hoverLink === focus.link ? "Click to let go"
@@ -232,6 +243,9 @@
     drag = null;
     if (moved > 6) return;
     const found = pick(e.clientX, e.clientY);
+    const hub = !found && hubAt(e.clientX, e.clientY);
+    if (hub) return goHub(hub);
+    if (focus.hub && !found) return goHome();
     if (found && found.sat) { focus.lens = found.sat.lens; return; }
     if (found && focus.link) return goNode(found.node);
     if (!found && !focus.node) {

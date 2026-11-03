@@ -32,7 +32,7 @@ A thing that exists, with identity. People, robots, projects, places, organisati
 - **Kind:** a field saying what sort of entity it is, such as `person`, `robot`, `project` or `place`.
 - **Links:** an entity *uses* or *knows about* subjects, and *is part of* or *owns* other entities.
 
-**Status: partly built.** `kg entity add`, `link`, `list` and `show` exist, in `keystone-gate/kg_entities.py`. James is the one entity so far; everything he links to is still waiting to be sorted (below). The page does not show entities.
+**Status: partly built.** `kg entity add`, `link`, `list` and `show` exist, in `keystone-gate/kg_entities.py`. James and SCPBot are the entities so far; the rest of what James links to is still waiting to be sorted (below). On the page, an entity that uses subjects is a smaller green dot with its parts circling it, and each claim gathers round the first of its parts. In the grid, every entity and subject has a card; opening one shows what it is, its parts or who uses it, and only its claims.
 
 ### Sorting what was already there
 
@@ -58,7 +58,9 @@ Something one or more entities know about. A component, a topic, a measure.
 - **Exists once.** If James, SCPBot and the robot arm all use a PCA9685, there is one `subject/pca9685` and three links to it. Knowledge about it is written once and reused.
 - **Links:** a claim links to its subject with `about-subject`. Plain `about` is taken: `trust.py` reads it as marking a trust record. Subjects can be *part of* other subjects, and *depend on* them.
 
-**Status: partly built.** `foundation:subject`, subject proposals and `about-subject` links exist, through `kg subject` and `keystone-gate/kg_subjects.py`. Links between subjects, and showing subjects on the page, are not built. Tags stay as labels for filtering.
+**Status: partly built.** `foundation:subject`, subject proposals and `about-subject` links exist, through `kg subject` and `keystone-gate/kg_subjects.py`. Links between subjects are not built. Each subject has its own place in the grid. Tags stay as labels for filtering.
+
+**Wiring.** A claim about how an entity is wired links to `subject/wiring` and lists its wires as pin-to-pin pairs. `kg wiring <entity>` traces which pins end up joined, so a common ground or a shared bus forms from the wiring rather than being stated as a claim of its own. Built in `keystone-gate/kg_wiring.py`.
 
 ## Claim
 

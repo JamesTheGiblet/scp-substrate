@@ -26,7 +26,7 @@
   document.getElementById("fsearch").addEventListener("input", e => cubeField.setQuery(e.target.value.trim().toLowerCase()));
   const modeBar = document.getElementById("modes");
   modeBar.append(el("span", "", "Cluster by"));
-  const names = { ALL: "All lenses", TAGS: "Tags", REPOS: "Repos", OVERLAPS: "Overlaps" };
+  const names = { ALL: "All lenses", TAGS: "Tags", REPOS: "Repos", OVERLAPS: "Overlaps", PLACES: "Entities" };
   const modes = [...Object.keys(MODES), "TAGS"];
   const modeChips = modes.map(mode => {
     const chip = el("button", "chip", names[mode] || mode[0] + mode.slice(1).toLowerCase());
@@ -44,5 +44,5 @@
     swatch.style.background = `var(--${VAR[lens]})`;
     key.append(swatch, document.createTextNode(lens === "HUMAN" ? "You" : lens[0] + lens.slice(1).toLowerCase()));
   });
-  key.append(document.createTextNode("   ·   Green centre: you   ·   Green strand: a cube you validated   ·   Foundations around you: orange safety, pink security, blue preferences   ·   Green ring: what defines you   ·   Green glow: a claim about you   ·   Gold glow: attested   ·   Hollow: missing   ·   Dim: unread   ·   Thread colour: the lens two cubes share   ·   Dashed: a suggested link, not accepted   ·   Click a thread to see why two cubes are linked   ·   Click to go in, Esc to back out, scroll to zoom"));
+  key.append(document.createTextNode("   ·   Green centre: you   ·   Green strand: a cube you validated   ·   Foundations around you: orange safety, pink security, blue preferences   ·   Green ring: what defines you   ·   Green glow: a claim about you   ·   Small green dot: something you are building, its parts circling it; click it for an overview   ·   Gold glow: attested   ·   Hollow: missing   ·   Dim: unread   ·   Thread colour: the lens two cubes share   ·   Dashed: a suggested link, not accepted   ·   Click a thread to see why two cubes are linked   ·   Click to go in, Esc to back out, scroll to zoom"));
 })();

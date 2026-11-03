@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 
 from kg_overlaps import attach_overlaps, load_decisions
-from kg_view import collect, render, user_name
+from kg_view import collect, hubs, render, user_name
 
 
 OUTPUT = Path(__file__).resolve().parent.parent / "build" / "public" / "index.html"
@@ -72,7 +72,7 @@ def write_snapshot(s, path=OUTPUT, private=None):
     private = private_repos(s) if private is None else private
     everything = collect(s)
     cubes = public_cubes(everything, private, load_decisions(s))
-    page = render(cubes, user=user_name(s))
+    page = render(cubes, user=user_name(s), hubs=hubs(s))
     # Check the finished page, not just the steps that made it
     data = json.dumps(cubes, ensure_ascii=False)
     leaked = [p.pattern for p in _names(private) if p.search(data)]

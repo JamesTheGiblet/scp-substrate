@@ -2,6 +2,9 @@
 const CUBES = /*CUBES*/[];
 const MODES = /*MODES*/{};
 const USER = /*USER*/"You";
+const HUBS = /*HUBS*/[];
+// Every entity and subject, each with its own place in the grid
+const THINGS = /*THINGS*/{};
 const LENSES = ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"];
 const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fiction", CONTEXT: "context", HUMAN: "human" };
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };
@@ -20,7 +23,7 @@ const el = (tag, cls, text) => {
   if (text !== undefined) node.textContent = text;
   return node;
 };
-const state = { filter: "all", tag: null, query: "" };
+const state = { filter: "all", tag: null, query: "", about: null, by: "group" };
 const shorten = (text, n) => (text.length > n ? text.slice(0, n - 1).trimEnd() + "…" : text);
 // “A” protects “B”: each claim quoted without its full stop, cut to n characters
 const quoted = (c, n) => `“${c ? shorten(c.content.replace(/\.$/, ""), n) : "?"}”`;
@@ -50,6 +53,7 @@ function matches(c) {
   if (state.filter === "foundational" && !c.tags.includes("foundational")) return false;
   if (["attested", "validated"].includes(state.filter) && c.status !== state.filter) return false;
   if (state.tag && !c.tags.includes(state.tag)) return false;
+  if (state.about && !isAbout(c, state.about)) return false;
   if (state.query) {
     const hay = [c.id, c.content, ...Object.values(c.faces).map(f => f ? f.content : "")].join(" ").toLowerCase();
     if (!hay.includes(state.query)) return false;
@@ -79,16 +83,87 @@ function card(c) {
   return button;
 }
 
+// A claim is about an entity directly, or through one of the entity's parts
+const thingOf = id => (THINGS.entities || []).find(e => e.id === id) || (THINGS.subjects || []).find(x => x.id === id);
+const isAbout = (c, id) => {
+  const e = (THINGS.entities || []).find(x => x.id === id);
+  return (c.entities || []).includes(id) || (c.subjects || []).includes(id)
+    || Boolean(e && e.parts.some(p => (c.subjects || []).includes(p)));
+};
+const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+
+function thingCard(t, isEntity) {
+  const button = el("button", "card thing" + (isEntity ? " entity" : ""));
+  const head = el("div", "thinghead");
+  head.append(el("i", "dot"), el("b", "", t.name));
+  const n = CUBES.filter(c => isAbout(c, t.id)).length;
+  const detail = isEntity ? [t.kind, t.parts.length && (t.you ? "uses " + plural(t.parts.length, "subject") : plural(t.parts.length, "part"))]
+    : [t.kind, t.used_by.length && "used by " + t.used_by.join(", ")];
+  button.append(head, el("p", "", detail.filter(Boolean).join(" · ") || (isEntity ? "Entity" : "Subject")));
+  const meta = el("div", "meta");
+  meta.append(el("span", "", plural(n, "claim")), el("span", "", isEntity ? "Entity" : "Subject"));
+  button.append(meta);
+  button.addEventListener("click", () => { state.about = t.id; draw(); scrollTo(0, 0); });
+  return button;
+}
+
+// The top of an entity's or subject's place: what it is and what it links to
+function aboutHeader(root, t) {
+  const isEntity = (THINGS.entities || []).includes(t);
+  const box = el("section", "about" + (isEntity ? " entity" : ""));
+  const back = el("button", "chip", "← Everything");
+  back.addEventListener("click", () => { state.about = null; draw(); });
+  box.append(back, el("h3", "", t.name), el("p", "id", t.id));
+  const facts = [isEntity ? "Entity" : "Subject", t.kind].filter(Boolean);
+  if (isEntity) t.links.filter(l => !l.out).forEach(l => facts.push(`${l.other} is ${l.word === "building" ? "building it" : l.word + " it"}`));
+  else if (t.used_by.length) facts.push("used by " + t.used_by.join(", "));
+  box.append(el("p", "facts", facts.join(" · ")));
+  const hop = (label, id) => {
+    const b = el("button", "chip", label);
+    if (thingOf(id)) b.addEventListener("click", () => { state.about = id; draw(); });
+    else b.disabled = true;
+    return b;
+  };
+  const chips = el("div", "controls");
+  if (isEntity) {
+    const hub = HUBS.find(h => h.id === t.id);
+    t.parts.forEach(id => {
+      const part = hub && hub.parts.find(p => p.id === id), name = (thingOf(id) || {}).name || id;
+      chips.append(hop((part && part.count > 1 ? `${part.count} × ` : "") + name + (part && part.role ? ` · ${part.role}` : ""), id));
+    });
+    t.links.filter(l => l.out).forEach(l => chips.append(hop(`${l.word} ${l.other}`, null)));
+  } else {
+    (THINGS.entities || []).filter(e => e.parts.includes(t.id)).forEach(e => chips.append(hop("← " + e.name, e.id)));
+  }
+  if (chips.childNodes.length) box.append(chips);
+  root.append(box);
+}
+
 function draw() {
   const root = document.getElementById("groups");
   root.replaceChildren();
+  const about = state.about && thingOf(state.about);
+  if (about) aboutHeader(root, about);
+  else {
+    const named = t => !state.query || t.name.toLowerCase().includes(state.query) || t.id.includes(state.query);
+    [["Entities", THINGS.entities || [], true], ["Subjects", THINGS.subjects || [], false]].forEach(([title, list, isEntity]) => {
+      const shown = list.filter(named);
+      if (!shown.length) return;
+      root.append(el("h2", "", title));
+      const grid = el("div", "grid things");
+      shown.forEach(t => grid.append(thingCard(t, isEntity)));
+      root.append(grid);
+    });
+  }
   const shown = CUBES.filter(matches);
   if (!shown.length) root.append(el("p", "none", "No cubes match that."));
-  const order = g => (g === "Project claims" ? "" : g);
-  for (const group of [...new Set(shown.map(c => c.group))].sort((a, b) => order(a).localeCompare(order(b)))) {
+  // Group by source, or by entity and subject
+  const key = c => state.by === "place" && c.place ? c.place : c.group;
+  const order = g => (g === "Project claims" ? "" : g === "No entity or subject" ? "￿" : g);
+  for (const group of [...new Set(shown.map(key))].sort((a, b) => order(a).localeCompare(order(b)))) {
     root.append(el("h2", "", group));
     const grid = el("div", "grid");
-    shown.filter(c => c.group === group)
+    shown.filter(c => key(c) === group)
       .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
       .forEach(c => grid.append(card(c)));
     root.append(grid);
@@ -230,6 +305,16 @@ function setupControls() {
   });
   chips.forEach(([b, v]) => b.setAttribute("aria-pressed", v === "all"));
   window.gridFilter = value => chips.find(([, v]) => v === value)[0].click();
+  const by = el("button", "chip", "Group by source");
+  by.title = "Switch between grouping by source and by entity and subject";
+  by.addEventListener("click", () => {
+    state.by = state.by === "group" ? "place" : "group";
+    by.textContent = state.by === "group" ? "Group by source" : "Group by entity & subject";
+    by.setAttribute("aria-pressed", state.by === "place");
+    draw();
+  });
+  by.setAttribute("aria-pressed", "false");
+  controls.append(by);
   const seen = t => CUBES.filter(c => c.tags.includes(t)).length;
   const tags = [...new Set(CUBES.flatMap(c => c.tags))].filter(t => seen(t) >= 3).sort();
   tags.forEach(tag => {

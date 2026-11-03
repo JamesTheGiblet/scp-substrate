@@ -33,7 +33,7 @@
   }
 
   const clusters = [], nodes = [];
-  const focus = { cluster: null, node: null, lens: null, link: null };
+  const focus = { cluster: null, node: null, lens: null, link: null, hub: null };
   groupNames.forEach((group, g) => {
     const peers = CUBES.filter(c => c.group === group);
     const angle = (g / groupNames.length) * Math.PI * 2;
@@ -200,7 +200,10 @@
   const fitBoxes = () => {
     clusters.forEach(cl => Object.assign(cl, box(cl.nodes)));
     groups.forEach(g => { const b = box(g.list); g.c = b.c; g.half = b.half + 26; });
-    Object.assign(world, box(nodes)); world.half += 46;
+    // Hubs circle the centre, so they don't move it
+    const centre = nodes.filter(n => !n.cluster.hub);
+    Object.assign(world, box(centre.length ? centre : nodes)); world.half += 46;
+    if (HUBS.length) world.half = Math.max(world.half, 900);
   };
   fitBoxes();
 
@@ -208,7 +211,7 @@
   function applyMode(next, keep) {
     mode = next;
     const kept = keep ? focus.node : null;
-    focus.cluster = focus.node = focus.lens = focus.link = null;
+    focus.cluster = focus.node = focus.lens = focus.link = focus.hub = null;
     clusters.length = 0;
     links.length = 0;
     let reach = 900;
@@ -247,9 +250,12 @@
         if (list.length) clusters.push(cl);
       }
     }
+    gatherHubs(placed);
     clusters.forEach(shell);
     fitBoxes();
     placeCores();
+    if (next !== "PLACES") view.entity = null;
+    renderPicker();
     world.half = Math.max(world.half, reach + 120);
     if (kept) {
       focus.node = kept;
