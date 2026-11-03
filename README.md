@@ -17,7 +17,7 @@ It is a single-user project and it is early. Read [Limits](#limits) and [Known i
 
 Everything stored is a capsule, a link or an event. A capsule's type is its foundation.
 
-The model being built on top of this, with entities, subjects, claims, evidence and relationships, is set out in [docs/VOCABULARY.md](docs/VOCABULARY.md).
+The model being built on top of this, with entities, subjects, claims, evidence and relationships, is set out in [docs/VOCABULARY.md](docs/VOCABULARY.md). To start a new project from a written outline, see [docs/OUTLINE.md](docs/OUTLINE.md).
 
 Foundations are defined in `sc.json`. Run `scripts/bootstrap.py` to copy them into `sc.db`; this does not happen automatically. Instances (people, projects, documents, repos, symbols, cubes, conversation turns) live only in `sc.db`.
 
