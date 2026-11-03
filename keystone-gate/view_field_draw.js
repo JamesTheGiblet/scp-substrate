@@ -2,8 +2,9 @@
   // --- camera --------------------------------------------------------------
   const cam = { yaw: .6, pitch: .34, dist: 1300, t: [...world.c], toDist: 1300 };
   let W = 0, H = 0, F = 800;
-  const view = { filter: "all", query: "", time: null, entity: null };
-  const shows = c => (!view.time || !c.created || c.created <= view.time) && (!view.entity || inEntity(c, view.entity));
+  const view = { filter: "all", query: "", time: null, entity: null, left: new Set() };
+  const shows = c => (!view.time || !c.created || c.created <= view.time) && (!view.entity || inEntity(c, view.entity))
+    && !view.left.has(c.id);
 
   function project(p) {
     const x = p[0] - cam.t[0], y = p[1] - cam.t[1], z = p[2] - cam.t[2];

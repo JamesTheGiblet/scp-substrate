@@ -251,6 +251,11 @@
       }
     }
     gatherHubs(placed);
+    // Clustering by something shows only what it groups: the leftovers hide
+    const LEFTOVER = ["no shared lens", "unlinked", "not from a repo", "No entity or subject"];
+    view.left = new Set(next === "TAGS" ? [] : clusters
+      .filter(cl => LEFTOVER.includes(cl.topic) || cl.topic.startsWith("below "))
+      .flatMap(cl => cl.nodes.map(n => n.c.id)));
     clusters.forEach(shell);
     fitBoxes();
     placeCores();

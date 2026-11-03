@@ -37,9 +37,13 @@
     });
   }
 
+  // Hubs hold their claims only when clustering by tags or by entity. Any
+  // other mode is about that mode's clusters, so the hubs step aside.
+  const hubsShown = () => mode === "TAGS" || mode === "PLACES";
   // Claims about a hub's parts leave their word clusters for the hub
   function gatherHubs(placed) {
     hubGroups().forEach(cl => { cl.nodes = []; });
+    if (!hubsShown()) return;
     const moved = nodes.filter(n => !placed.includes(n) && hubOf(n.c));
     if (!moved.length) return;
     const kept = clusters.filter(cl => (cl.nodes = cl.nodes.filter(n => !moved.includes(n))).length);
@@ -51,7 +55,7 @@
   }
 
   // A green strand from you to each hub and from the hub to each part
-  const hidden = h => view.entity && view.entity !== h.id;
+  const hidden = h => !hubsShown() || (view.entity && view.entity !== h.id);
   function drawHubs(you, dim, time) {
     hubs.forEach(h => {
       if (hidden(h)) return;
