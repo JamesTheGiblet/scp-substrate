@@ -6,7 +6,7 @@ const LENSES = ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"];
 const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fiction", CONTEXT: "context", HUMAN: "human" };
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };
 const POSE = { FACT: [-18, -24], COUNTER: [-18, -114], CONTEXT: [-18, -204], FICTION: [-18, 66], OPINION: [-72, -24], HUMAN: [72, -24] };
-const FILTERS = [["all", "All"], ["attested", "Attested"], ["validated", "Validated"], ["needs", "Needs you"], ["drafts", "Drafts to check"], ["overlaps", "Overlaps"]];
+const FILTERS = [["all", "All"], ["attested", "Attested"], ["validated", "Validated"], ["needs", "Needs you"], ["drafts", "Drafts to check"], ["overlaps", "Overlaps"], ["foundational", "Foundational"]];
 
 const el = (tag, cls, text) => {
   const node = document.createElement(tag);
@@ -37,6 +37,7 @@ function matches(c) {
   if (state.filter === "needs" && ["attested", "validated"].includes(c.status)) return false;
   if (state.filter === "drafts" && !Object.values(c.faces).some(f => f && f.pending)) return false;
   if (state.filter === "overlaps" && !(c.overlaps || []).length) return false;
+  if (state.filter === "foundational" && !c.tags.includes("foundational")) return false;
   if (["attested", "validated"].includes(state.filter) && c.status !== state.filter) return false;
   if (state.tag && !c.tags.includes(state.tag)) return false;
   if (state.query) {
@@ -47,7 +48,7 @@ function matches(c) {
 }
 
 function card(c) {
-  const button = el("button", "card");
+  const button = el("button", "card" + (c.tags.includes("foundational") ? " foundational" : ""));
   button.setAttribute("aria-label", `${c.content} ${LABEL[c.status]}`);
   const strip = el("div", "strip");
   for (const lens of [...LENSES, "HUMAN"]) {
@@ -104,6 +105,7 @@ function open(c) {
   right.append(el("h3", "", c.content), el("p", "id", c.id));
   const facts = [LABEL[c.status], Math.round(c.score * 100) + "% complete", "standing " + c.standing.toFixed(2)];
   if (c.source) facts.push(c.source);
+  if (c.tags.includes("foundational")) facts.unshift("Foundational: read each face and write your own note");
   right.append(el("p", "facts", facts.join(" · ")));
 
   const row = (lens, title, text, note) => {

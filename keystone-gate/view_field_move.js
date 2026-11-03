@@ -97,7 +97,7 @@
     let best = null, bestGap = 1e9;
     for (const cl of clusters) {
       const q = project(cl.c);
-      if (!q) continue;
+      if (!q || !cl.nodes.some(n => shows(n.c))) continue;
       const gap = Math.hypot(q.x - x, q.y - y);
       if (gap < cl.half * q.k * 1.25 && gap < bestGap) { best = cl; bestGap = gap; }
     }
@@ -164,6 +164,7 @@
   function resize() {
     W = innerWidth; H = innerHeight;
     canvas.width = W * devicePixelRatio; canvas.height = H * devicePixelRatio;
+    skin.width = W; skin.height = H;
     F = Math.min(W, H) * .95;
   }
   addEventListener("resize", resize);
@@ -191,6 +192,8 @@
       return new Promise(done => shot.toBlob(done, "image/png"));
     },
     screenOf(id) { return project(byId[id].p); },
+    worldOf(id) { return [...byId[id].p]; },
+    centre() { return [...world.c]; },
     clusterOf(id) { return project(byId[id].cluster.c); },
     state() { return { cluster: focus.cluster && focus.cluster.topic, node: focus.node && focus.node.c.id, panel: !panel.hidden }; },
   };

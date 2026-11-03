@@ -2,6 +2,7 @@
   // --- camera --------------------------------------------------------------
   const cam = { yaw: .6, pitch: .34, dist: 1300, t: [...world.c], toDist: 1300 };
   let W = 0, H = 0, F = 800;
+  const AMBER = "255,176,0";
   const view = { filter: "all", query: "", time: null };
   const shows = c => !view.time || !c.created || c.created <= view.time;
 
@@ -66,17 +67,61 @@
     ctx.globalAlpha = 1;
   }
 
-  function wire(c, half, rgb, alpha) {
-    const pts = CORNERS.map(v => project(add(c, v, half)));
+  function wire(c, half, rgb, alpha, angle) {
+    const pts = CORNERS.map(v => project(add(c, turned(v, angle), half)));
     ctx.strokeStyle = `rgba(${rgb},${alpha})`;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
     for (const [a, b] of EDGES) {
-      if (!pts[a] || !pts[b]) continue;
-      ctx.moveTo(pts[a].x, pts[a].y);
-      ctx.lineTo(pts[b].x, pts[b].y);
+      if (pts[a] && pts[b]) { ctx.moveTo(pts[a].x, pts[a].y); ctx.lineTo(pts[b].x, pts[b].y); }
     }
     ctx.stroke();
+  }
+
+  // Each cluster grows its own form: its cubes joined by their shortest links, with
+  // a soft skin around them. The shape comes from where the cubes are, so it changes
+  // as they move, and a cluster with no cubes yet has no shape at all.
+  const skin = document.createElement("canvas");
+  const sk = skin.getContext("2d");
+
+  function reach(points) {
+    const left = points.slice(1), edges = [], tree = [points[0]];
+    while (left.length) {
+      let best = 1e12, from = 0, to = 0;
+      tree.forEach((p, i) => left.forEach((q, j) => {
+        const d = (p.x - q.x) ** 2 + (p.y - q.y) ** 2;
+        if (d < best) { best = d; from = i; to = j; }
+      }));
+      edges.push([tree[from], left[to]]);
+      tree.push(left.splice(to, 1)[0]);
+    }
+    return edges;
+  }
+
+  function trace(points, edges, width) {
+    sk.lineWidth = width;
+    sk.beginPath();
+    for (const [a, b] of edges) { sk.moveTo(a.x, a.y); sk.lineTo(b.x, b.y); }
+    for (const p of points) { sk.moveTo(p.x + .01, p.y); sk.lineTo(p.x, p.y); }
+    sk.stroke();
+  }
+
+  function growForm(cl, rgb, alpha, time) {
+    const points = cl.nodes.filter(n => shows(n.c)).map(n => project(n.p)).filter(Boolean);
+    if (!points.length) return;
+    const k = points.reduce((t, q) => t + q.k, 0) / points.length;
+    const breath = calm ? 1 : 1 + Math.sin(time * .5 + cl.topic.length) * .05;
+    const width = Math.max(30, Math.min(150, 44 * k * breath)), edges = reach(points);
+    sk.lineCap = sk.lineJoin = "round";
+    sk.globalCompositeOperation = "source-over";
+    sk.strokeStyle = `rgba(${rgb},${alpha})`;
+    trace(points, edges, width + 2.4);
+    sk.globalCompositeOperation = "destination-out";
+    sk.strokeStyle = "#000";
+    trace(points, edges, width);
+    sk.globalCompositeOperation = "source-over";
+    sk.strokeStyle = `rgba(${rgb},${alpha * .13})`;
+    trace(points, edges, width);
   }
 
   function glow(q, radius, rgb, alpha) {
@@ -112,7 +157,7 @@
       const strong = cl.nodes.filter(n => shows(n.c))
         .sort((a, b) => b.c.score - a.c.score || b.c.standing - a.c.standing || a.c.id.localeCompare(b.c.id));
       cl.nodes.forEach(n => { n.lead = false; });
-      strong.slice(0, LEADS).forEach(n => { n.lead = true; });
+      strong.slice(0, cl.rigid ? strong.length : LEADS).forEach(n => { n.lead = true; });
     }
   }
   const zoomedIn = () => (focus.cluster ? 1 : Math.max(0, Math.min(1, (1 - cam.dist / (world.half * 2.42)) / .45)));
@@ -120,8 +165,13 @@
   const crowding = () => Math.max(.5, Math.min(1, Math.sqrt(48 / Math.max(nodes.filter(n => shows(n.c)).length, 1))));
 
   function orbitClusters(dt) {
-    if (calm || focus.cluster) return;
+    core.home = [...world.c];
+    self.home = [...world.c];
+    if (calm) return;
+    for (const cl of [core, self]) if (focus.cluster !== cl) cl.angle += cl.turn * dt;
+    if (focus.cluster) return;
     for (const cl of clusters) {
+      if (cl.rigid) continue;
       const x = cl.home[0] - world.c[0], z = cl.home[2] - world.c[2];
       // Inner clusters go round faster, so they pass one another
       const turn = dt * .05 * Math.min(1.6, 300 / Math.max(Math.hypot(x, z), 120));
@@ -160,14 +210,26 @@
       ctx.fillRect(q.x, q.y, 1.4, 1.4);
     }
 
-    // Glass: the big cube, the groups and the clusters
+    // Each cluster's own form
     const inside = focus.node || focus.cluster;
-    wire(world.c, world.half, "150,185,245", inside ? .12 : .5);
-    groups.forEach(g => wire(g.c, g.half, "120,205,235", inside ? .1 : .36));
+    sk.setTransform(1, 0, 0, 1, 0, 0);
+    sk.clearRect(0, 0, skin.width, skin.height);
     clusters.forEach(cl => {
       const on = focus.cluster === cl;
-      wire(cl.c, cl.half, on ? "150,215,255" : "110,150,205", on ? .5 : inside ? .06 : .22);
+      if (!cl.rigid) growForm(cl, on ? "150,215,255" : "110,160,215", on ? .6 : inside ? .1 : .34, time);
     });
+    ctx.drawImage(skin, 0, 0, W, H);
+    if (core.nodes.length) wire(core.home, core.reach, AMBER, inside && focus.cluster !== core ? .25 : .85, core.angle);
+    if (self.nodes.length) {
+      ctx.strokeStyle = `rgba(94,235,130,${inside && focus.cluster !== self ? .2 : .8})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      for (let i = 0; i <= 64; i++) {
+        const q = project(add(self.home, turned([self.reach, 0, 0], i / 64 * Math.PI * 2)));
+        if (q) ctx.lineTo(q.x, q.y);
+      }
+      ctx.stroke();
+    }
 
     // Threads, with a pulse travelling along each
     const lit = focus.node;
@@ -196,11 +258,12 @@
     if (you) {
       const dim = inside ? .3 : 1;
       for (const n of nodes) {
-        if (!shows(n.c) || !n.c.validation || n.c.validation.stale) continue;
+        const valid = n.c.validation && !n.c.validation.stale, amber = n.c.tags.includes("foundational");
+        if (!shows(n.c) || (!valid && !n.cluster.rigid)) continue;
         const q = project(n.p);
         if (!q) continue;
-        const on = lit === n, alpha = (on ? .85 : .26) * dim * fog(q.d);
-        ctx.strokeStyle = `rgba(94,235,130,${alpha})`;
+        const on = lit === n, alpha = (on ? .85 : valid ? .26 : .1) * dim * fog(q.d);
+        ctx.strokeStyle = `rgba(${amber ? AMBER : "94,235,130"},${alpha})`;
         ctx.lineWidth = on ? 1.8 : 1;
         ctx.beginPath(); ctx.moveTo(you.x, you.y); ctx.lineTo(q.x, q.y); ctx.stroke();
         if (!calm) {
@@ -219,8 +282,9 @@
     // Cubes and their lenses, furthest first
     const items = [];
     for (const n of nodes) {
-      n.ry += dt * n.spin * (calm ? 0 : 1);
-      n.rx += dt * n.spin * .4 * (calm ? 0 : 1);
+      const still = calm || n.cluster.rigid;
+      n.ry += dt * n.spin * (still ? 0 : 1);
+      n.rx += dt * n.spin * .4 * (still ? 0 : 1);
       n.open = mix(n.open, focus.node === n ? 1 : 0, 1 - Math.exp(-dt * 5));
       n.hover = mix(n.hover, hover === n ? 1 : 0, 1 - Math.exp(-dt * 10));
       if (n.fresh > 0) {
@@ -259,6 +323,7 @@
     ctx.lineJoin = "round";
     for (const it of items) {
       if (it.type === "cube" && it.n.fresh > 0) glow(it.q, it.size * it.q.k * 4.2, "120,235,255", Math.min(.6, it.n.fresh * .2));
+      if (it.type === "cube" && it.n.cluster.rigid) glow(it.q, it.size * it.q.k * 2.8, it.n.cluster.circle ? "94,235,130" : AMBER, .32 * it.alpha);
       if (it.type === "cube" && it.n.c.status === "attested") glow(it.q, it.size * it.q.k * 3.2, "242,190,70", .34 * it.alpha);
       if (it.type === "lens") {
         const from = project(it.sat.node.p);
@@ -277,7 +342,7 @@
     if (you && !inside) label(USER, { x: you.x, y: you.y + 26 * you.k + 20 }, 15, .95, 700);
     if (!focus.node) clusters.forEach(cl => {
       const q = project(add(cl.c, [0, -cl.half - 8, 0]));
-      if (q && (!focus.cluster || focus.cluster === cl)) label("#" + cl.topic, q, focus.cluster ? 16 : 13, focus.cluster ? .95 : .85 * fog(q.d));
+      if (q && cl.nodes.some(n => shows(n.c)) && (!focus.cluster || focus.cluster === cl)) label("#" + cl.topic, q, focus.cluster ? 16 : 13, focus.cluster ? .95 : .85 * fog(q.d));
     });
     if (!inside) groups.forEach(g => {
       const q = project(add(g.c, [0, -g.half - 12, 0]));

@@ -44,5 +44,5 @@
     swatch.style.background = `var(--${VAR[lens]})`;
     key.append(swatch, document.createTextNode(lens === "HUMAN" ? "You" : lens[0] + lens.slice(1).toLowerCase()));
   });
-  key.append(document.createTextNode("   ·   Green centre: you   ·   Green strand: a cube you validated   ·   Gold glow: attested   ·   Hollow: missing   ·   Dim: unread   ·   Thread colour: the lens two cubes share   ·   Click to go in, Esc to back out, scroll to zoom"));
+  key.append(document.createTextNode("   ·   Green centre: you   ·   Green strand: a cube you validated   ·   Amber: foundational safety and security, turning around you   ·   Green ring: what defines you   ·   Gold glow: attested   ·   Hollow: missing   ·   Dim: unread   ·   Thread colour: the lens two cubes share   ·   Click to go in, Esc to back out, scroll to zoom"));
 })();

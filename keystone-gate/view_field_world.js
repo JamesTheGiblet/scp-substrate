@@ -1,4 +1,4 @@
-// The cube field: one big cube, holding clusters, holding cubes, holding lenses.
+// The cube field: you at the centre, clusters that shape themselves, cubes, and their lenses.
 // Canvas 2D with its own small 3D maths, so the page needs no network.
   const canvas = document.getElementById("field");
   const ctx = canvas.getContext("2d");
@@ -60,7 +60,33 @@
   });
 
   // Each cube's own place on a shell, used while its cluster is open
+  // Foundational cubes hold a fixed lattice around you, with the centre left clear
+  const lattice = cl => {
+    const side = Math.ceil(Math.cbrt(cl.nodes.length + 1)), gap = 84, mid = (side - 1) / 2, cells = [];
+    for (let z = 0; z < side; z++) for (let y = 0; y < side; y++) for (let x = 0; x < side; x++) {
+      if (x !== mid || y !== mid || z !== mid) cells.push([(x - mid) * gap, (y - mid) * gap, (z - mid) * gap]);
+    }
+    cl.spread = side * gap;
+    cl.reach = mid * gap + 46;
+    cl.nodes.forEach((n, i) => { n.slot = cells[i]; });
+  };
+  const core = { group: "", topic: "Foundations", rigid: true, turn: .05, angle: 0, home: [0, 0, 0], nodes: [], c: [0, 0, 0], half: 40, reach: 46 };
+
+  // What defines you circles just outside, the other way round
+  const ring = cl => {
+    cl.reach = core.reach * 1.5 + 60;
+    cl.spread = cl.reach * 1.4;
+    cl.nodes.forEach((n, i) => {
+      const a = i / cl.nodes.length * Math.PI * 2;
+      n.slot = [Math.cos(a) * cl.reach, Math.sin(i * 2.4) * 22, Math.sin(a) * cl.reach];
+    });
+  };
+  const self = { group: "", topic: `What defines ${USER}`, rigid: true, circle: true, turn: -.09, angle: 0, home: [0, 0, 0], nodes: [], c: [0, 0, 0], half: 40, reach: 100 };
+  const turned = (p, a) => [p[0] * Math.cos(a) - p[2] * Math.sin(a), p[1], p[0] * Math.sin(a) + p[2] * Math.cos(a)];
+
   const shell = cl => {
+    if (cl.circle) return ring(cl);
+    if (cl.rigid) return lattice(cl);
     const count = cl.nodes.length;
     cl.spread = 60 + count * 24;
     cl.nodes.forEach((n, i) => {
@@ -93,8 +119,8 @@
 
   function physics(dt, time) {
     for (const n of nodes) {
-      const open = focus.cluster === n.cluster;
-      const pull = open ? add(n.cluster.home, n.slot) : n.cluster.home;
+      const open = focus.cluster === n.cluster || n.cluster.rigid;
+      const pull = open ? add(n.cluster.home, n.cluster.rigid ? turned(n.slot, n.cluster.angle) : n.slot) : n.cluster.home;
       const grip = open ? 7 : n.fresh > 0 ? 2.4 : .3;
       for (let k = 0; k < 3; k++) {
         n.v[k] += (pull[k] - n.p[k]) * grip * dt;
@@ -111,6 +137,7 @@
     }
     for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
       const a = nodes[i], b = nodes[j];
+      if (a.cluster.rigid && b.cluster.rigid) continue;
       const d = [a.p[0] - b.p[0], a.p[1] - b.p[1], a.p[2] - b.p[2]];
       const dist = Math.max(Math.hypot(...d), 1);
       if (dist > 240) continue;
@@ -171,6 +198,20 @@
       data.links.forEach(l => links.push({ a: byId[l.a], b: byId[l.b], kind: "lens", lens: l.lens,
                                            term: l.term, seed: rand(byId[l.a].seed, byId[l.b].seed % 97) }));
       groups = [];
+    }
+    const found = nodes.filter(n => n.c.tags.includes("foundational"));
+    const defining = nodes.filter(n => n.c.tags.includes("defining") && !found.includes(n));
+    const placed = [...found, ...defining];
+    if (placed.length) {
+      clusters.forEach(cl => { cl.nodes = cl.nodes.filter(n => !placed.includes(n)); });
+      const kept = clusters.filter(cl => cl.nodes.length);
+      clusters.length = 0;
+      clusters.push(...kept);
+      for (const [cl, list] of [[core, found], [self, defining]]) {
+        cl.nodes = list;
+        list.forEach(n => { n.cluster = cl; });
+        if (list.length) clusters.push(cl);
+      }
     }
     clusters.forEach(shell);
     fitBoxes();

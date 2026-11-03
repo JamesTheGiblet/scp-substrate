@@ -84,12 +84,23 @@ def create_cube(s, content, source=None, tags=None, cube_id=None):
     return {"cube_id": cube_id}
 
 
+FOUNDATIONAL = "foundational"
+
+
+def is_foundational(s, cube_id):
+    """Safety and security cubes. Their rules are enforced here, not left to habit."""
+    cube = s.get(cube_id)
+    return bool(cube) and FOUNDATIONAL in (cube["state"].get("tags") or [])
+
+
 def fill_face(s, cube_id, lens, content, confidence=None, filled_by="human"):
     """Fill one lens face of a cube. Returns {face_id, lens} or {error}."""
     if lens not in LENSES:
         return {"error": f"invalid lens {lens!r}; must be one of {LENSES}"}
     if not s.get(cube_id):
         return {"error": f"cube {cube_id} not found"}
+    if "bulk accept" in filled_by and is_foundational(s, cube_id):
+        return {"error": f"{cube_id} is foundational, so each face must be read and accepted on its own"}
 
     face_id = f"{cube_id}/face/{lens}"
     state = {
@@ -137,6 +148,13 @@ def validate(s, cube_id, validator, note=None):
     minimum = _shape(s)["minimum_lenses"]
     if len(completeness(s, cube_id)["filled_lenses"]) < minimum:
         return {"error": f"{cube_id} needs at least {minimum} lenses before validation"}
+    if is_foundational(s, cube_id):
+        if len(completeness(s, cube_id)["filled_lenses"]) < len(LENSES):
+            return {"error": f"{cube_id} is foundational, so all five faces must be accepted first"}
+        said = " ".join((note or "").lower().split())
+        draft = s.get(f"{cube_id}/validation-draft")
+        if not said or (draft and said == " ".join(draft["state"]["content"].lower().split())):
+            return {"error": f"{cube_id} is foundational, so the note must be in your own words"}
 
     face_id = f"{cube_id}/face/human-validation"
     state = {

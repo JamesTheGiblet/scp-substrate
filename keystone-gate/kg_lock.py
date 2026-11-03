@@ -11,11 +11,11 @@ from pathlib import Path
 
 LOCK_FILE = Path.home() / ".config" / "scp" / "cube-edit.json"
 MIN_LENGTH = 8
-_COST = {"n": 2 ** 15, "r": 8, "p": 1}
+_COST = {"n": 2 ** 17, "r": 8, "p": 1}
 
 
 def _hash(password, salt, cost):
-    return hashlib.scrypt(password.encode("utf-8"), salt=salt, maxmem=2 ** 26, **cost)
+    return hashlib.scrypt(password.encode("utf-8"), salt=salt, maxmem=2 ** 28, **cost)
 
 
 def make_lock(password):

@@ -63,6 +63,19 @@ The gate checks references, not reasoning. A passing answer can still be wrong. 
 
 To add a rule, add an entry to the `sc` capsule and a checker to `_RULES` in `kg_gate.py`.
 
+## Foundational cubes
+
+Safety and security cubes are tagged `foundational`. They appear in amber in a rigid lattice around you at the centre, with amber strands that brighten once validated. Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
+
+- A face cannot be bulk accepted.
+- All five faces must be accepted before validating, where other cubes need two.
+- The validation note must be your own, and a suggested note is refused word for word.
+- Models cannot draft faces or suggest notes for them.
+
+The lattice turns around you as one solid piece. Cubes tagged `defining`, such as the ones about you, form a green ring outside it, turning the other way. Both stop turning while you have them open.
+
+These rules check the process, not the truth, and they work through the code only. Someone with direct access to `sc.db` can bypass them.
+
 ## Models
 
 `kg ask --claude "<question>"` is opt-in, because it sends the question and the walker's answer to outside services. The flag keeps its name, but the model that answers can be any of three.
@@ -125,7 +138,7 @@ python keystone-gate/kg cube serve --by james      # browse, and edit in the gri
 python keystone-gate/kg cube view                  # read-only file, build/cubes.html
 ```
 
-Cubes appear as 3D nodes grouped in clusters inside a large cube. Click a cluster to enter it, and a cube to open it. Drag to orbit, scroll to zoom, and press Esc to go back. A grid view lists the same cubes.
+Cubes appear as 3D nodes grouped in clusters. Each cluster grows its own form: its cubes are joined by their shortest links with a soft skin around them, so the shape comes from where the cubes are and changes as they move. Click a cluster to enter it, and a cube to open it. Drag to orbit, scroll to zoom, and press Esc to go back. A grid view lists the same cubes.
 
 You are the green glow at the centre. A green strand runs to each cube you have validated, so a cube with no strand has not been vouched for, and the strands grow as you move along the time bar.
 
@@ -224,6 +237,11 @@ Run these as `python keystone-gate/kg ...`.
 | `seed_cubes_m5stick.py` | M5StickC Plus2 cubes, cross-referenced across sources, as drafts |
 | `seed_cubes_servos.py` | SG90, MG90S and MG996R cubes, cross-referenced, as drafts |
 | `seed_cubes_batteries.py` | 7.4V 3000mAh Li-ion pack cubes, cross-referenced, as drafts |
+| `seed_cubes_sensors.py` | Distance sensors, buzzers, LEDs and switches, cross-referenced, as drafts |
+| `seed_cubes_wiring.py`, `seed_cubes_boards.py` | Wiring and dev board cubes, cross-referenced, as drafts |
+| `seed_cubes_safety.py` | Hardware safety cubes linked to the rest, as drafts. Reference notes, not official guidance |
+| `seed_cubes_robots.py` | Robot shapes and configurations, as drafts |
+| `seed_cubes_security.py` | Foundational security cubes, and marks safety cubes foundational |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
 | `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
 | `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |

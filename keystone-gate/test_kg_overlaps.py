@@ -106,7 +106,7 @@ def test_the_cubes_about_james_are_drafts_and_stay_private():
         seed(s, CUBES)
         assert seed(s, CUBES) == []
         cube = next(c for c in collect(s) if c["id"] == cid)
-        assert "private" in cube["tags"] and cube["note_draft"], cube
+        assert "private" in cube["tags"] and "defining" in cube["tags"] and cube["note_draft"], cube
         assert cube["group"] == "James Gilbert" and user_name(s) == "James"
     finally:
         s.close()
@@ -156,6 +156,43 @@ def test_the_battery_cubes_are_drafts_with_their_sources():
         cube = next(c for c in collect(s) if c["id"] == f"cube/{CUBES[0][0]}")
         assert cube["group"] == "7.4V Li-ion packs" and cube["score"] == 0 and cube["note_draft"], cube
         assert len(list_proposals(s, cube_id=cube["id"], status="pending")) >= 5
+    finally:
+        s.close()
+
+
+def test_the_sensor_cubes_are_drafts_with_their_sources():
+    from kg_agent import list_proposals
+    from kg_view import collect
+    from seed_cubes_sensors import CUBES, SOURCE, seed
+    s = Substrate()
+    try:
+        seed(s)
+        assert seed(s) == []
+        assert s.get(SOURCE["id"])["state"]["urls"]
+        cube = next(c for c in collect(s) if c["id"] == f"cube/{CUBES[0][0]}")
+        assert cube["group"] == "Sensors and outputs" and cube["score"] == 0 and cube["note_draft"], cube
+        assert len(list_proposals(s, cube_id=cube["id"], status="pending")) >= 5
+    finally:
+        s.close()
+
+
+def test_the_wiring_and_board_cubes_are_drafts_with_their_sources():
+    from kg_agent import list_proposals
+    from kg_view import collect
+    import seed_cubes_boards as boards
+    import seed_cubes_wiring as wiring
+    import seed_cubes_robots as robots
+    import seed_cubes_safety as safety
+    s = Substrate()
+    try:
+        for module, group in ((wiring, "Wiring and connectors"), (boards, "Dev boards"), (safety, "Hardware safety"),
+                               (robots, "Robot configurations")):
+            module.seed(s)
+            assert module.seed(s) == []
+            assert s.get(module.SOURCE["id"])["state"]["urls"]
+            cube = next(c for c in collect(s) if c["id"] == f"cube/{module.CUBES[0][0]}")
+            assert cube["group"] == group and cube["score"] == 0 and cube["note_draft"], cube
+            assert len(list_proposals(s, cube_id=cube["id"], status="pending")) >= 5
     finally:
         s.close()
 

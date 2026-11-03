@@ -80,7 +80,7 @@ def seed(s, cubes=CUBES):
         if s.get(cube_id):
             continue
         create_cube(s, claim, source="Written by Claude from conversation with James",
-                    tags=["james", "private"], cube_id=cube_id)
+                    tags=["james", "private", "defining"], cube_id=cube_id)
         if s.get(PERSON):
             s.link(cube_id, "derived-from", PERSON)
         for lens, text in faces.items():

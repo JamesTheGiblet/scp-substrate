@@ -89,9 +89,10 @@
     const valid = v && !v.stale, attested = c.attestation && !c.attestation.retracted;
     if (v || !left) {
       const label = !v ? "Validate" : v.stale ? "Validate again" : "Edit";
-      const suggested = !v && c.note_draft;
-      tools.append(button(label, () => writer(tools, c, "Why does this hold?", v ? v.note : c.note_draft,
-        suggested ? "Suggested by a model. Change anything that is not true for you." : "",
+      const rigid = c.tags.includes("foundational"), suggested = !v && c.note_draft && !rigid;
+      tools.append(button(label, () => writer(tools, c, "Why does this hold?", v ? v.note : rigid ? "" : c.note_draft,
+        suggested ? "Suggested by a model. Change anything that is not true for you."
+          : rigid ? "Foundational: write this in your own words." : "",
         note => act({ action: "validate", cube_id: c.id, note }, c.id, "Validated"))));
     } else {
       tools.append(el("span", "warn", `Accept or write the ${left} unfinished ${left === 1 ? "face" : "faces"} to validate.`));

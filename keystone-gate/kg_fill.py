@@ -12,6 +12,7 @@ import threading
 from substrate import Substrate
 
 from kg_agent import LENSES, list_cubes, list_proposals, propose_face, show_cube
+from kg_cube import is_foundational
 from kg_llm import MODELS, LLMUnavailable, local_only
 
 
@@ -100,6 +101,8 @@ def draft_cube(s, cube_id, models=None, lock=None):
     Returns {drafted: [lenses], by: model, tried: [why others failed]}.
     The model call happens outside the lock, which guards writes only.
     """
+    if is_foundational(s, cube_id):
+        return {"drafted": [], "by": None, "tried": ["foundational: write this one yourself"]}
     missing = blanks(s, cube_id)
     if not missing:
         return {"drafted": [], "by": None, "tried": []}
@@ -142,6 +145,8 @@ def _read_note(text):
 def suggest_note(s, cube_id, models=None):
     """Store a suggested validation note. It counts for nothing until a person saves it."""
     draft_id = f"{cube_id}/validation-draft"
+    if is_foundational(s, cube_id):
+        return {"note": None, "by": None, "tried": ["foundational: write this one yourself"]}
     if show_cube(s, cube_id)["validation"] or s.get(draft_id):
         return {"note": None, "by": None, "tried": []}
     known = _known(s, cube_id)
