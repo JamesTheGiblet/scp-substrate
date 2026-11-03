@@ -288,6 +288,8 @@
     for (const it of items) {
       if (it.type === "cube" && it.n.fresh > 0) glow(it.q, it.size * it.q.k * 4.2, "120,235,255", Math.min(.6, it.n.fresh * .2));
       if (it.type === "cube" && it.n.cluster.rigid) glow(it.q, it.size * it.q.k * 2.8, it.n.cluster.circle ? "94,235,130" : it.n.cluster.rgb, .32 * it.alpha);
+      // A claim about you glows green wherever it clusters
+      else if (it.type === "cube" && it.n.c.about_you) glow(it.q, it.size * it.q.k * 2.8, "94,235,130", .32 * it.alpha);
       if (it.type === "cube" && it.n.c.status === "attested") glow(it.q, it.size * it.q.k * 3.2, "242,190,70", .34 * it.alpha);
       if (it.type === "lens") {
         const from = project(it.sat.node.p);

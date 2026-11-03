@@ -160,5 +160,22 @@ def test_a_claim_can_be_about_a_person_and_cite_a_document():
         s.close()
 
 
+def test_the_page_knows_a_claim_is_about_you():
+    from kg_agent import create_cube
+    from kg_entities import link_claim
+    from kg_view import collect
+    s = _store()
+    try:
+        s.write({"id": "person/james-gilbert", "foundation": "foundation:knowledge",
+                 "state": {"kind": "person", "owner": "James Gilbert"}})
+        mine = create_cube(s, "James learns by doing", tags=["private"])["cube_id"]
+        other = create_cube(s, "The ESP32 has two cores")["cube_id"]
+        link_claim(s, mine, entities=["james"])
+        about = {c["id"]: c["about_you"] for c in collect(s)}
+        assert about[mine] and not about[other]
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

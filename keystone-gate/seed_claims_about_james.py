@@ -45,7 +45,7 @@ CLAIMS = [
      "dyslexia", STATED),
     ("james-has-adhd", "James has ADHD and no built-in scheduler, so external structure tells him what's next.",
      "adhd", STATED),
-    ("james-has-misophonia", "James has misophonia. The details aren't captured yet.", "misophonia", STATED),
+    ("james-has-misophonia", "James has misophonia, triggered by eating sounds: chewing, chomping and gulping.", "misophonia", STATED),
     ("james-finishes-what-he-is-pointed-at", "Pointed at a task, James finishes it. Left alone, he wanders.",
      "working-style", STATED),
     ("adversity-fuels-james", 'Adversity fuels James: being told "it can\'t be done" is what makes him do it.',

@@ -99,9 +99,17 @@ def _link_notes(s):
     return drafts, reasons, words
 
 
+def _you(s):
+    """The person entity the store belongs to, or None."""
+    row = s.get(user_name(s).lower())
+    return row["id"] if row and row["foundation"] == "foundation:person" else None
+
+
 def collect(s):
-    """Everything the page shows, one dict per cube."""
+    """Everything the page shows, one dict per cube. A cube with an about-entity
+    link to you glows green on the page."""
     cubes = []
+    you = _you(s)
     link_drafts, link_reasons, link_words = _link_notes(s)
     for row in list_cubes(s):
         cube = show_cube(s, row["id"])
@@ -114,6 +122,7 @@ def collect(s):
             "created": s.get(cube["cube_id"])["state"].get("created_at"),
             "source": cube["source"],
             "tags": cube["tags"] or [],
+            "about_you": bool(you) and you in _links(s, cube["cube_id"], "about-entity"),
             "group": _group(s, cube["cube_id"]),
             "repo": _repo(s, cube["cube_id"]),
             "score": cube["completeness"]["score"],
