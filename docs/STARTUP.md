@@ -54,6 +54,7 @@ A tab opens at `http://127.0.0.1:8765/`. Leave the terminal running while you wo
    - **Accept** if it is right.
    - **Edit** to change it first.
    - **Reject** to drop it. The face goes blank.
+   - A **SUGGESTED LINK** row lower down is a link a model proposed to another cube, with its reason. Press **Link them** or **Not related**. Click the row to see the other cube first.
 5. When all five faces are done, use **Validate** under HUMAN VALIDATION to say why the claim holds.
 6. If you stand behind it, press **I stand behind this**. That attests the cube.
 

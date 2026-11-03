@@ -238,6 +238,7 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_lens_links.py` | Lens links and clusters |
 | `kg_view.py` | Builds the page |
 | `kg_serve.py` | Local server |
+| `kg_public.py` | The public snapshot, without private cubes or drafts |
 | `kg_lock.py` | Editing password |
 | `kg_repos.py` | Claim cubes from a repo's README |
 | `kg_overlaps.py` | Overlaps valued by Leighton weight |
@@ -258,6 +259,7 @@ Run these as `python keystone-gate/kg ...`.
 | `seed_cubes_safety.py` | Hardware safety cubes linked to the rest, as drafts. Reference notes, not official guidance |
 | `seed_cubes_robots.py` | Robot shapes and configurations, as drafts |
 | `seed_cubes_security.py` | Foundational security cubes, and marks safety cubes foundational |
+| `seed_links_foundations.py` | Suggested links from foundational cubes to related cubes, as proposals |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
 | `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
 | `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |

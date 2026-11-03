@@ -41,8 +41,10 @@ scp-substrate/
 │
 ├── seeds/                 scripts that create starting capsules
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
-├── docs/                  SPEC, STRUCTURE, REASONING, SCP documents (*.scp.json)
-├── build/                 generated page, tracked in git
+├── docs/                  SPEC, STRUCTURE, STARTUP, FAQ, REASONING, SCP documents (*.scp.json)
+├── images/                screenshots used in the README
+├── build/                 cubes.html, the generated page, tracked in git
+│   └── public/            the public snapshot, its own repo (JamesTheGiblet/cubes)
 ├── keystone-gate/         see keystone-gate/README.md for its files
 └── legacy/                pre-SQLite JSON archive, ignored by git
 ```
