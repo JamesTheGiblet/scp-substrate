@@ -65,14 +65,24 @@ To add a rule, add an entry to the `sc` capsule and a checker to `_RULES` in `kg
 
 ## Foundational cubes
 
-Safety and security cubes are tagged `foundational`. They appear in amber, gathered loosely around you at the centre, with amber strands that brighten once validated. Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
+Foundational cubes are tagged `foundational`, and come in three kinds, each with its own colour:
+
+| Tag | Kind | Colour | Examples |
+|---|---|---|---|
+| `safety` | Safety | Orange | Li-ion charging and fire, emergency stops, mains work |
+| `security` | Security | Pink | Keys and secrets, the page password, private text |
+| `preference` | Preferences | Blue | British English, Python, plain words in docs, files under 400 lines |
+
+A cube goes to the first kind its tags name, in that order. Each kind gathers in its own group around you at the centre, with strands in its colour that brighten once validated. `seed_cubes_preferences.py` marks your attested principle cubes as preferences, adds two drafts, and suggests links from each kind to what it governs.
+
+Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
 
 - A face cannot be bulk accepted.
 - All five faces must be accepted before validating, where other cubes need two.
 - The validation note must be your own, and a suggested note is refused word for word.
 - Models cannot draft faces or suggest notes for them.
 
-The amber cluster grows its own form like the others, and its cubes drift and spin while the whole cluster turns around you. Cubes tagged `defining`, such as the ones about you, form a green ring outside it, turning the other way. Both stop turning while you have them open.
+Each group grows its own form like the other clusters, and its cubes drift and spin while the three groups turn around you together. Cubes tagged `defining`, such as the ones about you, form a green ring outside them, turning the other way. A group stops turning while you have it open.
 
 These rules check the process, not the truth, and they work through the code only. Someone with direct access to `sc.db` can bypass them.
 
@@ -260,6 +270,7 @@ Run these as `python keystone-gate/kg ...`.
 | `seed_cubes_robots.py` | Robot shapes and configurations, as drafts |
 | `seed_cubes_security.py` | Foundational security cubes, and marks safety cubes foundational |
 | `seed_links_foundations.py` | Suggested links from foundational cubes to related cubes, as proposals |
+| `seed_cubes_preferences.py` | Marks your principle cubes as foundational preferences, adds two drafts, and suggests links |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
 | `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
 | `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |

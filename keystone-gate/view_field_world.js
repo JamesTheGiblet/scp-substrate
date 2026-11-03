@@ -60,7 +60,7 @@
   });
 
   // Each cube's own place on a shell, used while its cluster is open
-  // Foundational cubes gather loosely around you, with the centre left clear
+  // Foundational cubes gather loosely in their own group
   const cloud = cl => {
     const count = cl.nodes.length;
     cl.reach = 80 + Math.sqrt(count) * 18;
@@ -71,11 +71,19 @@
       n.slot = [Math.cos(a) * r * out, y * out * .8, Math.sin(a) * r * out];
     });
   };
-  const core = { group: "", topic: "Foundations", rigid: true, loose: true, turn: .05, angle: 0, home: [0, 0, 0], nodes: [], c: [0, 0, 0], half: 40, reach: 80 };
+  // The three kinds of foundation (FOUNDATIONS, in view_grid.js) circle you together
+  const FOUND_R = 170, orbit = { angle: 0, turn: .03 };
+  const cores = FOUNDATIONS.map(([kind, topic, rgb], k) => ({
+    group: "", topic, kind, rgb, rigid: true, loose: true, turn: .05, angle: 0, slotAngle: k * Math.PI * 2 / 3,
+    home: [0, 0, 0], nodes: [], c: [0, 0, 0], half: 40, reach: 80 }));
+  const kindOf = c => foundationOf(c)[0];
+  const placeCores = () => cores.forEach(cl => {
+    cl.home = add(world.c, turned([FOUND_R, 0, 0], orbit.angle + cl.slotAngle));
+  });
 
-  // What defines you circles just outside, the other way round
+  // What defines you circles outside the foundations, the other way round
   const ring = cl => {
-    cl.reach = core.reach * 1.5 + 60;
+    cl.reach = FOUND_R + Math.max(...cores.map(f => f.nodes.length ? f.reach : 0)) + 50;
     cl.spread = cl.reach * 1.4;
     cl.nodes.forEach((n, i) => {
       const a = i / cl.nodes.length * Math.PI * 2;
@@ -226,7 +234,8 @@
       const kept = clusters.filter(cl => cl.nodes.length);
       clusters.length = 0;
       clusters.push(...kept);
-      for (const [cl, list] of [[core, found], [self, defining]]) {
+      const lists = [...cores.map(cl => [cl, found.filter(n => kindOf(n.c) === cl.kind)]), [self, defining]];
+      for (const [cl, list] of lists) {
         cl.nodes = list;
         list.forEach(n => { n.cluster = cl; });
         if (list.length) clusters.push(cl);
@@ -234,6 +243,7 @@
     }
     clusters.forEach(shell);
     fitBoxes();
+    placeCores();
     world.half = Math.max(world.half, reach + 120);
     if (kept) {
       focus.node = kept;

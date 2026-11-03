@@ -26,9 +26,9 @@ A gold glow means I've attested the cube: I've read it, written why it holds, an
 
 Treat it as a careful notebook, not a manual. Many hardware cubes were drafted from datasheets and guides, and not every one was tested on real parts. Some say so on the cube itself. For anything that can hurt you or your kit, such as charging lithium batteries or mains wiring, follow the maker's instructions and qualified advice first.
 
-## 6. Why are some cubes amber?
+## 6. Why are some cubes orange, pink or blue?
 
-Amber cubes are about safety and security. They follow stricter rules than the rest: I can't accept drafts for them in bulk, all five sides must be filled in, and the note has to be in my own words. They gather around the centre because everything else rests on them.
+They're my foundations. Orange is safety, such as charging lithium batteries. Pink is security, such as keys and passwords. Blue is preferences, such as writing in British English. They follow stricter rules than the rest: I can't accept drafts for them in bulk, all five sides must be filled in, and the note has to be in my own words. They gather around the centre because everything else rests on them.
 
 ## 7. What's the green glow in the middle?
 

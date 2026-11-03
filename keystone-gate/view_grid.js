@@ -6,6 +6,12 @@ const LENSES = ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"];
 const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fiction", CONTEXT: "context", HUMAN: "human" };
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };
 const POSE = { FACT: [-18, -24], COUNTER: [-18, -114], CONTEXT: [-18, -204], FICTION: [-18, 66], OPINION: [-72, -24], HUMAN: [72, -24] };
+// Foundational cubes come in three kinds, each with its own colour. A cube goes
+// to the first kind its tags name.
+const FOUNDATIONS = [["safety", "Safety", "255,140,26"], ["security", "Security", "236,72,153"],
+                     ["preference", "Preferences", "56,189,248"]];
+const foundationOf = c => !c.tags.includes("foundational") ? null
+  : FOUNDATIONS.find(([kind]) => c.tags.includes(kind)) || FOUNDATIONS[0];
 const FILTERS = [["all", "All"], ["attested", "Attested"], ["validated", "Validated"], ["needs", "Needs you"], ["drafts", "Drafts to check"], ["overlaps", "Overlaps"], ["foundational", "Foundational"]];
 
 const el = (tag, cls, text) => {
@@ -48,7 +54,9 @@ function matches(c) {
 }
 
 function card(c) {
-  const button = el("button", "card" + (c.tags.includes("foundational") ? " foundational" : ""));
+  const found = foundationOf(c);
+  const button = el("button", "card" + (found ? " foundational" : ""));
+  if (found) button.style.setProperty("--found", `rgb(${found[2]})`);
   button.setAttribute("aria-label", `${c.content} ${LABEL[c.status]}`);
   const strip = el("div", "strip");
   for (const lens of [...LENSES, "HUMAN"]) {
@@ -105,7 +113,7 @@ function open(c) {
   right.append(el("h3", "", c.content), el("p", "id", c.id));
   const facts = [LABEL[c.status], Math.round(c.score * 100) + "% complete", "standing " + c.standing.toFixed(2)];
   if (c.source) facts.push(c.source);
-  if (c.tags.includes("foundational")) facts.unshift("Foundational: read each face and write your own note");
+  if (foundationOf(c)) facts.unshift(`Foundational ${foundationOf(c)[1].toLowerCase()}: read each face and write your own note`);
   right.append(el("p", "facts", facts.join(" · ")));
 
   const row = (lens, title, text, note) => {
@@ -134,7 +142,8 @@ function open(c) {
     const other = CUBES.find(x => x.id === d.other);
     const b = el("button", "lens");
     b.dataset.link = d.proposal_id;
-    b.style.setProperty("--c", c.tags.includes("foundational") || (other && other.tags.includes("foundational")) ? "#ffb000" : "var(--context)");
+    const tint = foundationOf(c) || (other && foundationOf(other));
+    b.style.setProperty("--c", tint ? `rgb(${tint[2]})` : "var(--context)");
     const head = el("b", "", "SUGGESTED LINK");
     head.append(el("em", "", " · not accepted" + (d.why ? ", " + d.why : "")));
     b.append(head, document.createTextNode(other ? other.content : d.other));

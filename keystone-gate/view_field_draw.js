@@ -2,7 +2,6 @@
   // --- camera --------------------------------------------------------------
   const cam = { yaw: .6, pitch: .34, dist: 1300, t: [...world.c], toDist: 1300 };
   let W = 0, H = 0, F = 800;
-  const AMBER = "255,176,0";
   const view = { filter: "all", query: "", time: null };
   const shows = c => !view.time || !c.created || c.created <= view.time;
 
@@ -154,10 +153,11 @@
   const crowding = () => Math.max(.5, Math.min(1, Math.sqrt(48 / Math.max(nodes.filter(n => shows(n.c)).length, 1))));
 
   function orbitClusters(dt) {
-    core.home = [...world.c];
+    placeCores();
     self.home = [...world.c];
     if (calm) return;
-    for (const cl of [core, self]) if (focus.cluster !== cl) cl.angle += cl.turn * dt;
+    if (!cores.includes(focus.cluster)) orbit.angle += orbit.turn * dt;
+    for (const cl of [...cores, self]) if (focus.cluster !== cl) cl.angle += cl.turn * dt;
     if (focus.cluster || focus.link) return;
     for (const cl of clusters) {
       if (cl.rigid) continue;
@@ -210,7 +210,7 @@
     sk.clearRect(0, 0, skin.width, skin.height);
     clusters.forEach(cl => {
       const on = focus.cluster === cl || kin(cl);
-      if (cl.loose) growForm(cl, AMBER, on ? .7 : inside ? .12 : .45, time);
+      if (cl.loose) growForm(cl, cl.rgb, on ? .7 : inside ? .12 : .45, time);
       else if (!cl.rigid) growForm(cl, on ? "150,215,255" : "110,160,215", on ? .6 : inside ? .1 : .34, time);
     });
     ctx.drawImage(skin, 0, 0, W, H);
@@ -234,12 +234,13 @@
       const held = l === pulled, near = l === hoverLink;
       const touches = (lit && (l.a === lit || l.b === lit)) || held || near;
       const proposed = l.kind === "proposed";
-      const amber = l.a.cluster.loose || l.b.cluster.loose;
+      // A thread from a foundational cube takes that foundation's colour
+      const amber = l.a.cluster.loose ? l.a.cluster.rgb : l.b.cluster.loose ? l.b.cluster.rgb : null;
       const base = l.kind === "bridge" ? .08 : l.kind === "neighbour" ? .55 : l.kind === "lens" ? .42 : proposed ? (amber ? .4 : .22) : .2;
       const alpha = (held ? 1 : near ? .9 : pulled ? (kin(l.a.cluster) && kin(l.b.cluster) ? .1 : .02)
         : lit ? (touches ? .7 : .04) : base * mix(.35, 1, zoom)) * (held ? 1 : fog((a.d + b.d) / 2));
-      const rgb = l.kind === "lens" ? RGB[l.lens].join(",") : l.kind === "neighbour" ? (amber ? AMBER : "242,200,100")
-        : l.kind === "contra" ? "240,104,96" : proposed ? (amber ? AMBER : "170,185,215") : "120,185,255";
+      const rgb = l.kind === "lens" ? RGB[l.lens].join(",") : l.kind === "neighbour" ? (amber || "242,200,100")
+        : l.kind === "contra" ? "240,104,96" : proposed ? (amber || "170,185,215") : "120,185,255";
       if (held) {
         // The pulled strand glows along its length
         for (let i = 0; i <= 8; i++) glow({ x: mix(a.x, b.x, i / 8), y: mix(a.y, b.y, i / 8) }, 14, rgb, .16);
@@ -263,12 +264,12 @@
     if (you) {
       const dim = pulled ? .12 : inside ? .3 : 1;
       for (const n of nodes) {
-        const valid = n.c.validation && !n.c.validation.stale, amber = n.c.tags.includes("foundational");
+        const valid = n.c.validation && !n.c.validation.stale, amber = n.cluster.loose ? n.cluster.rgb : null;
         if (!shows(n.c) || (!valid && !n.cluster.rigid)) continue;
         const q = project(n.p);
         if (!q) continue;
         const on = lit === n, alpha = (on ? .85 : valid ? .26 : .1) * dim * fog(q.d);
-        ctx.strokeStyle = `rgba(${amber ? AMBER : "94,235,130"},${alpha})`;
+        ctx.strokeStyle = `rgba(${amber || "94,235,130"},${alpha})`;
         ctx.lineWidth = on ? 1.8 : 1;
         ctx.beginPath(); ctx.moveTo(you.x, you.y); ctx.lineTo(q.x, q.y); ctx.stroke();
         if (!calm) {
@@ -330,7 +331,7 @@
     ctx.lineJoin = "round";
     for (const it of items) {
       if (it.type === "cube" && it.n.fresh > 0) glow(it.q, it.size * it.q.k * 4.2, "120,235,255", Math.min(.6, it.n.fresh * .2));
-      if (it.type === "cube" && it.n.cluster.rigid) glow(it.q, it.size * it.q.k * 2.8, it.n.cluster.circle ? "94,235,130" : AMBER, .32 * it.alpha);
+      if (it.type === "cube" && it.n.cluster.rigid) glow(it.q, it.size * it.q.k * 2.8, it.n.cluster.circle ? "94,235,130" : it.n.cluster.rgb, .32 * it.alpha);
       if (it.type === "cube" && it.n.c.status === "attested") glow(it.q, it.size * it.q.k * 3.2, "242,190,70", .34 * it.alpha);
       if (it.type === "lens") {
         const from = project(it.sat.node.p);

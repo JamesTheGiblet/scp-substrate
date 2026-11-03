@@ -77,7 +77,7 @@ Click a thread between two cubes to pull it. The two cubes come together, the re
 
 ![Pulling a thread that two cubes share through one word](images/pull-word-match.png)
 
-A dashed thread is a suggested link you have not accepted. Amber threads and cubes are the foundational safety and security cubes, which gather around you.
+A dashed thread is a suggested link you have not accepted. The foundational cubes gather around you in three colours: orange for safety, pink for security and blue for preferences. This picture was taken before preferences were added, when all foundations were amber.
 
 ![Pulling a suggested link between a foundational cube and a cube in another cluster](images/pull-suggested-link.png)
 

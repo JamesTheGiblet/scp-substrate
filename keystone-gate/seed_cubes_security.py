@@ -36,7 +36,7 @@ CUBES = [
         "COUNTER": "These rules are only enforced through kg_cube.py and kg_fill.py. Anyone with direct access to sc.db can still change it, and the rules check process, not truth.",
         "OPINION": "Slowing down is the point here, as these are the cubes that can hurt someone if wrong.",
         "FICTION": "Suppose a tired evening of bulk accepting reaches these cubes. The code says no, and that is the moment the rule earns its place.",
-        "CONTEXT": "They sit in the rigid amber lattice around you at the centre of the field, fixed in place while everything else moves.",
+        "CONTEXT": "They sit in three groups around you at the centre of the field: orange for safety, pink for security and blue for preferences.",
     }),
     ("never-commit-secrets", "API keys and passwords never go in the repo, or in any cube.", {
         "FACT": ".gitignore lists .env, and the page password is stored only as a scrypt hash in the home folder, outside the repo. GitHub says a leaked secret should be treated as immediately compromised.",

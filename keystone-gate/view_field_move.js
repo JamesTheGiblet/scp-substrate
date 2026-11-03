@@ -73,7 +73,7 @@
     panel.append(shut, el("h3", "", "Why these are linked"), el("p", "facts", reasonOf(l)));
     for (const n of [l.a, l.b]) {
       const card = el("button", "lens");
-      card.style.setProperty("--c", l.lens ? `rgb(${RGB[l.lens].join(",")})` : n.cluster.loose ? `rgb(${AMBER})` : "rgb(150,215,255)");
+      card.style.setProperty("--c", l.lens ? `rgb(${RGB[l.lens].join(",")})` : n.cluster.loose ? `rgb(${n.cluster.rgb})` : "rgb(150,215,255)");
       const head = el("b", "", "#" + n.cluster.topic);
       head.append(el("em", "", " · " + LABEL[n.c.status]));
       card.append(head, document.createTextNode(n.c.content));
