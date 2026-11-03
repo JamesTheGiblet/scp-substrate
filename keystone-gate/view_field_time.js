@@ -32,6 +32,8 @@
       n.c = now ? c : asOf(c, view.time);
       n.r = 11 + n.c.score * 6;
     });
+    if (focus.link && !(shows(focus.link.a.c) && shows(focus.link.b.c))) goHome();
+    else if (focus.link) linkPanel(focus.link);
     if (focus.node && !shows(focus.node.c)) back();
     else if (focus.node) fillPanel(focus.node);
     const live = nodes.filter(n => shows(n.c));

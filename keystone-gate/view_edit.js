@@ -115,6 +115,12 @@
       tools.append(button("Confirm", () => say("confirmed")), button("Not related", () => say("dismissed")));
       row.after(tools);
     });
+    box.querySelectorAll("[data-link]").forEach(row => {
+      const tools = el("div", "tools"), proposal_id = row.dataset.link;
+      tools.append(button("Link them", () => act({ action: "accept", proposal_id }, c.id, "Linked")),
+        button("Not related", () => act({ action: "reject", proposal_id }, c.id, "Link rejected")));
+      row.after(tools);
+    });
   }
 
   lockButton.hidden = false;

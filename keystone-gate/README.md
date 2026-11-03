@@ -140,6 +140,8 @@ python keystone-gate/kg cube view                  # read-only file, build/cubes
 
 Cubes appear as 3D nodes grouped in clusters. Each cluster grows its own form: its cubes are joined by their shortest links with a soft skin around them, so the shape comes from where the cubes are and changes as they move. Click a cluster to enter it, and a cube to open it. Drag to orbit, scroll to zoom, and press Esc to go back. A grid view lists the same cubes.
 
+Click a thread between two cubes to pull it. The two cubes come together, their clusters stay lit and the rest fades, and a panel says why they are linked: the word they share, with it marked in both sentences, or the reason given for a link you accepted or a model suggested. Press Esc or click empty space to let go. The threads that only shape a cluster cannot be pulled.
+
 You are the green glow at the centre. A green strand runs to each cube you have validated, so a cube with no strand has not been vouched for, and the strands grow as you move along the time bar.
 
 To keep a growing set readable, cubes shrink as their number rises, down to half size, and return to full size as you zoom in. From far away each cluster shows its three strongest cubes and dims the rest, and searching or filtering shows them all. Clusters circle slowly and cubes drift around their cluster, which stops for an open cluster and when the system is set to reduce motion.

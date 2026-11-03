@@ -33,7 +33,7 @@
   }
 
   const clusters = [], nodes = [];
-  const focus = { cluster: null, node: null, lens: null };
+  const focus = { cluster: null, node: null, lens: null, link: null };
   groupNames.forEach((group, g) => {
     const peers = CUBES.filter(c => c.group === group);
     const angle = (g / groupNames.length) * Math.PI * 2;
@@ -98,17 +98,27 @@
   clusters.forEach(shell);
 
   const links = [], byId = Object.fromEntries(nodes.map(n => [n.c.id, n]));
-  const link = (a, b, kind) => {
-    if (a !== b && !links.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a)))
-      links.push({ a, b, kind, seed: rand(a.seed, b.seed % 97) });
+  const link = (a, b, kind, into = links) => {
+    if (a !== b && !into.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a)))
+      into.push({ a, b, kind, seed: rand(a.seed, b.seed % 97) });
   };
+  // Links that come from the cubes themselves, the same in every view:
+  // your neighbours, contradictions, and suggested links waiting for you
+  const OWN = ["neighbour", "contra", "proposed"];
+  const relate = into => {
+    for (let i = into.length - 1; i >= 0; i--) if (OWN.includes(into[i].kind)) into.splice(i, 1);
+    nodes.forEach(n => {
+      n.c.neighbours.forEach(id => byId[id] && link(n, byId[id], "neighbour", into));
+      if (n.c.contradicts && byId[n.c.contradicts]) link(n, byId[n.c.contradicts], "contra", into);
+    });
+    nodes.forEach(n => (n.c.link_drafts || []).forEach(d => byId[d.other] && link(n, byId[d.other], "proposed", into)));
+  };
+  relate(links);
   clusters.forEach(cl => cl.nodes.forEach((n, i) => {
     if (cl.nodes.length > 1) link(n, cl.nodes[(i + 1) % cl.nodes.length], "topic");
     if (cl.nodes.length > 4) link(n, cl.nodes[(i + 2) % cl.nodes.length], "topic");
   }));
   nodes.forEach(n => {
-    n.c.neighbours.forEach(id => byId[id] && link(n, byId[id], "neighbour"));
-    if (n.c.contradicts && byId[n.c.contradicts]) link(n, byId[n.c.contradicts], "contra");
     const other = nodes.find(m => m.cluster !== n.cluster && m.c.group === n.c.group
       && m.c.tags.some(t => n.c.tags.includes(t) && t !== "pca9685" && t !== "hardware"));
     if (other) link(n, other, "bridge");
@@ -123,7 +133,7 @@
       const open = focus.cluster === n.cluster || n.cluster.rigid;
       const pull = open ? add(n.cluster.home, n.cluster.rigid ? turned(n.slot, n.cluster.angle) : n.slot) : n.cluster.home;
       // Loose clusters keep only a light hold on their places, so their cubes wander
-      const grip = n.cluster.loose ? 1.1 : open ? 7 : n.fresh > 0 ? 2.4 : .3;
+      const grip = n.cluster.loose ? .4 : open ? 7 : n.fresh > 0 ? 2.4 : .3;
       for (let k = 0; k < 3; k++) {
         n.v[k] += (pull[k] - n.p[k]) * grip * dt;
         if (!calm) n.v[k] += Math.sin(time * .35 + n.seed + k * 2) * 9 * dt;
@@ -147,10 +157,16 @@
       for (let k = 0; k < 3; k++) { a.v[k] += d[k] / dist * force; b.v[k] -= d[k] / dist * force; }
     }
     for (const l of links) {
-      if (l.kind === "bridge" || l.a.cluster !== l.b.cluster) continue;
+      if (l.kind === "bridge" || l.kind === "proposed" || l.a.cluster !== l.b.cluster) continue;
       const d = [l.b.p[0] - l.a.p[0], l.b.p[1] - l.a.p[1], l.b.p[2] - l.a.p[2]];
       const pull = (Math.hypot(...d) - 110) * .28 * dt / Math.max(Math.hypot(...d), 1);
       for (let k = 0; k < 3; k++) { l.a.v[k] += d[k] * pull; l.b.v[k] -= d[k] * pull; }
+    }
+    // A pulled strand draws its two cubes towards each other, out of their clusters
+    if (focus.link) {
+      const { a, b } = focus.link, d = [b.p[0] - a.p[0], b.p[1] - a.p[1], b.p[2] - a.p[2]];
+      const gap = Math.max(Math.hypot(...d), 1), pull = Math.max(0, gap - 280) * 1.2 * dt / gap;
+      for (let k = 0; k < 3; k++) { a.v[k] += d[k] * pull; b.v[k] -= d[k] * pull; }
     }
     for (const n of nodes) for (let k = 0; k < 3; k++) {
       n.v[k] *= Math.pow(.2, dt);
@@ -178,7 +194,7 @@
   function applyMode(next, keep) {
     mode = next;
     const kept = keep ? focus.node : null;
-    focus.cluster = focus.node = focus.lens = null;
+    focus.cluster = focus.node = focus.lens = focus.link = null;
     clusters.length = 0;
     links.length = 0;
     let reach = 900;
@@ -199,6 +215,7 @@
       });
       data.links.forEach(l => links.push({ a: byId[l.a], b: byId[l.b], kind: "lens", lens: l.lens,
                                            term: l.term, seed: rand(byId[l.a].seed, byId[l.b].seed % 97) }));
+      relate(links);
       groups = [];
     }
     const found = nodes.filter(n => n.c.tags.includes("foundational"));
@@ -255,6 +272,7 @@
       tagGroups.forEach(g => { if (g.name === c.group) g.list.push(n); });
     }
     tagClusters.forEach(shell);
+    relate(tagLinks);
     loadMoments();
     applyMode(MODES[mode] || mode === "TAGS" ? mode : "ALL", true);
     if (byId[flyId]) { byId[flyId].fresh = 7; byId[flyId].trail = byId[flyId].trail || []; }

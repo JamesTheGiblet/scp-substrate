@@ -16,7 +16,7 @@
     const k = F / d;
     return { x: mid() + x1 * k, y: H / 2 + y2 * k, d, k };
   }
-  const mid = () => W / 2 - (focus.node && W > 760 ? Math.min(W * .16, 205) : 0);
+  const mid = () => W / 2 - ((focus.node || focus.link) && W > 760 ? Math.min(W * .16, 205) : 0);
   const fog = d => Math.max(.1, Math.min(1, 1.5 - d / (cam.dist * 2.1)));
 
   function matches(c) {
@@ -158,7 +158,7 @@
     self.home = [...world.c];
     if (calm) return;
     for (const cl of [core, self]) if (focus.cluster !== cl) cl.angle += cl.turn * dt;
-    if (focus.cluster) return;
+    if (focus.cluster || focus.link) return;
     for (const cl of clusters) {
       if (cl.rigid) continue;
       const x = cl.home[0] - world.c[0], z = cl.home[2] - world.c[2];
@@ -180,11 +180,16 @@
     const zoom = zoomedIn(), shrink = mix(crowding(), 1, zoom), sifted = view.query || view.filter !== "all";
 
     // Glide to whatever is in focus
-    const aim = focus.node ? focus.node.p : focus.cluster ? focus.cluster.c : world.c;
+    const pulled = focus.link;
+    const aim = focus.node ? focus.node.p : focus.cluster ? focus.cluster.c
+      : pulled ? pulled.a.p.map((v, k) => (v + pulled.b.p[k]) / 2) : world.c;
     const ease = 1 - Math.exp(-dt * 3.4);
     cam.t = cam.t.map((v, k) => mix(v, aim[k], ease));
     cam.dist = mix(cam.dist, cam.toDist, ease);
-    if (!calm && !drag && !focus.node) cam.yaw += dt * .05;
+    if (!calm && !drag && !focus.node && !pulled) cam.yaw += dt * .05;
+    // While a strand is pulled, its two cubes and their clusters stay, and the rest fades
+    const end = n => pulled && (n === pulled.a || n === pulled.b);
+    const kin = cl => pulled && (cl === pulled.a.cluster || cl === pulled.b.cluster);
 
     ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     const sky = ctx.createRadialGradient(W / 2, H / 2, 60, W / 2, H / 2, Math.max(W, H) * .75);
@@ -200,11 +205,11 @@
     }
 
     // Each cluster's own form
-    const inside = focus.node || focus.cluster;
+    const inside = focus.node || focus.cluster || pulled;
     sk.setTransform(1, 0, 0, 1, 0, 0);
     sk.clearRect(0, 0, skin.width, skin.height);
     clusters.forEach(cl => {
-      const on = focus.cluster === cl;
+      const on = focus.cluster === cl || kin(cl);
       if (cl.loose) growForm(cl, AMBER, on ? .7 : inside ? .12 : .45, time);
       else if (!cl.rigid) growForm(cl, on ? "150,215,255" : "110,160,215", on ? .6 : inside ? .1 : .34, time);
     });
@@ -226,26 +231,37 @@
       if (!shows(l.a.c) || !shows(l.b.c)) continue;
       const a = project(l.a.p), b = project(l.b.p);
       if (!a || !b) continue;
-      const touches = lit && (l.a === lit || l.b === lit);
-      const base = l.kind === "bridge" ? .08 : l.kind === "neighbour" ? .55 : l.kind === "lens" ? .42 : .2;
-      const alpha = (lit ? (touches ? .7 : .04) : base * mix(.35, 1, zoom)) * fog((a.d + b.d) / 2);
-      const rgb = l.kind === "lens" ? RGB[l.lens].join(",") : l.kind === "neighbour" ? "242,200,100"
-        : l.kind === "contra" ? "240,104,96" : "120,185,255";
+      const held = l === pulled, near = l === hoverLink;
+      const touches = (lit && (l.a === lit || l.b === lit)) || held || near;
+      const proposed = l.kind === "proposed";
+      const amber = l.a.cluster.loose || l.b.cluster.loose;
+      const base = l.kind === "bridge" ? .08 : l.kind === "neighbour" ? .55 : l.kind === "lens" ? .42 : proposed ? (amber ? .4 : .22) : .2;
+      const alpha = (held ? 1 : near ? .9 : pulled ? (kin(l.a.cluster) && kin(l.b.cluster) ? .1 : .02)
+        : lit ? (touches ? .7 : .04) : base * mix(.35, 1, zoom)) * (held ? 1 : fog((a.d + b.d) / 2));
+      const rgb = l.kind === "lens" ? RGB[l.lens].join(",") : l.kind === "neighbour" ? (amber ? AMBER : "242,200,100")
+        : l.kind === "contra" ? "240,104,96" : proposed ? (amber ? AMBER : "170,185,215") : "120,185,255";
+      if (held) {
+        // The pulled strand glows along its length
+        for (let i = 0; i <= 8; i++) glow({ x: mix(a.x, b.x, i / 8), y: mix(a.y, b.y, i / 8) }, 14, rgb, .16);
+      }
       ctx.strokeStyle = `rgba(${rgb},${alpha})`;
-      ctx.lineWidth = touches ? 1.4 : .8;
+      ctx.lineWidth = held ? 3 : near ? 2.2 : touches ? 1.4 : .8;
+      // A suggested link is dashed until you accept it
+      if (proposed) ctx.setLineDash([4, 5]);
       ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
-      if (!calm && l.kind !== "bridge") {
+      ctx.setLineDash([]);
+      if (!calm && l.kind !== "bridge" && !proposed) {
         const t = (time * .16 + l.seed) % 1;
         const dot = { x: mix(a.x, b.x, t), y: mix(a.y, b.y, t) };
         ctx.fillStyle = `rgba(${rgb},${Math.min(1, alpha * 2.2)})`;
-        ctx.beginPath(); ctx.arc(dot.x, dot.y, touches ? 2.2 : 1.3, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(dot.x, dot.y, held ? 3.2 : touches ? 2.2 : 1.3, 0, 7); ctx.fill();
       }
     }
 
     // You, at the centre, with a strand to every cube you have vouched for
     const you = project(world.c);
     if (you) {
-      const dim = inside ? .3 : 1;
+      const dim = pulled ? .12 : inside ? .3 : 1;
       for (const n of nodes) {
         const valid = n.c.validation && !n.c.validation.stale, amber = n.c.tags.includes("foundational");
         if (!shows(n.c) || (!valid && !n.cluster.rigid)) continue;
@@ -291,8 +307,10 @@
       }
       if (!q) continue;
       const near = !focus.cluster || focus.cluster === n.cluster;
-      const fade = (!shows(n.c) ? 0 : matches(n.c) ? 1 : .07) * (focus.node && focus.node !== n ? .13 : near ? 1 : .1)
-        * (n.lead || sifted || hover === n ? 1 : mix(.16, 1, zoom));
+      const fade = (!shows(n.c) ? 0 : matches(n.c) ? 1 : .07)
+        * (pulled ? (end(n) ? 1 : kin(n.cluster) ? .4 : .04)
+          : (focus.node && focus.node !== n ? .13 : near ? 1 : .1) * (n.lead || sifted || hover === n ? 1 : mix(.16, 1, zoom)));
+      if (end(n) && q) glow(q, n.r * q.k * 4, "255,236,180", .28);
       items.push({ type: "cube", n, d: q.d, q, p: n.p, size: n.r * shrink * (1 + n.hover * .18) * (1 - n.open * .25),
                    ry: n.ry, rx: n.rx, faces: faceMap(n), alpha: fade * fog(q.d) });
       if (n.open > .02) n.sats.forEach((sat, i) => {
@@ -331,8 +349,13 @@
     if (you && !inside) label(USER, { x: you.x, y: you.y + 26 * you.k + 20 }, 15, .95, 700);
     if (!focus.node) clusters.forEach(cl => {
       const q = project(add(cl.c, [0, -cl.half - 8, 0]));
-      if (q && cl.nodes.some(n => shows(n.c)) && (!focus.cluster || focus.cluster === cl)) label("#" + cl.topic, q, focus.cluster ? 16 : 13, focus.cluster ? .95 : .85 * fog(q.d));
+      if (pulled && !kin(cl)) return;
+      if (q && cl.nodes.some(n => shows(n.c)) && (!focus.cluster || focus.cluster === cl)) label("#" + cl.topic, q, focus.cluster || pulled ? 16 : 13, focus.cluster || pulled ? .95 : .85 * fog(q.d));
     });
+    if (pulled) for (const n of [pulled.a, pulled.b]) {
+      const q = project(add(n.p, [0, n.r * 2.4, 0]));
+      if (q) label(shorten(n.c.content, 40), q, 13, .95, 600);
+    }
     if (!inside) groups.forEach(g => {
       const q = project(add(g.c, [0, -g.half - 12, 0]));
       if (q) label(g.name, q, 16, .95, 700);

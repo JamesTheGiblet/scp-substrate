@@ -4,6 +4,8 @@ A personal knowledge store in one SQLite file, with tools for querying it, track
 
 It is a single-user project and it is early. Read [Limits](#limits) and [Known issues](#known-issues) before relying on it.
 
+![The cube page: clusters of cubes around the green centre, which is you](images/overview.png)
+
 ## Parts
 
 - **Substrate:** stores capsules (JSON records), links between them, and a log of events.
@@ -64,6 +66,43 @@ python keystone-gate/kg cube view                  # read-only snapshot, build/c
 ```
 
 Press **Unlock to edit** in the grid view to change anything. The password protects the page only, not `sc.db` or the `kg` commands.
+
+### What the page looks like
+
+Click a cube to open it. Its five lenses and your validation float around it, and the panel shows each one in full.
+
+![An attested cube opened, with its five lenses and your validation around it](images/cube-open.png)
+
+Click a thread between two cubes to pull it. The two cubes come together, the rest fades, and the panel says why they are linked. For a word match, the shared word is marked in both sentences.
+
+![Pulling a thread that two cubes share through one word](images/pull-word-match.png)
+
+A dashed thread is a suggested link you have not accepted. Amber threads and cubes are the foundational safety and security cubes, which gather around you.
+
+![Pulling a suggested link between a foundational cube and a cube in another cluster](images/pull-suggested-link.png)
+
+**Cluster by** regroups the cubes, here by the repo each one came from.
+
+![The cubes grouped by repo](images/repos.png)
+
+The bar at the bottom steps back through time. This is the store as it was on 2 November, with 88 cubes.
+
+![The time bar moved back to 2 November](images/time-bar.png)
+
+The grid lists every cube. The bar under each one shows its six sides, and a striped side was accepted without being read. Editing happens here, after you unlock it.
+
+![The grid view](images/grid.png)
+
+![A cube opened in the grid](images/grid-cube.png)
+
+The page works on a phone through Tailscale. See [docs/STARTUP.md](docs/STARTUP.md).
+
+<p>
+  <img src="images/phone.png" alt="The cube page on a phone" width="260">
+  <img src="images/phone-pull.png" alt="Pulling a thread on a phone" width="260">
+</p>
+
+These pictures come from the full local store. The public snapshot leaves out private cubes and drafts, so it shows less.
 
 To review them at the terminal:
 

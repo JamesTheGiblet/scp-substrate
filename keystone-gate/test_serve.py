@@ -192,6 +192,24 @@ def test_a_stalled_phone_does_not_block_the_pc():
             stalled.close()
 
 
+def test_a_suggested_link_can_be_accepted_from_the_page():
+    from kg_agent import propose_neighbour
+    with _Server() as srv:
+        made = [srv.post({"action": "new", "content": f"Link serve {i}"})[1]["result"]["cube_id"] for i in (1, 2)]
+        s = Substrate()
+        try:
+            pid = propose_neighbour(s, made[0], made[1], "model-draft:test", rationale="test")["proposal_id"]
+        finally:
+            s.close()
+        assert srv.post({"action": "accept", "proposal_id": pid}, key="")[0] == 401
+        status, reply = srv.post({"action": "accept", "proposal_id": pid})
+        assert status == 200, reply
+        cube = next(c for c in reply["cubes"] if c["id"] == made[0])
+        assert made[1] in cube["neighbours"] and cube["link_drafts"] == []
+        # The reason stays, so the page can say why they are linked
+        assert cube["link_reasons"] == {made[1]: "test"}
+
+
 def test_a_named_host_is_let_in_and_others_are_not():
     body = {"action": "fill", "cube_id": "cube/nope", "lens": "FACT", "content": "x"}
     name = "pc.tailnet.ts.net"

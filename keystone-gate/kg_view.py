@@ -80,9 +80,25 @@ def _repo(s, cube_id):
     return None
 
 
+def _link_notes(s):
+    """Suggested neighbour links waiting for you, and the reasons behind ones you
+    accepted, listed on both cubes."""
+    drafts, reasons = {}, {}
+    for p in list_proposals(s, status="any"):
+        if p.get("proposal_type") != "neighbour" or p.get("status") not in ("pending", "accepted"):
+            continue
+        for this, other in ((p["cube_id"], p["other_cube_id"]), (p["other_cube_id"], p["cube_id"])):
+            if p["status"] == "pending":
+                drafts.setdefault(this, []).append({"other": other, "proposal_id": p["id"], "why": p.get("rationale") or ""})
+            elif p.get("rationale"):
+                reasons.setdefault(this, {})[other] = p["rationale"]
+    return drafts, reasons
+
+
 def collect(s):
     """Everything the page shows, one dict per cube."""
     cubes = []
+    link_drafts, link_reasons = _link_notes(s)
     for row in list_cubes(s):
         cube = show_cube(s, row["id"])
         validation = cube["validation"]
@@ -114,6 +130,8 @@ def collect(s):
             },
             "note_draft": (s.get(f"{cube['cube_id']}/validation-draft") or {"state": {}})["state"].get("content"),
             "neighbours": _links(s, cube["cube_id"], "neighbour"),
+            "link_drafts": link_drafts.get(cube["cube_id"], []),
+            "link_reasons": link_reasons.get(cube["cube_id"], {}),
             "contradicts": (cube["contradicts"] or {}).get("other"),
         })
     return attach_overlaps(cubes, load_decisions(s))

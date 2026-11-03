@@ -5,32 +5,91 @@
 
   function setCrumbs() {
     const parts = [["Everything", goHome]];
+    if (focus.link) parts.push([`Why #${focus.link.a.cluster.topic} meets #${focus.link.b.cluster.topic}`, null]);
     if (focus.cluster) parts.push(["#" + focus.cluster.topic, () => goCluster(focus.cluster)]);
     if (focus.node) parts.push([shorten(focus.node.c.content, 30), null]);
     crumbs.replaceChildren();
     parts.forEach(([text, go], i) => {
       if (i) crumbs.append(el("span", "sep", "›"));
       const b = el("button", "", text);
+      b.title = text;
       if (go) b.addEventListener("click", go); else b.disabled = true;
       crumbs.append(b);
     });
   }
   function goHome() {
-    focus.cluster = focus.node = focus.lens = null;
+    focus.cluster = focus.node = focus.lens = focus.link = null;
     cam.toDist = world.half * 2.42;
     panel.hidden = true; setCrumbs();
   }
   function goCluster(cl) {
-    focus.cluster = cl; focus.node = focus.lens = null;
+    focus.cluster = cl; focus.node = focus.lens = focus.link = null;
     cam.toDist = cl.spread * 3 + 150;
     panel.hidden = true; setCrumbs();
   }
   function goNode(n) {
-    focus.cluster = n.cluster; focus.node = n; focus.lens = null;
+    focus.cluster = n.cluster; focus.node = n; focus.lens = focus.link = null;
     cam.toDist = n.r * 11;
     fillPanel(n); setCrumbs();
   }
+  function goLink(l) {
+    focus.cluster = focus.node = focus.lens = null;
+    focus.link = l;
+    tip.hidden = true;
+    const gap = Math.hypot(...l.a.p.map((v, k) => v - l.b.p[k]));
+    cam.toDist = Math.max(420, Math.min(1400, gap * .9 + 380));
+    linkPanel(l); setCrumbs();
+  }
   const back = () => focus.node ? goCluster(focus.node.cluster) : goHome();
+
+  // Why two cubes are linked, in plain words, with the shared word marked
+  function marked(text, word) {
+    const p = el("span", "said");
+    const at = word ? text.toLowerCase().indexOf(word.toLowerCase()) : -1;
+    if (at < 0) { p.textContent = text; return p; }
+    p.append(text.slice(0, at), el("mark", "", text.slice(at, at + word.length)), text.slice(at + word.length));
+    return p;
+  }
+  function reasonOf(l) {
+    const { a, b } = l;
+    if (l.kind === "lens") return `Both cubes use the word "${l.term}" on their ${l.lens.toLowerCase()} side. This is a match on words, so it can be a coincidence.`;
+    if (l.kind === "neighbour") {
+      const why = (a.c.link_reasons || {})[b.c.id] || (b.c.link_reasons || {})[a.c.id];
+      return "You linked these." + (why ? ` The reason given: ${why}.` : "");
+    }
+    if (l.kind === "proposed") {
+      const d = [...(a.c.link_drafts || []), ...(b.c.link_drafts || [])].find(x => x.other === b.c.id || x.other === a.c.id);
+      return "A model suggested this link, and you have not accepted it yet." + (d && d.why ? ` Its reason: ${d.why}.` : "");
+    }
+    if (l.kind === "contra") return "You marked these as contradicting each other.";
+    if (l.kind === "bridge") return "They come from the same source and share a tag.";
+    return `They sit in the same cluster, #${a.cluster.topic}.`;
+  }
+  function linkPanel(l) {
+    panel.replaceChildren();
+    const shut = el("button", "shut", "×");
+    shut.setAttribute("aria-label", "Let go");
+    shut.addEventListener("click", goHome);
+    panel.append(shut, el("h3", "", "Why these are linked"), el("p", "facts", reasonOf(l)));
+    for (const n of [l.a, l.b]) {
+      const card = el("button", "lens");
+      card.style.setProperty("--c", l.lens ? `rgb(${RGB[l.lens].join(",")})` : n.cluster.loose ? `rgb(${AMBER})` : "rgb(150,215,255)");
+      const head = el("b", "", "#" + n.cluster.topic);
+      head.append(el("em", "", " · " + LABEL[n.c.status]));
+      card.append(head, document.createTextNode(n.c.content));
+      const face = l.lens && n.c.faces[l.lens];
+      if (face && face.content) card.append(marked(face.content, l.term));
+      card.addEventListener("click", () => goNode(n));
+      panel.append(card);
+    }
+    if (l.kind === "proposed" && window.cubeEdit) {
+      const decide = el("button", "hop", "Open in the grid to accept or reject");
+      decide.addEventListener("click", () => { document.getElementById("togrid").click(); open(l.a.c); });
+      panel.append(decide);
+    }
+    panel.append(el("p", "facts", "Click a cube to open it. Esc or a click on empty space lets go."));
+    panel.hidden = false;
+  }
 
   function fillPanel(n) {
     const c = n.c;
@@ -68,7 +127,8 @@
         const m = l.a === n ? l.b : l.a;
         const why = l.lens ? `${l.lens}, "${l.term}": ` : "";
         const b = el("button", "hop", why + shorten(m.c.content, 52));
-        b.addEventListener("click", () => goNode(m));
+        b.title = "See why these are linked";
+        b.addEventListener("click", () => goLink(l));
         panel.append(b);
       });
     }
@@ -93,6 +153,23 @@
     }
     return best ? { node: best } : null;
   }
+  // Strands you can pull: the ones between cubes, not the ones that shape a cluster
+  const PULLABLE = ["lens", "neighbour", "proposed", "contra"];
+  function strandAt(x, y, reach) {
+    let best = null, bestGap = reach;
+    for (const l of links) {
+      if (!PULLABLE.includes(l.kind) || !shows(l.a.c) || !shows(l.b.c)) continue;
+      if (focus.link && l !== focus.link) continue;
+      const a = project(l.a.p), b = project(l.b.p);
+      if (!a || !b) continue;
+      const dx = b.x - a.x, dy = b.y - a.y, len = dx * dx + dy * dy;
+      if (len < 400) continue;
+      const t = Math.max(.08, Math.min(.92, ((x - a.x) * dx + (y - a.y) * dy) / len));
+      const gap = Math.hypot(a.x + dx * t - x, a.y + dy * t - y);
+      if (gap < bestGap) { best = l; bestGap = gap; }
+    }
+    return best;
+  }
   function clusterAt(x, y) {
     let best = null, bestGap = 1e9;
     for (const cl of clusters) {
@@ -104,7 +181,7 @@
     return best;
   }
 
-  let drag = null, hover = null;
+  let drag = null, hover = null, hoverLink = null;
   const points = new Map();
   const tip = document.getElementById("tip");
   canvas.addEventListener("pointerdown", e => {
@@ -131,10 +208,12 @@
     }
     const found = pick(e.clientX, e.clientY);
     hover = found && found.node || null;
-    canvas.style.cursor = found || clusterAt(e.clientX, e.clientY) ? "pointer" : "grab";
-    tip.hidden = !hover;
-    if (hover) {
-      tip.textContent = `${hover.c.content} (${LABEL[hover.c.status]})`;
+    hoverLink = hover || focus.node ? null : strandAt(e.clientX, e.clientY, 7);
+    canvas.style.cursor = found || hoverLink || clusterAt(e.clientX, e.clientY) ? "pointer" : "grab";
+    tip.hidden = !hover && !hoverLink;
+    if (hover || hoverLink) {
+      tip.textContent = hover ? `${hover.c.content} (${LABEL[hover.c.status]})`
+        : hoverLink === focus.link ? "Click to let go" : "Pull to see why these are linked";
       tip.style.left = Math.min(e.clientX + 14, W - 280) + "px";
       tip.style.top = e.clientY + 14 + "px";
     }
@@ -146,6 +225,13 @@
     if (moved > 6) return;
     const found = pick(e.clientX, e.clientY);
     if (found && found.sat) { focus.lens = found.sat.lens; return; }
+    if (found && focus.link) return goNode(found.node);
+    if (!found && !focus.node) {
+      // A finger is wider than a pointer, so touch gets more room
+      const strand = strandAt(e.clientX, e.clientY, e.pointerType === "touch" ? 16 : 7);
+      if (strand) return strand === focus.link ? goHome() : goLink(strand);
+      if (focus.link) return goHome();
+    }
     if (found && focus.cluster && found.node.cluster === focus.cluster) return goNode(found.node);
     const cl = found ? found.node.cluster : clusterAt(e.clientX, e.clientY);
     if (cl && cl !== focus.cluster && !focus.node) return goCluster(cl);
@@ -195,7 +281,11 @@
     worldOf(id) { return [...byId[id].p]; },
     centre() { return [...world.c]; },
     clusterOf(id) { return project(byId[id].cluster.c); },
-    state() { return { cluster: focus.cluster && focus.cluster.topic, node: focus.node && focus.node.c.id, panel: !panel.hidden }; },
+    state() { return { cluster: focus.cluster && focus.cluster.topic, node: focus.node && focus.node.c.id, panel: !panel.hidden,
+                       link: focus.link && [focus.link.a.c.id, focus.link.b.c.id, focus.link.kind] }; },
+    // For checks: pull the first strand of a kind
+    pull(kind) { const l = links.find(x => x.kind === kind); if (l) goLink(l); return Boolean(l); },
+    strandScreen(kind) { const l = links.find(x => x.kind === kind); return l && [project(l.a.p), project(l.b.p)]; },
   };
 
   panelReady = true;

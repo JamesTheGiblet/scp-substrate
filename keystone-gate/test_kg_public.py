@@ -50,6 +50,21 @@ def test_unconfirmed_drafts_stay_out_but_accepted_words_go_in():
         s.close()
 
 
+def test_suggested_links_reach_the_page_but_not_the_snapshot():
+    from kg_agent import propose_neighbour
+    from kg_view import collect
+    s = Substrate()
+    try:
+        a, b = _cube(s, "Link test one, snapshot"), _cube(s, "Link test two, snapshot")
+        pid = propose_neighbour(s, a, b, "model-draft:test", rationale="a test reason")["proposal_id"]
+        cubes = {c["id"]: c for c in collect(s)}
+        assert cubes[a]["link_drafts"] == [{"other": b, "proposal_id": pid, "why": "a test reason"}]
+        assert cubes[b]["link_drafts"][0]["other"] == a
+        assert "a test reason" not in _snapshot(s)[1]
+    finally:
+        s.close()
+
+
 def test_a_link_to_a_hidden_cube_is_cut():
     from kg_public import public_cubes
     base = {"content": "x", "source": "", "group": "g", "repo": None, "note_draft": None,

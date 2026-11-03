@@ -130,6 +130,17 @@ function open(c) {
     right.append(el("p", "facts", a.retracted ? "Attestation retracted: " + a.retracted : "Attested by " + a.source + (a.note ? ". " + a.note : "")));
   }
   if (c.neighbours.length) right.append(el("p", "facts", "Neighbours: " + c.neighbours.join(", ")));
+  (c.link_drafts || []).forEach(d => {
+    const other = CUBES.find(x => x.id === d.other);
+    const b = el("button", "lens");
+    b.dataset.link = d.proposal_id;
+    b.style.setProperty("--c", c.tags.includes("foundational") || (other && other.tags.includes("foundational")) ? "#ffb000" : "var(--context)");
+    const head = el("b", "", "SUGGESTED LINK");
+    head.append(el("em", "", " · not accepted" + (d.why ? ", " + d.why : "")));
+    b.append(head, document.createTextNode(other ? other.content : d.other));
+    if (other) b.addEventListener("click", () => open(other));
+    right.append(b);
+  });
   if (c.contradicts) right.append(el("p", "facts", "Contradicts: " + c.contradicts));
   (c.overlaps || []).forEach(o => {
     const other = CUBES.find(x => x.id === o.other);
