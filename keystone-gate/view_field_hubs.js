@@ -1,7 +1,8 @@
 // Part of the cube field. kg_view.py joins these inside one function.
   // Entities you are building sit out from you as smaller green dots, with
   // their parts circling them and each part's claims gathered round it
-  const HUB_R = 640, PART_R = 210, GREEN = "94,235,130";
+  // The ring of hubs widens as hubs are added, so their parts never overlap
+  const PART_R = 190, HUB_R = Math.max(640, HUBS.length * (PART_R * 2 + 420) / (Math.PI * 2)), GREEN = "94,235,130";
   const hubGroup = (topic, reach) => ({ group: "", topic, rgb: "110,190,255", rigid: true, loose: true, hub: true,
                                         turn: .05, angle: 0, home: [0, 0, 0], nodes: [], c: [0, 0, 0], half: 40, reach });
   const hubs = HUBS.map((h, i) => ({
@@ -18,7 +19,7 @@
 
   function placeHubs() {
     hubs.forEach(h => {
-      h.home = add(world.c, turned([HUB_R, 0, 0], h.angle));
+      h.home = add(world.c, turned([HUB_R, (hubs.indexOf(h) % 2 ? 1 : -1) * 60, 0], h.angle));
       h.own.home = [...h.home];
       h.parts.forEach((p, k) => {
         p.cl.home = add(h.home, turned([PART_R, Math.sin(k * 2.1) * 40, 0], h.spin + k * Math.PI * 2 / h.parts.length));

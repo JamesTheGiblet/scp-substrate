@@ -203,7 +203,7 @@
     // Hubs circle the centre, so they don't move it
     const centre = nodes.filter(n => !n.cluster.hub);
     Object.assign(world, box(centre.length ? centre : nodes)); world.half += 46;
-    if (HUBS.length) world.half = Math.max(world.half, 900);
+    if (HUBS.length) world.half = Math.max(world.half, Math.max(640, HUBS.length * 800 / (Math.PI * 2)) + 260);
   };
   fitBoxes();
 
