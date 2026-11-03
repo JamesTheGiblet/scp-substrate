@@ -41,7 +41,8 @@ scp-substrate/
 │
 ├── seeds/                 scripts that create starting capsules
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
-├── docs/                  SPEC, STRUCTURE, STARTUP, FAQ, REASONING, SCP documents (*.scp.json)
+├── docs/                  SPEC, VOCABULARY, STRUCTURE, STARTUP, FAQ, REASONING, SCP documents (*.scp.json)
+├── archive/               archived capsules, links and events, one sc-archive-<date>.db per archive
 ├── images/                screenshots used in the README
 ├── build/                 cubes.html, the generated page, tracked in git
 │   └── public/            the public snapshot, its own repo (JamesTheGiblet/cubes), ignored here

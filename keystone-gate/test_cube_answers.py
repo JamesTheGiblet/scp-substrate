@@ -72,10 +72,10 @@ def test_no_matching_cube_is_stated():
 
 def test_hardware_cubes_are_answerable_and_sourced():
     r = _ask("what do I know about servo power")
-    assert "cube/pca9685-" in r["answer"], r
+    assert "cube/emergency-stop-cuts-power" in r["answer"], r
     s = Substrate()
     try:
-        links = s.links_from("cube/pca9685-v-plus-voltage-limit")
+        links = s.links_from("cube/emergency-stop-cuts-power")
         assert any(l["type"] == "derived-from" for l in links), links
     finally:
         s.close()

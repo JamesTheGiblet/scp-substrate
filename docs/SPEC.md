@@ -117,7 +117,7 @@ CREATE TABLE events (
 );
 ```
 
-Append-only. Never updated, never deleted. Every write through Substrate.write(), link(), supersede() and every engine fire logs an event.
+Append-only. Never updated, never deleted, except by archiving: `scripts/archive_cubes.py` moves the events of the capsules it archives into `archive/sc-archive-<date>.db` and logs an `archive.moved` event in their place. The ledger is sc.db and its archives together. Every write through Substrate.write(), link(), supersede() and every engine fire logs an event.
 
 Event types in use:
 
@@ -133,6 +133,7 @@ link.retyped the source {"target": "...", "new_type": "..."}
 rule.fired the rule {"source": "...", "type": "...", "target": "..."}
 trust.computed the instance {"model": "...", "score": 0.87, "prev": null}
 foundation.reloaded NULL {"version": "0.1.0", "hash": "...", "count": 11}
+archive.moved NULL {"archive": "archive/sc-archive-2026-11-03.db", "kept_tags": [...], "counts": {...}}
 
 Events are the ledger. Nothing in the system reconstructs state from events; the events are for audit, not for replay. This is a deliberate choice — replay is a v2 concern.
 

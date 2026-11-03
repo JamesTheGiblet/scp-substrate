@@ -136,7 +136,8 @@ def test_lock_file_round_trip():
 
 def test_a_validation_can_be_rewritten():
     with _Server() as srv:
-        cid = "cube/esp32-logic-is-3v3"
+        faces = {lens: "text" for lens in ("FACT", "COUNTER")}
+        cid = srv.post({"action": "new", "content": "A claim to validate twice", "faces": faces})[1]["result"]["cube_id"]
         assert srv.post({"action": "fill", "cube_id": cid, "lens": "OPINION", "content": "mine"})[0] == 200
         assert srv.post({"action": "validate", "cube_id": cid, "note": "first"})[0] == 200
         status, reply = srv.post({"action": "validate", "cube_id": cid, "note": "second"})
@@ -251,7 +252,8 @@ def test_new_cube_returns_fresh_clusters():
 
 def test_filling_a_face_replaces_its_draft():
     with _Server() as srv:
-        cid = "cube/esp32-logic-is-3v3"
+        cid = srv.post({"action": "new", "content": "A claim with a drafted view"})[1]["result"]["cube_id"]
+        srv.server.drafter.jobs.join()
         status, reply = srv.post({"action": "fill", "cube_id": cid, "lens": "OPINION", "content": "my own words"})
         assert status == 200, reply
         cube = next(c for c in reply["cubes"] if c["id"] == cid)

@@ -17,6 +17,8 @@ It is a single-user project and it is early. Read [Limits](#limits) and [Known i
 
 Everything stored is a capsule, a link or an event. A capsule's type is its foundation.
 
+The model being built on top of this, with entities, subjects, claims, evidence and relationships, is set out in [docs/VOCABULARY.md](docs/VOCABULARY.md).
+
 Foundations are defined in `sc.json`. Run `scripts/bootstrap.py` to copy them into `sc.db`; this does not happen automatically. Instances (people, projects, documents, repos, symbols, cubes, conversation turns) live only in `sc.db`.
 
 `schema.sql` has changed once since the move to SQLite: the unused `rules` table was dropped, and that was logged as a `schema.migration` event. New kinds of data go in `state_json`.
@@ -178,7 +180,8 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 | `seeds/` | Scripts that create starting capsules. Most are create-only, so capsules are authoritative after the first run |
 | `tests/` | `run.py` runs every test file. `test_house_rules.py` checks the line limit on code and page files, and silent exception handlers |
 | `keystone-gate/` | Cubes, gate, model layer, page and server |
-| `docs/` | `SPEC.md`, `STRUCTURE.md`, `REASONING.md`, and signed SCP documents |
+| `docs/` | `SPEC.md`, `VOCABULARY.md`, `STRUCTURE.md`, `REASONING.md`, and signed SCP documents |
+| `archive/` | Archived capsules, links and events, made by `scripts/archive_cubes.py` |
 
 `docs/STRUCTURE.md` has the full file list.
 
