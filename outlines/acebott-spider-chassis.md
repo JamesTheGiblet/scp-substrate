@@ -8,6 +8,12 @@ kind: chassis
 definition: The mechanical frame of ACEBOTT's four-legged Bionic Spider robot kit: the acrylic body, legs, joints, servo mounts, fasteners and feet, without its electronics.
 aliases: ACEBOTT spider, spider chassis, bionic spider
 bought: 2026-09-13, per the Amazon order history
+part-of: entity/scpbot
+
+### claim SCPBot uses only the ACEBOTT spider's chassis; its electronics are SCPBot's own, not the kit's.
+id: cube/scpbot-uses-acebott-chassis-only
+source: Stated by James, 2026-11-04
+also: subject/pca9685, subject/m5stickc-plus2
 
 ## subject MG90S
 uses: yes
@@ -122,3 +128,8 @@ tags: needs-check, seller, review
 id: cube/spider-chassis-battery-in-during-build
 source: Customer review (Ernestina, Vine)
 tags: needs-check, review
+
+### claim SCPBot's ACEBOTT chassis is modified to hold its two 7.4V Li-ion packs instead of the stock 18650 cell.
+id: cube/scpbot-chassis-modded-for-7-4v-packs
+source: Stated by James, 2026-11-04
+also: subject/7-4v-li-ion-pack, subject/18650-cell
