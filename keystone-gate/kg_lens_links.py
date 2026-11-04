@@ -1,8 +1,12 @@
 """Cluster cubes by what they say on the same lens.
 
-Two cubes link when one lens on each shares at least two unusual words. Lenses are compared
-only with themselves, so a shared COUNTER means two cubes share a weakness,
-not merely a topic. This measures shared vocabulary, not agreement in meaning.
+Two cubes link when one lens on each shares unusual words: two will do for
+cubes on the same subject or entity, but cubes with nothing else in common need
+three and a closer match. Lenses are compared only with themselves, so a shared
+COUNTER means two cubes share a weakness, not merely a topic. Pronouns, the
+store's own words and any word on more than a quarter of a lens's faces don't
+count, since seeded faces repeat stock phrases. This measures shared
+vocabulary, not agreement in meaning.
 """
 import math
 import re
@@ -11,6 +15,10 @@ from collections import Counter, defaultdict
 
 LENSES = ("FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT")
 THRESHOLD = 0.10
+# Cubes that share no subject or entity need more before a word links them
+APART_THRESHOLD, APART_TERMS = 0.20, 3
+# A word on more than this share of a lens's faces is boilerplate, once a lens has enough faces
+MAX_SHARE, MIN_FACES = 0.25, 8
 LINKS_PER_CUBE = 3
 
 _STOP = set("""about above after again against also because been before being
@@ -24,7 +32,12 @@ without would first second another already often rather page pages cube cubes
 fully new not back matter matters kit build built chosen principle recorded
 guide says say said itself add adds run runs seem seems work works part parts
 far full long short high low way ways thing things get gets keep keeps
-check checks moment case point every whole""".split())
+check checks moment case point every whole
+he him his himself she her hers herself they them their theirs we our us
+james james's
+attached attach entity entities link links linked document documents person
+suppose supposing stated states written confirmed inferred claim claims
+subject subjects lens lenses face faces draft drafts""".split())
 
 
 def _stem(word):
@@ -43,11 +56,14 @@ def _word(stem):
     return min(forms, key=lambda w: (-forms[w], w)) if forms else stem
 
 
+_STOP_STEMS = {_stem(w) for w in _STOP}
+
+
 def _terms(text):
     words = re.findall(r"[a-z][a-z0-9]{2,}", (text or "").lower())
     terms = Counter()
     for w in words:
-        if w not in _STOP:
+        if w not in _STOP and _stem(w) not in _STOP_STEMS:
             terms[_stem(w)] += 1
             _seen_as[_stem(w)][w] += 1
     return terms
@@ -62,15 +78,16 @@ def _vectors(cubes, lens):
             bags[c["id"]] = _terms(face["content"])
     seen = Counter(term for bag in bags.values() for term in bag)
     total = max(len(bags), 1)
-    return {cid: {t: n * math.log((1 + total) / seen[t]) for t, n in bag.items()}
+    common = {t for t, n in seen.items() if total >= MIN_FACES and n / total > MAX_SHARE}
+    return {cid: {t: n * math.log((1 + total) / seen[t]) for t, n in bag.items() if t not in common}
             for cid, bag in bags.items()}
 
 
-def _similar(a, b):
+def _similar(a, b, terms=2):
     """Cosine similarity, and the term that contributes most."""
     shared = set(a) & set(b)
     # One shared word is a coincidence; two are the start of a subject
-    if len(shared) < 2:
+    if len(shared) < terms:
         return 0.0, None
     size = math.sqrt(sum(v * v for v in a.values()) * sum(v * v for v in b.values()))
     if not size:
@@ -78,16 +95,32 @@ def _similar(a, b):
     return sum(a[t] * b[t] for t in shared) / size, max(sorted(shared), key=lambda t: a[t] * b[t])
 
 
+def _ties(cubes):
+    """What each cube is about. The store's owner, whom every cube about you is
+    about, and any tie on more than a third of the cubes are too broad to count
+    as having something in common."""
+    ties = {c["id"]: set(c.get("subjects") or []) | set(c.get("entities") or []) for c in cubes}
+    seen = Counter(t for tie in ties.values() for t in tie)
+    broad = {t for t, n in seen.items() if len(cubes) >= MIN_FACES and n > len(cubes) / 3}
+    yours = [ties[c["id"]] for c in cubes if c.get("about_you")]
+    broad |= set.intersection(*yours) if yours else set()
+    return {cid: tie - broad for cid, tie in ties.items()}
+
+
 def _links(cubes, lenses):
     """Strongest lens per pair, keeping each cube's best few."""
     pairs = {}
+    ties = _ties(cubes)
     for lens in lenses:
         vectors = _vectors(cubes, lens)
         ids = sorted(vectors)
         for i, a in enumerate(ids):
             for b in ids[i + 1:]:
-                weight, term = _similar(vectors[a], vectors[b])
-                if weight >= THRESHOLD and weight > pairs.get((a, b), {"weight": 0})["weight"]:
+                near = bool(ties[a] & ties[b])
+                weight, term = _similar(vectors[a], vectors[b], 2 if near else APART_TERMS)
+                if weight < (THRESHOLD if near else APART_THRESHOLD):
+                    continue
+                if weight > pairs.get((a, b), {"weight": 0})["weight"]:
                     pairs[(a, b)] = {"a": a, "b": b, "lens": lens, "term": term, "word": _word(term),
                                      "weight": round(weight, 3)}
     per_cube = defaultdict(list)
