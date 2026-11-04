@@ -4,7 +4,7 @@ A personal knowledge store in one SQLite file, with tools for querying it, track
 
 It is a single-user project and it is early. Read [Limits](#limits) and [Known issues](#known-issues) before relying on it.
 
-![The cube page: clusters of cubes around the green centre, which is you](images/overview.png)
+![The cube page: you at the green centre, with SCPBot, the ACEBOTT chassis and each project as smaller green dots, their parts circling them](images/overview.png)
 
 ## Parts
 
@@ -71,6 +71,10 @@ Press **Unlock to edit** in the grid view to change anything. The password prote
 
 ### What the page looks like
 
+Each smaller green dot is an entity: SCPBot, the ACEBOTT chassis, or one of the projects. Its parts circle it, each with the claims about that part. Press **Entities** under **Cluster by** and pick one, or open the page at `#entity:entity/scpbot`, for an overview: its parts, how many claims each has, and the wiring traced from its wiring claims.
+
+![SCPBot with its parts circling it, and its overview: parts, claim counts and the common ground traced from its wiring](images/entity-scpbot.png)
+
 Click a cube to open it. Its five lenses and your validation float around it, and the panel shows each one in full.
 
 ![An attested cube opened, with its five lenses and your validation around it](images/cube-open.png)
@@ -79,21 +83,23 @@ Click a thread between two cubes to pull it. The two cubes come together, the re
 
 ![Pulling a thread that two cubes share through one word](images/pull-word-match.png)
 
-A dashed thread is a suggested link you have not accepted. The foundational cubes gather around you in three colours: orange for safety, pink for security and blue for preferences. This picture was taken before preferences were added, when all foundations were amber.
+A dashed thread is a suggested link you have not accepted. The foundational cubes gather around you in three colours: orange for safety, pink for security and blue for preferences.
 
-![Pulling a suggested link between a foundational cube and a cube in another cluster](images/pull-suggested-link.png)
-
-**Cluster by** regroups the cubes, here by the repo each one came from.
+**Cluster by** regroups the cubes and shows only what that grouping holds, here the claims that came from a repo.
 
 ![The cubes grouped by repo](images/repos.png)
 
-The bar at the bottom steps back through time. This is the store as it was on 2 November, with 88 cubes.
+The bar at the bottom steps back through time. This is the store as it was on the evening of 3 November, with 29 cubes, soon after every cube was archived to start again on entities, subjects and claims.
 
-![The time bar moved back to 2 November](images/time-bar.png)
+![The time bar moved back to 3 November](images/time-bar.png)
 
 The grid lists every cube. The bar under each one shows its six sides, and a striped side was accepted without being read. Editing happens here, after you unlock it.
 
 ![The grid view](images/grid.png)
+
+Every entity and subject has a card in the grid. Opening one shows what it is, its parts or who uses it, and only its claims.
+
+![SCPBot's card in the grid: its kind, who is building it, the chassis that is part of it, and its parts](images/grid-entity.png)
 
 ![A cube opened in the grid](images/grid-cube.png)
 
@@ -101,7 +107,7 @@ The page works on a phone through Tailscale. See [docs/STARTUP.md](docs/STARTUP.
 
 <p>
   <img src="images/phone.png" alt="The cube page on a phone" width="260">
-  <img src="images/phone-pull.png" alt="Pulling a thread on a phone" width="260">
+  <img src="images/phone-entity.png" alt="SCPBot and its overview on a phone" width="260">
 </p>
 
 These pictures come from the full local store. The public snapshot leaves out private cubes and drafts, so it shows less.

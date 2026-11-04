@@ -331,6 +331,15 @@
     cam.t = [...openCluster.c];
     cam.dist = cam.toDist;
   }
+  // #entity:<id> opens the page on that entity, its parts round it
+  const openHub = hashText.startsWith("entity:") && hubs.find(h => h.id === hashText.slice(7));
+  if (openHub) {
+    applyMode("PLACES");
+    pickEntity(openHub);
+    for (let i = 0; i < 300; i++) physics(.03, i * .03);
+    cam.t = [...openHub.home];
+    cam.dist = cam.toDist;
+  }
   const linked = byId[hashText];
   if (linked) {
     goNode(linked);

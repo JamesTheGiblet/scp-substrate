@@ -43,9 +43,9 @@ scp-substrate/
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
 ├── docs/                  README (what each doc is for), VOCABULARY, SPEC, OUTLINE, STARTUP, PHONE, FAQ, REASONING, STRUCTURE
 │   └── scp/               signed SCP documents (*.scp.json) imported into the store
-├── archive/               archived capsules, links and events, one sc-archive-<date>.db per archive
+├── archive/               archived capsules, links and events, one sc-archive-<date>.db per archive, and old README screenshots in images-<date>/
 ├── outlines/              outlines that kg import built entities from, kept as the record
-├── images/                screenshots used in the README
+├── images/                screenshots used in the README, taken by scripts/readme_shots.py
 ├── build/                 cubes.html, the generated page, tracked in git
 │   └── public/            the public snapshot, its own repo (JamesTheGiblet/cubes), ignored here
 ├── keystone-gate/         see keystone-gate/README.md for its files

@@ -229,5 +229,25 @@ def test_a_shared_part_keeps_each_claim_with_its_own_entity():
         s.close()
 
 
+def test_a_shared_part_sits_with_the_whole_not_its_part():
+    from kg_agent import create_cube
+    from kg_entities import add_entity, link_claim, relate
+    from kg_view import collect
+    s = _store()
+    try:
+        # The chassis sorts first by id, but it is part of the bot
+        chassis = add_entity(s, "Chassis", "chassis", "james", eid="entity/a-chassis")["id"]
+        bot = add_entity(s, "Bot", "robot", "james", eid="entity/b-bot")["id"]
+        s.write({"id": "subject/servo", "foundation": "foundation:subject", "state": {"name": "Servo"}})
+        relate(s, chassis, "uses", "subject/servo")
+        relate(s, bot, "uses", "subject/servo")
+        relate(s, chassis, "part-of", bot)
+        cid = create_cube(s, "A servo has metal gears")["cube_id"]
+        link_claim(s, cid, subjects=["subject/servo"])
+        assert next(c for c in collect(s) if c["id"] == cid)["hub"] == {"entity": bot, "part": "subject/servo"}
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

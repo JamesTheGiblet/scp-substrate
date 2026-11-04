@@ -194,6 +194,10 @@ def collect(s):
     cubes = []
     you = _you(s)
     places = [(h["id"], [p["id"] for p in h["parts"]]) for h in hubs(s)]
+    # A whole comes before its parts, so a claim about a part they share
+    # sits with SCPBot, not with the chassis that is part of it
+    inner = {h for h, _ in places for l in s.links_from(h) if l["type"] == "part-of"}
+    places.sort(key=lambda p: p[0] in inner)
     link_drafts, link_reasons, link_words = _link_notes(s)
     for row in list_cubes(s):
         cube = show_cube(s, row["id"])
