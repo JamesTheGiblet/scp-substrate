@@ -8,8 +8,8 @@ For the substrate's own SymLM walker, "HAL" is a thin wrapper around
 ask.answer_question. When a real LLM is wired up later, that LLM's output
 still goes through gate.check before rendering.
 """
-from ask import answer_question, render as render_answer
-from substrate import Substrate
+from answer.ask import answer_question, render as render_answer
+from store.substrate import Substrate
 
 from kg_gate import check as gate_check
 

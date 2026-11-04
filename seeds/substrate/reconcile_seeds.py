@@ -3,12 +3,12 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import json
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def fmt_lexicon(lexicon):
     lines = ['"""Seed lexical entries. Create-only (capsules authoritative)."""',
-             'from substrate import Substrate', '',
+             'from store.substrate import Substrate', '',
              'LEXICON = {']
     for word, (pos, features) in sorted(lexicon.items()):
         lines.append(f'    {word!r}: ({pos!r}, {features!r}),')
@@ -18,7 +18,7 @@ def fmt_lexicon(lexicon):
 
 def fmt_grammar(grammar):
     lines = ['"""Seed grammar rules. Create-only (capsules authoritative)."""',
-             'from substrate import Substrate', '',
+             'from store.substrate import Substrate', '',
              'GRAMMAR = [']
     for rule_id, state in grammar:
         cond = state.get("condition", {})

@@ -2,7 +2,7 @@
 
 Pure substrate-side querying — proves the boundary works before any logic is built.
 """
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def count_by_foundation(s, foundation_id):

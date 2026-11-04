@@ -6,12 +6,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
 import argparse
 import json
 
-from substrate import Substrate
-from explain import explain
-from why import why_trusted, print_chain
-from queries import trust_now, verified, observations
-from rules import evaluate_rules
-from trust import compute_all, trust_from_evidence
+from store.substrate import Substrate
+from answer.explain import explain
+from answer.why import why_trusted, print_chain
+from store.queries import trust_now, verified, observations
+from store.rules import evaluate_rules
+from store.trust import compute_all, trust_from_evidence
 
 
 def cmd_explain(a):
@@ -111,7 +111,7 @@ def cmd_stats(a):
 
 
 def cmd_version(a):
-    from queries import latest
+    from store.queries import latest
     s = Substrate()
     cur = latest(s, a.id)
     chain = [cur]
@@ -136,7 +136,7 @@ def cmd_version(a):
 
 
 def cmd_fused(a):
-    from trust import fused_trust
+    from store.trust import fused_trust
     s = Substrate()
     r = fused_trust(s, a.id)
     if "error" in r:
@@ -155,7 +155,7 @@ def cmd_fused(a):
 
 
 def cmd_parse(a):
-    from parse import parse_sentence, display_parse
+    from symlm.parse import parse_sentence, display_parse
     s = Substrate()
     result = parse_sentence(s, a.text)
     if "error" in result:
@@ -174,15 +174,15 @@ def cmd_parse(a):
 
 
 def cmd_forget_parse(a):
-    from parse import cleanup_session
+    from symlm.parse import cleanup_session
     s = Substrate()
     cleanup_session(s, a.session)
     print(f"forgot parse session: {a.session}")
 
 
 def cmd_generate(a):
-    from generate import generate_sentence
-    from parse import cleanup_session, display_parse
+    from symlm.generate import generate_sentence
+    from symlm.parse import cleanup_session, display_parse
     s = Substrate()
     result = generate_sentence(s, start=a.start, seed=a.seed)
     if "error" in result:
@@ -231,8 +231,8 @@ def cmd_sweep_parse(a):
 
 
 def cmd_analyse_corpus(a):
-    from analysis import analyse_corpus
-    from corpus import load_corpus
+    from symlm.analysis import analyse_corpus
+    from symlm.corpus import load_corpus
     s = Substrate()
     corpus = load_corpus(s)
     print(f"analysing {len(corpus)} sentences\n")
@@ -241,7 +241,7 @@ def cmd_analyse_corpus(a):
 
 
 def cmd_confirm(a):
-    from feedback import apply_feedback
+    from symlm.feedback import apply_feedback
     s = Substrate()
     r = apply_feedback(s, a.session, positive=True)
     print(f"confirmed: {r['session']}")
@@ -250,7 +250,7 @@ def cmd_confirm(a):
 
 
 def cmd_reject(a):
-    from feedback import apply_feedback
+    from symlm.feedback import apply_feedback
     s = Substrate()
     r = apply_feedback(s, a.session, positive=False)
     print(f"rejected: {r['session']}")
@@ -259,12 +259,12 @@ def cmd_reject(a):
 
 
 def cmd_talk(a):
-    from talk import repl
+    from symlm.talk import repl
     repl()
 
 
 def cmd_ask(a):
-    from ask import answer_question, render
+    from answer.ask import answer_question, render
     s = Substrate()
     text = " ".join(a.question)
     result = answer_question(s, text)

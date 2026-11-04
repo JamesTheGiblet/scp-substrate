@@ -17,7 +17,7 @@ import urllib.error
 import urllib.request
 from pathlib import Path
 
-from ask import answer_question, render as render_answer
+from answer.ask import answer_question, render as render_answer
 
 from kg_agent import show_cube
 from kg_gate import check as gate_check, load_sc

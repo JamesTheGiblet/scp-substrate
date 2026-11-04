@@ -1,7 +1,7 @@
 """Explain a fact by walking back through the substrate."""
 import json
-from substrate import Substrate
-from queries import trust_now
+from store.substrate import Substrate
+from store.queries import trust_now
 
 
 def why_trusted(s: Substrate, claim_id: str):

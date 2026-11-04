@@ -7,8 +7,8 @@ Two failure modes reported:
 import json
 import re
 
-from substrate import Substrate
-from parse import parse_sentence, cleanup_session, lookup_pos
+from store.substrate import Substrate
+from symlm.parse import parse_sentence, cleanup_session, lookup_pos
 
 
 def find_gap_spans(s, text):

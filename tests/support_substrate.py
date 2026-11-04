@@ -7,12 +7,12 @@ for _d in ("src", "scripts", "scripts/scp", "scripts/repos", "scripts/language",
 import json
 import traceback
 
-from substrate import Substrate
-from signing import generate_keypair, sign, verify, canonicalise
-import ed25519
-from rules import evaluate_rules
-from trust import compute_all, trust_from_evidence
-from queries import latest
+from store.substrate import Substrate
+from store.signing import generate_keypair, sign, verify, canonicalise
+from store import ed25519
+from store.rules import evaluate_rules
+from store.trust import compute_all, trust_from_evidence
+from store.queries import latest
 
 
 def hx(s): return bytes.fromhex(s)

@@ -3,8 +3,8 @@ import json
 import re
 import uuid
 
-from substrate import Substrate
-from rules import evaluate_rules
+from store.substrate import Substrate
+from store.rules import evaluate_rules
 
 
 def _lookup_entry(s, word):

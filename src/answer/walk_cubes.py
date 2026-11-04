@@ -2,7 +2,7 @@
 import json
 import re
 
-from trust import fused_trust
+from store.trust import fused_trust
 
 
 _ASKING = {"what", "believe", "think", "about", "trust", "should", "does", "view",

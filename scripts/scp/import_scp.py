@@ -8,7 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import json
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 # Authored declaration = a claim. Uses existing foundation:knowledge.
 FOUNDATION = "foundation:knowledge"

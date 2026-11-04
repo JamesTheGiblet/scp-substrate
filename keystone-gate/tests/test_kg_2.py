@@ -104,7 +104,7 @@ def test_attest_requires_complete_cube():
 
 def test_attestation_raises_fused_trust():
     from kg_agent import attest
-    from trust import fused_trust
+    from store.trust import fused_trust
     s = _fresh_kg_substrate()
     try:
         cid = _complete_cube(s)
@@ -117,7 +117,7 @@ def test_attestation_raises_fused_trust():
 
 def test_face_change_retracts_attestation():
     from kg_agent import attest, fill_face, validate
-    from trust import fused_trust
+    from store.trust import fused_trust
     s = _fresh_kg_substrate()
     try:
         cid = _complete_cube(s)

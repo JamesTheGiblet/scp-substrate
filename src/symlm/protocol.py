@@ -2,7 +2,7 @@
 import random
 import re
 
-from parse import parse_sentence, cleanup_session
+from symlm.parse import parse_sentence, cleanup_session
 
 
 def _classifiers(s):

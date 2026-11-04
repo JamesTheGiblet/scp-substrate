@@ -24,7 +24,7 @@ def extract_kind(s, text):
 
 # --- walkers ------------------------------------------------------------
 def _walk_why_trusted(s, entity_id, text):
-    from why import why_trusted
+    from answer.why import why_trusted
     chain = why_trusted(s, entity_id)
     if not chain.get("derived_link"):
         return {"ok": False,
@@ -50,7 +50,7 @@ def _walk_why_trusted(s, entity_id, text):
 
 
 def _walk_verified(s, entity_id, text):
-    from queries import verified as qverified
+    from store.queries import verified as qverified
     records = qverified(s, entity_id)
     if not records:
         return {"ok": True,
@@ -145,7 +145,7 @@ def _walk_what_building(s, entity_id, text):
 
 
 def _walk_what_supports(s, entity_id, text):
-    from queries import what_supports
+    from store.queries import what_supports
     if not entity_id:
         return {"ok": False, "summary": "No claim specified.", "detail": None}
     rows = what_supports(s, entity_id)
@@ -316,7 +316,7 @@ def _walk_who_is(s, entity_id, text):
 
 
 def _walk_what_is(s, entity_id, text):
-    from explain import explain
+    from answer.explain import explain
     if not entity_id:
         return {"ok": False, "summary": "Nothing identified to describe.", "detail": None}
     c = s.get(entity_id)
@@ -332,7 +332,7 @@ def _walk_what_is(s, entity_id, text):
 
 
 def _walk_what_believe(s, entity_id, text):
-    from walk_cubes import walk_what_believe
+    from answer.walk_cubes import walk_what_believe
     return walk_what_believe(s, entity_id, text)
 
 

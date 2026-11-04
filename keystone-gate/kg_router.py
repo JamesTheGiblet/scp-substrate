@@ -15,7 +15,7 @@ def route_list():
 
     Empty list if no cube is linked to any other. Ordered by cube ID.
     """
-    from substrate import Substrate
+    from store.substrate import Substrate
     s = Substrate()
     try:
         rows = s.conn.execute(

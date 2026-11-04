@@ -28,7 +28,7 @@ from absorb_repo import (
     SKIP_DIRS, SKIP_FILE_EXTS, LANG_BY_EXT,
     MAX_FILE_BYTES, MAX_FILES_HARD, _slug,
 )
-from substrate import Substrate
+from store.substrate import Substrate
 
 API_BASE = "https://api.github.com"
 API_VERSION = "2022-11-28"

@@ -15,7 +15,7 @@ _here = Path(__file__).resolve().parents[2] / "keystone-gate"
 sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 
-from substrate import Substrate
+from store.substrate import Substrate
 from kg_agent import create_cube
 from kg_entities import accept_sort, link_claim
 from kg_subjects import accept_subject, add_claim, propose_subject

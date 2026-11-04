@@ -3,7 +3,7 @@ import json
 import math
 from datetime import datetime, timezone
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 FOUNDATION = "foundation:leighton-weight"
@@ -228,7 +228,7 @@ def fuse(prior, evidence_score, eps=1e-3):
 
 def fused_trust(s: Substrate, capsule_id: str):
     """Combine parameter trust (prior) and evidence trust (likelihood)."""
-    from queries import trust_now
+    from store.queries import trust_now
 
     p = trust_now(s, capsule_id)
     e = trust_from_evidence(s, capsule_id)

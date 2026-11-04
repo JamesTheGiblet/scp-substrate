@@ -20,8 +20,8 @@ import argparse
 import json
 from datetime import datetime, timezone
 
-from substrate import Substrate
-from signing import verify
+from store.substrate import Substrate
+from store.signing import verify
 
 
 KIND = "person"

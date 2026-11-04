@@ -1,7 +1,7 @@
 """DB-native rule engine. Reads rules from sc.db, derives links, logs events."""
 import json
 from datetime import datetime, timezone
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def _log_fire(s, rule_id, source, rel, target, extra=None):
@@ -166,7 +166,7 @@ def _eval_kind_and_age(s, rule_id, condition, effect):
     return fired, warnings
 
 
-from rules_sequence import (_eval_sequence, _leaf_features, _object_semantic_check,
+from store.rules_sequence import (_eval_sequence, _leaf_features, _object_semantic_check,
                             _subject_semantic_check, _sv_agree)
 
 

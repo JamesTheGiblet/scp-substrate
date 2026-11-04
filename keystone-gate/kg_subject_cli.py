@@ -1,5 +1,5 @@
 """kg subject commands. Imported by kg."""
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def _members(text):

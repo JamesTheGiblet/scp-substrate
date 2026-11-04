@@ -11,7 +11,7 @@ _here = Path(__file__).resolve().parent
 sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 
-from substrate import Substrate
+from store.substrate import Substrate
 from kg_cube_cli import *
 from kg_subject_cli import add_subject_parser
 from kg_entity_cli import add_entity_parser

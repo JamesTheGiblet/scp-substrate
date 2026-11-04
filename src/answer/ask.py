@@ -6,8 +6,8 @@ Flow:
 import json
 import re
 
-from substrate import Substrate
-from walkers import WALKERS, extract_kind
+from store.substrate import Substrate
+from answer.walkers import WALKERS, extract_kind
 
 
 # --- intent classification ----------------------------------------------

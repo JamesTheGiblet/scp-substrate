@@ -146,7 +146,7 @@ def test_entities_and_relations():
 def test_a_claim_can_be_about_a_person_and_cite_a_document():
     from kg_agent import create_cube
     from kg_entities import claim_link_error, link_claim
-    from trust import trust_from_evidence
+    from store.trust import trust_from_evidence
     s = _store()
     try:
         assert "entity" in claim_link_error(s, entities=["tool/esp32"])

@@ -5,7 +5,7 @@ wires it describes as [[part, pin], [part, pin]] pairs, where a part is a
 subject. Nets are traced from those wires, so a common ground shows up from
 the wiring itself rather than being stated. See docs/VOCABULARY.md.
 """
-from substrate import Substrate
+from store.substrate import Substrate
 
 WIRING = "subject/wiring"
 

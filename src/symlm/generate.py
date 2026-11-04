@@ -12,8 +12,8 @@ import json
 import random
 import uuid
 
-from substrate import Substrate
-from rules import _sv_agree, _object_semantic_check, _subject_semantic_check, _leaf_features
+from store.substrate import Substrate
+from store.rules import _sv_agree, _object_semantic_check, _subject_semantic_check, _leaf_features
 
 
 class ExpansionError(Exception):
@@ -309,7 +309,7 @@ def generate_sentence(s, start="S", seed=None, prefer_tense=None):
         except ExpansionError as e:
             last_err = e
             # Clear any leftover partial capsules from failed attempts
-            from parse import cleanup_session
+            from symlm.parse import cleanup_session
             cleanup_session(s, session_id)
             continue
 

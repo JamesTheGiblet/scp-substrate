@@ -14,7 +14,7 @@ import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlsplit
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 from kg_agent import (CONNECTING_WORDS, LENSES, accept_proposal, attest, create_cube, fill_face,
                       list_proposals, reject_proposal, validate)

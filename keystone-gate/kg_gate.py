@@ -17,7 +17,7 @@ entry in the sc capsule. Removing a rule means removing both.
 import json
 import re
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 # A capsule ID or file path in text: one or more slash-separated segments
@@ -123,8 +123,8 @@ def _actual_trust_values(s, cid):
     stored = capsule["state"].get("score") if capsule else None
     if isinstance(stored, (int, float)) and not isinstance(stored, bool):
         values.append(("stored_score", float(stored)))
-    from queries import trust_now
-    from trust import fused_trust
+    from store.queries import trust_now
+    from store.trust import fused_trust
     tn = trust_now(s, cid)
     if tn and tn.get("score") is not None:
         values.append(("trust_now", float(tn["score"])))

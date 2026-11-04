@@ -36,7 +36,7 @@ def test_js_symbols():
 
 # --- person import ------------------------------------------------------
 def test_import_person():
-    from substrate import Substrate
+    from store.substrate import Substrate
     from pathlib import Path
     from import_person import import_person
     s = Substrate(":memory:")
@@ -88,7 +88,7 @@ def test_import_person():
 
 
 def test_import_circadian_phases():
-    from substrate import Substrate
+    from store.substrate import Substrate
     from pathlib import Path
     from import_circadian import import_circadian
     s = Substrate(":memory:")
@@ -119,7 +119,7 @@ def test_import_circadian_phases():
 
 def test_frequency_tallies_are_not_trust():
     """A word seen 33 times is not 33 times trusted."""
-    from rules import evaluate_rules
+    from store.rules import evaluate_rules
     s = fresh_substrate()
     try:
         s.write({"id": "lex/the", "foundation": "foundation:knowledge", "state": {}})

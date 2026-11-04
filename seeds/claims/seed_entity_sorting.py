@@ -13,7 +13,7 @@ _here = Path(__file__).resolve().parents[2] / "keystone-gate"
 sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 
-from substrate import Substrate
+from store.substrate import Substrate
 from kg_entities import propose_sort
 
 # (target, action, options, rationale)

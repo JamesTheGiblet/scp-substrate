@@ -74,7 +74,7 @@ def test_unwritten_opinion_says_so():
 
 
 def test_trust_lists_only_attested_cubes():
-    from walk_cubes import walk_what_believe
+    from answer.walk_cubes import walk_what_believe
     s = Substrate()
     try:
         r = walk_what_believe(s, None, "what do i trust")
@@ -86,7 +86,7 @@ def test_trust_lists_only_attested_cubes():
 
 def test_retracted_attestation_is_shown_as_retracted():
     from kg_agent import attest, fill_face
-    from walk_cubes import walk_what_believe
+    from answer.walk_cubes import walk_what_believe
     s = Substrate()
     try:
         cid = "cube/british-english-everywhere"

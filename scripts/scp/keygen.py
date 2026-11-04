@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import argparse, json, os
-from signing import generate_keypair
+from store.signing import generate_keypair
 
 KEYS_DIR = Path.home() / ".config" / "scp" / "keys"
 

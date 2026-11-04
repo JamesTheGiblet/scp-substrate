@@ -5,11 +5,11 @@ from support_substrate import *
 # --- weighted choice -----------------------------------------------------
 def test_weighted_choice_prefers_common():
     """Corpus learning biases generation toward frequent words."""
-    from substrate import Substrate
+    from store.substrate import Substrate
     from seed_corpus import CORPUS_SENTENCES as CORPUS
     from learn_frequencies import main as learn  # not used; do it inline
-    from generate import generate_sentence
-    from parse import parse_sentence, cleanup_session
+    from symlm.generate import generate_sentence
+    from symlm.parse import parse_sentence, cleanup_session
 
     s = fresh_parse_fixture()
 
@@ -59,8 +59,8 @@ def test_weighted_choice_prefers_common():
 # --- semantic filtering -------------------------------------------------
 def test_semantic_blocks_animal_location():
     """'on'/'in' require a location; animals are not locations."""
-    from generate import generate_sentence
-    from parse import cleanup_session
+    from symlm.generate import generate_sentence
+    from symlm.parse import cleanup_session
     s = fresh_parse_fixture()
 
     violations = 0
@@ -81,8 +81,8 @@ def test_semantic_blocks_animal_location():
 
 def test_semantic_allows_object_location():
     """'on the mat' should still generate — mat is a location."""
-    from generate import generate_sentence
-    from parse import cleanup_session
+    from symlm.generate import generate_sentence
+    from symlm.parse import cleanup_session
     s = fresh_parse_fixture()
 
     found = False
@@ -101,7 +101,7 @@ def test_semantic_allows_object_location():
 # --- gap analysis --------------------------------------------------------
 def test_gap_analysis_raw_span():
     """'the big red cat sat' -> unreduced tokens at [0-3] (det adj adj noun)."""
-    from analysis import find_gap_spans
+    from symlm.analysis import find_gap_spans
     s = fresh_parse_fixture()
     s.write({"id": "lex/red", "foundation": "foundation:knowledge",
              "state": {"kind": "lexical-entry", "text": "red", "pos": "adj",
@@ -119,7 +119,7 @@ def test_gap_analysis_raw_span():
 
 def test_gap_analysis_composition_gap():
     """'the cat sat the dog' -> sat is intransitive, can't take an object."""
-    from analysis import find_gap_spans
+    from symlm.analysis import find_gap_spans
     s = fresh_parse_fixture()
     r = find_gap_spans(s, "the cat sat the dog")
     assert not r.get("ok"), r
@@ -129,7 +129,7 @@ def test_gap_analysis_composition_gap():
 
 def test_gap_analysis_ok():
     """A parseable sentence returns ok=True."""
-    from analysis import find_gap_spans
+    from symlm.analysis import find_gap_spans
     s = fresh_parse_fixture()
     r = find_gap_spans(s, "the cat sat")
     assert r.get("ok") is True, r
@@ -138,7 +138,7 @@ def test_gap_analysis_ok():
 # --- transitivity --------------------------------------------------------
 def test_parse_transitive():
     """'the cat chased the dog' parses via VP -> verb(transitive) NP."""
-    from parse import parse_sentence
+    from symlm.parse import parse_sentence
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the cat chased the dog")
     assert "error" not in r, r
@@ -147,7 +147,7 @@ def test_parse_transitive():
 
 def test_parse_transitive_needs_object():
     """'the cat chased' -> transitive verb without object doesn't produce S."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the cat chased")
     assert "error" not in r, r
@@ -157,7 +157,7 @@ def test_parse_transitive_needs_object():
 
 def test_parse_intransitive_rejects_object():
     """'the cat sat the dog' -> sat is intransitive, no VP -> verb NP."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the cat sat the dog")
     assert "error" not in r, r
@@ -168,7 +168,7 @@ def test_parse_intransitive_rejects_object():
 # --- number agreement ----------------------------------------------------
 def test_number_agreement():
     """'a cats' must fail; 'the cats' must parse."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     for text, expect_ok in [
         ("a cat sat", True),
@@ -186,8 +186,8 @@ def test_number_agreement():
 # --- feedback ------------------------------------------------------------
 def test_feedback_confirm():
     """Confirming a session raises trust for its words and rules."""
-    from parse import parse_sentence, cleanup_session
-    from feedback import apply_feedback
+    from symlm.parse import parse_sentence, cleanup_session
+    from symlm.feedback import apply_feedback
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the cat sat")
     sess = r["session"]
@@ -208,8 +208,8 @@ def test_feedback_confirm():
 
 def test_feedback_reject_lowers():
     """Confirm twice, reject once → trust net +1."""
-    from parse import parse_sentence, cleanup_session
-    from feedback import apply_feedback
+    from symlm.parse import parse_sentence, cleanup_session
+    from symlm.feedback import apply_feedback
     s = fresh_parse_fixture()
 
     for _ in range(2):
@@ -240,7 +240,7 @@ def test_feedback_reject_lowers():
 # --- SV agreement & object semantics ------------------------------------
 def test_sv_agreement():
     """Plural subject with 3sg verb must fail; past tense passes (no number)."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     cases = [
         ("the cats sits", False),   # pl subject, sg verb → fail
@@ -257,7 +257,7 @@ def test_sv_agreement():
 
 def test_object_must_be_animate():
     """'chased' requires an animate object; mat fails, dog passes."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     cases = [
         ("the cat chased the mat", False),   # mat not animate → fail
@@ -272,7 +272,7 @@ def test_object_must_be_animate():
 
 
 def test_classify_greeting():
-    from protocol import classify
+    from symlm.protocol import classify
     s = fresh_parse_fixture()
     _seed_classifiers_for_test(s)
     r = classify(s, "hi")
@@ -280,7 +280,7 @@ def test_classify_greeting():
 
 
 def test_classify_wellbeing():
-    from protocol import classify
+    from symlm.protocol import classify
     s = fresh_parse_fixture()
     _seed_classifiers_for_test(s)
     r = classify(s, "how are you")
@@ -288,7 +288,7 @@ def test_classify_wellbeing():
 
 
 def test_classify_semantic():
-    from protocol import classify
+    from symlm.protocol import classify
     s = fresh_parse_fixture()
     _seed_classifiers_for_test(s)
     r = classify(s, "the cat sat")
@@ -296,7 +296,7 @@ def test_classify_semantic():
 
 
 def test_classify_unknown():
-    from protocol import classify
+    from symlm.protocol import classify
     s = fresh_parse_fixture()
     _seed_classifiers_for_test(s)
     r = classify(s, "flibbertigibbet")
@@ -305,7 +305,7 @@ def test_classify_unknown():
 
 def test_respond_ack_mode():
     """'hi' returns a template, not a word dump."""
-    from talk import respond
+    from symlm.talk import respond
     s = fresh_parse_fixture()
     _seed_classifiers_for_test(s)
     out = respond(s, "hi", 1, "sess-t1")
@@ -315,7 +315,7 @@ def test_respond_ack_mode():
 
 def test_respond_layer7_concise():
     """'the cat sat' produces a generated sentence, no word dump."""
-    from talk import respond
+    from symlm.talk import respond
     s = fresh_parse_fixture()
     _seed_classifiers_for_test(s)
     out = respond(s, "the cat sat", 1, "sess-t2")
@@ -325,7 +325,7 @@ def test_respond_layer7_concise():
 
 # --- expansion ----------------------------------------------------------
 def test_endswith_classifier():
-    from protocol import classify
+    from symlm.protocol import classify
     s = fresh_parse_fixture()
     # Seed a minimal endswith classifier
     s.write({"id": "classifier/09-question-mark",
@@ -338,8 +338,8 @@ def test_endswith_classifier():
 
 
 def test_alias_lookup():
-    from substrate import Substrate
-    from parse import _lookup_entry
+    from store.substrate import Substrate
+    from symlm.parse import _lookup_entry
     s = fresh_parse_fixture()
     s.write({"id": "alias/an", "foundation": "foundation:knowledge",
              "state": {"kind": "alias", "alias_for": "a", "text": "an",
@@ -349,8 +349,8 @@ def test_alias_lookup():
 
 
 def test_typo_lookup():
-    from substrate import Substrate
-    from parse import _lookup_entry
+    from store.substrate import Substrate
+    from symlm.parse import _lookup_entry
     s = fresh_parse_fixture()
     s.write({"id": "typo/teh", "foundation": "foundation:knowledge",
              "state": {"kind": "typo", "alias_for": "the", "text": "teh",

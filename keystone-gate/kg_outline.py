@@ -23,7 +23,7 @@ Imported by kg. See docs/VOCABULARY.md.
 """
 import re
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 HEAD = re.compile(r"^(#{1,3})\s*(entity|subject|claim)\b[:\s]*(.*)$", re.I)
 PAIR = re.compile(r"^([A-Za-z-]+):\s*(.*)$")

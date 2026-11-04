@@ -14,21 +14,15 @@ scp-substrate/
 ├── sc.json                foundations
 ├── sc.db                  instances, links, events
 │
-├── src/                   everything importable
-│   ├── substrate.py       Substrate class, DB access, decay function
-│   ├── ed25519.py         Ed25519 (RFC 8032), pure Python
-│   ├── signing.py         sign, verify, canonicalise, did:key
-│   ├── rules.py           rule engine
-│   ├── rules_sequence.py  sequence rules for the grammar
-│   ├── trust.py           parameter trust, evidence trust, fusion
-│   ├── queries.py         read-only queries
-│   ├── why.py             why a capsule is trusted
-│   ├── explain.py         describes a capsule
-│   ├── ask.py             intent matching and entity extraction
-│   ├── walkers.py         one function per kind of question
-│   ├── walk_cubes.py      answers questions from cubes
-│   └── parse, generate, corpus, analysis, protocol, feedback, talk
-│                          SymLM language layer
+├── src/                   everything importable, in three packages
+│   ├── store/             substrate (Substrate class, DB access, decay), rules,
+│   │                      rules_sequence (grammar rules), trust (parameter and
+│   │                      evidence trust, fusion), queries (read-only),
+│   │                      signing (sign, verify, did:key), ed25519 (pure Python)
+│   ├── answer/            ask (intent matching), walkers (one per kind of question),
+│   │                      walk_cubes (answers from cubes), explain, why
+│   └── symlm/             the SymLM language layer: parse, generate, corpus,
+│                          analysis, protocol, feedback, talk
 │
 ├── scripts/               run by hand
 │   ├── bootstrap.py       copy sc.json into sc.db

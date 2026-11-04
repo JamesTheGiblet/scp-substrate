@@ -66,7 +66,7 @@ def test_a_rejection_sticks_unless_the_proposal_changes():
 def test_a_subject_link_leaves_trust_alone():
     # trust.py reads a plain `about` link as a trust record, so subjects use their own
     from kg_subjects import accept_subject, propose_subject
-    from trust import trust_from_evidence
+    from store.trust import trust_from_evidence
     s, a, b, _ = _store()
     try:
         pid = propose_subject(s, "Li-ion packs", [a], "claude")["proposal_id"]

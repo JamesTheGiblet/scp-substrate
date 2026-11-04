@@ -17,8 +17,8 @@ _here = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(_here.parent / "src"), str(_here), str(_here.parent / "seeds" / "claims"),
                  str(_here.parent / "seeds" / "claims" / "before-pivot")]
 
-import substrate
-from substrate import Substrate
+from store import substrate
+from store.substrate import Substrate
 from kg_stats import stats, count_by_foundation
 from kg_router import route_list
 
@@ -91,7 +91,7 @@ GOOD_CLAIM = {"text": "James is a builder.", "evidence": "is a person — builde
 # --- cube tests ----------------------------------------------------------
 def _fresh_kg_substrate():
     """In-memory substrate with KG foundations + default-cube."""
-    from substrate import Substrate
+    from store.substrate import Substrate
     s = Substrate(":memory:")
     s.conn.executescript((_here.parent / "schema.sql").read_text())
     import json as _j
@@ -137,7 +137,7 @@ def _draft_cube(s):
 # --- rule tests ----------------------------------------------------------
 def _seed_decision_substrate():
     """KG substrate with a chose-sqlite-like decision capsule."""
-    from substrate import Substrate
+    from store.substrate import Substrate
     import json as _j
     s = Substrate(":memory:")
     s.conn.executescript((_here.parent / "schema.sql").read_text())

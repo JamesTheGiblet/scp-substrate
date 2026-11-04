@@ -1,6 +1,6 @@
 """Explicit user feedback → trust updates. The learning loop."""
 import json
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def apply_feedback(s, session_id, positive):

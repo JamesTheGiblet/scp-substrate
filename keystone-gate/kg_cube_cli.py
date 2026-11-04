@@ -1,5 +1,5 @@
 """kg cube and kg neighbour commands."""
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def cmd_cube_new(args):

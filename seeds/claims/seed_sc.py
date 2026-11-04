@@ -6,7 +6,7 @@ from pathlib import Path
 _here = Path(__file__).resolve().parents[2] / "keystone-gate"
 sys.path.insert(0, str(_here.parent / "src"))
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 SC_CAPSULES = [

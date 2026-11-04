@@ -227,7 +227,7 @@ def test_gate_passes_file_paths_in_stored_content():
 
 
 def test_is_x_signed_finds_namespaced_capsule():
-    from ask import answer_question
+    from answer.ask import answer_question
     s = Substrate()
     try:
         r = answer_question(s, "is james-gilbert-v1 signed")

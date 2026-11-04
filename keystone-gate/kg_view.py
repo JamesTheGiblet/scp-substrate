@@ -9,7 +9,7 @@ from pathlib import Path
 from kg_agent import LENSES, list_cubes, list_proposals, show_cube
 from kg_lens_links import all_modes
 from kg_overlaps import attach_overlaps, load_decisions
-from trust import fused_trust
+from store.trust import fused_trust
 
 
 _here = Path(__file__).resolve().parent

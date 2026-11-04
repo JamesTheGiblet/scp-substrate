@@ -5,7 +5,7 @@ Content comes from the declaration blob itself — no invention.
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
-from substrate import Substrate
+from store.substrate import Substrate
 
 FOUNDATION = "foundation:knowledge"
 SOURCE_DOC = "giblets-forge/author/james-gilbert-v1"

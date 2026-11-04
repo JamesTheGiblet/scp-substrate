@@ -21,7 +21,7 @@ import json
 import re
 from collections import Counter, defaultdict
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -96,9 +96,9 @@ def collect_sources(s):
             print(f"  skipped {row['id']}: {e}", file=sys.stderr)
 
     # 3. Python docstrings + comments
-    # scripts/ is in folders by job, so it is searched all the way down
+    # scripts/ and src/ are in folders, so they are searched all the way down
     code = [p for d in ("src", "scripts", "seeds/substrate", "tests")
-            for p in (ROOT / d).glob("**/*.py" if d == "scripts" else "*.py")]
+            for p in (ROOT / d).glob("**/*.py" if d in ("scripts", "src") else "*.py")]
     for path in sorted(code, key=lambda p: p.name):
         try:
             src = path.read_text()

@@ -1,6 +1,6 @@
 """explain(capsule_id) — narrative biography via graph traversal."""
 import json
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def _summarise_state(state, foundation):

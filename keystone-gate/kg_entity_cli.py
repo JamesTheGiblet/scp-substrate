@@ -1,5 +1,5 @@
 """kg entity commands. Imported by kg."""
-from substrate import Substrate
+from store.substrate import Substrate
 
 
 def cmd_entity_list(args):

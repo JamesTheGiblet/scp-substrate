@@ -3,7 +3,7 @@ from support_substrate import *
 
 
 def test_subject_must_be_animate():
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     import json
     s = fresh_parse_fixture()
     # Tag sat
@@ -34,7 +34,7 @@ def test_subject_must_be_animate():
 
 # --- wh-startswith classifier --------------------------------------------
 def test_wh_startswith_classifier():
-    from protocol import classify
+    from symlm.protocol import classify
     s = fresh_parse_fixture()
     s.write({
         "id": "classifier/11-wh-question",
@@ -52,7 +52,7 @@ def test_wh_startswith_classifier():
 # --- expanded NP grammar -------------------------------------------------
 def test_np_bare_noun():
     """'cat sat' parses via NP -> noun (bare)."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     r = parse_sentence(s, "cat sat")
     assert r.get("sentence"), r
@@ -61,7 +61,7 @@ def test_np_bare_noun():
 
 def test_np_adj_noun():
     """'big cat sat' parses via NP -> adj noun."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     r = parse_sentence(s, "big cat sat")
     assert r.get("sentence"), r
@@ -70,7 +70,7 @@ def test_np_adj_noun():
 
 def test_np_noun_noun():
     """'house cat sat' parses via NP -> noun noun (compound)."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     r = parse_sentence(s, "house cat sat")
     assert r.get("sentence"), r
@@ -79,7 +79,7 @@ def test_np_noun_noun():
 
 def test_permissive_animacy_missing():
     """Missing animacy feature passes the object check (permissive)."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     import json
     s = fresh_parse_fixture()
     # Add a bare noun with no features
@@ -94,7 +94,7 @@ def test_permissive_animacy_missing():
 # --- animacy feature tags ------------------------------------------------
 def test_abstract_object_blocked():
     """Tagged-abstract noun as object of 'chased' fails."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     s.write({"id": "lex/substrate", "foundation": "foundation:knowledge",
              "state": {"kind": "lexical-entry", "text": "substrate",
@@ -106,7 +106,7 @@ def test_abstract_object_blocked():
 
 def test_object_subject_blocked():
     """Tagged-object noun as subject of 'sat' fails."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     s.write({"id": "lex/capsule", "foundation": "foundation:knowledge",
              "state": {"kind": "lexical-entry", "text": "capsule",
@@ -118,7 +118,7 @@ def test_object_subject_blocked():
 
 def test_animal_subject_passes():
     """Tagged-animal noun as subject of 'sat' passes."""
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     # 'cat' already has animacy: animal from fixture
     r = parse_sentence(s, "cat sat")
@@ -127,7 +127,7 @@ def test_animal_subject_passes():
 
 
 def test_intent_why_trusted():
-    from ask import classify_intent
+    from answer.ask import classify_intent
     s = fresh_parse_fixture()
     _seed_intents_for_test(s)
     r = classify_intent(s, "why is scp-claim trusted")
@@ -135,7 +135,7 @@ def test_intent_why_trusted():
 
 
 def test_intent_what_decided():
-    from ask import classify_intent
+    from answer.ask import classify_intent
     s = fresh_parse_fixture()
     _seed_intents_for_test(s)
     r = classify_intent(s, "what did i decide about sqlite")
@@ -143,7 +143,7 @@ def test_intent_what_decided():
 
 
 def test_intent_no_match():
-    from ask import classify_intent
+    from answer.ask import classify_intent
     s = fresh_parse_fixture()
     _seed_intents_for_test(s)
     r = classify_intent(s, "the cat sat")
@@ -151,14 +151,14 @@ def test_intent_no_match():
 
 
 def test_extract_entity_direct_id():
-    from ask import extract_entity
+    from answer.ask import extract_entity
     s = fresh_parse_fixture()
     entity = extract_entity(s, "why is alice trusted", {"walker": "why_trusted"})
     assert entity == "alice", entity
 
 
 def test_ask_returns_result():
-    from ask import answer_question
+    from answer.ask import answer_question
     s = fresh_parse_fixture()
     _seed_intents_for_test(s)
     # 'who is alice' → what_is walker
@@ -267,7 +267,7 @@ def test_import_scp_help_exits_cleanly():
 
 
 def test_why_walks_back_through_rule_and_model():
-    from why import why_trusted
+    from answer.why import why_trusted
     s = fresh_substrate()
     try:
         s.write({"id": "trust-a", "foundation": "foundation:leighton-weight",
@@ -288,7 +288,7 @@ def test_why_walks_back_through_rule_and_model():
 
 
 def test_why_reports_untrusted():
-    from why import why_trusted
+    from answer.why import why_trusted
     s = fresh_substrate()
     try:
         assert why_trusted(s, "alice") == {"claim": "alice", "trusted": False}
@@ -297,7 +297,7 @@ def test_why_reports_untrusted():
 
 
 def test_explain_narrates_state_and_links():
-    from explain import explain
+    from answer.explain import explain
     s = fresh_substrate()
     try:
         s.write({"id": "bob", "foundation": "foundation:knowledge",

@@ -9,7 +9,7 @@ import base64
 import json
 import os
 
-import ed25519 as _ed
+from store import ed25519 as _ed
 
 DID_KEY_PREFIX = "did:key:z"
 B58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"

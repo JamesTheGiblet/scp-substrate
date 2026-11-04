@@ -9,7 +9,7 @@ import json
 import queue
 import threading
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 from kg_agent import LENSES, list_cubes, list_proposals, propose_face, show_cube
 from kg_cube import is_foundational

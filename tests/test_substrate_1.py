@@ -129,21 +129,21 @@ def test_supersede_rejects_missing_old():
 
 # --- fusion --------------------------------------------------------------
 def test_sigmoid():
-    from trust import sigmoid
+    from store.trust import sigmoid
     assert abs(sigmoid(0) - 0.5) < 1e-9
     assert abs(sigmoid(2) - 0.880797) < 1e-4
     assert abs(sigmoid(-2) - 0.119203) < 1e-4
 
 
 def test_fuse_no_evidence():
-    from trust import fuse
+    from store.trust import fuse
     # Evidence = 0 → L = 0.5 → posterior = prior
     assert abs(fuse(0.7, 0) - 0.7) < 1e-6
     assert abs(fuse(0.2, 0) - 0.2) < 1e-6
 
 
 def test_fuse_mid_prior_strong_evidence():
-    from trust import fuse
+    from store.trust import fuse
     # prior 0.5 (uncertain), evidence +2 → posterior ≈ 0.88
     assert abs(fuse(0.5, 2) - 0.88) < 0.01
     # prior 0.5, evidence -2 → posterior ≈ 0.12
@@ -151,7 +151,7 @@ def test_fuse_mid_prior_strong_evidence():
 
 
 def test_fuse_disagreement_moves():
-    from trust import fuse
+    from store.trust import fuse
     # Prior confident-positive (0.9), evidence strong-negative (-2)
     # Posterior should move toward 0.5 but not below
     p = fuse(0.9, -2)
@@ -159,7 +159,7 @@ def test_fuse_disagreement_moves():
 
 
 def test_fuse_clamping():
-    from trust import fuse
+    from store.trust import fuse
     # prior=1, evidence=-10 → posterior > 0 (clamping prevents freeze)
     p = fuse(1.0, -10)
     assert 0.0 < p < 1.0
@@ -169,7 +169,7 @@ def test_fuse_clamping():
 
 
 def test_fused_trust_integration():
-    from trust import fused_trust, compute_all
+    from store.trust import fused_trust, compute_all
     s = fresh_substrate()
     s.write({"id": "trust-1", "foundation": "foundation:leighton-weight",
              "state": {"n0": 0.8, "k": 0.01}})
@@ -233,7 +233,7 @@ def test_kind_and_age_skips_young_question():
 
 # --- parse ---------------------------------------------------------------
 def test_parse_simple():
-    from parse import parse_sentence
+    from symlm.parse import parse_sentence
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the cat sat")
     assert "error" not in r, r
@@ -242,7 +242,7 @@ def test_parse_simple():
 
 
 def test_parse_pp():
-    from parse import parse_sentence
+    from symlm.parse import parse_sentence
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the cat sat on the mat")
     assert "error" not in r, r
@@ -251,7 +251,7 @@ def test_parse_pp():
 
 
 def test_parse_adj():
-    from parse import parse_sentence
+    from symlm.parse import parse_sentence
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the big cat sat")
     assert "error" not in r, r
@@ -259,7 +259,7 @@ def test_parse_adj():
 
 
 def test_parse_unknown_word():
-    from parse import parse_sentence
+    from symlm.parse import parse_sentence
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the zzz sat")
     assert "error" in r
@@ -267,7 +267,7 @@ def test_parse_unknown_word():
 
 
 def test_parse_cleanup():
-    from parse import parse_sentence, cleanup_session
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     r = parse_sentence(s, "the cat sat")
     sess = r["session"]
@@ -286,7 +286,7 @@ def test_parse_cleanup():
 
 # --- generate ------------------------------------------------------------
 def test_generate_simple():
-    from generate import generate_sentence
+    from symlm.generate import generate_sentence
     s = fresh_parse_fixture()
     r = generate_sentence(s, seed=42)
     assert "error" not in r, r
@@ -295,7 +295,7 @@ def test_generate_simple():
 
 
 def test_generate_deterministic():
-    from generate import generate_sentence
+    from symlm.generate import generate_sentence
     s = fresh_parse_fixture()
     a = generate_sentence(s, seed=123)
     b = generate_sentence(s, seed=123)
@@ -303,8 +303,8 @@ def test_generate_deterministic():
 
 
 def test_generate_then_parse():
-    from generate import generate_sentence
-    from parse import parse_sentence, cleanup_session
+    from symlm.generate import generate_sentence
+    from symlm.parse import parse_sentence, cleanup_session
     s = fresh_parse_fixture()
     r = generate_sentence(s, seed=7)
     assert "error" not in r, r

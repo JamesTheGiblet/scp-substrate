@@ -20,7 +20,7 @@ import os
 import subprocess
 from datetime import datetime, timezone
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 SKIP_DIRS = {
     ".git", "__pycache__", "node_modules", "venv", ".venv", "env", ".env",

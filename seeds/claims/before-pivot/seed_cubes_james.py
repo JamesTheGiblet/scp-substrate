@@ -12,7 +12,7 @@ from pathlib import Path
 _here = Path(__file__).resolve().parents[3] / "keystone-gate"
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
-from substrate import Substrate
+from store.substrate import Substrate
 
 from kg_agent import create_cube, propose_face
 

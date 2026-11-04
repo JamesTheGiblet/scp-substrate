@@ -13,9 +13,9 @@ The rule behind the gate and the model layer is that an LLM handles wording, not
 
 ## Boundary with the substrate
 
-Keystone Gate adds no code to `src/substrate.py`, `src/rules.py`, `src/queries.py` or `schema.sql`, and its capsules are written through `Substrate.write()` and `Substrate.link()`.
+Keystone Gate adds no code to `src/store/substrate.py`, `src/store/rules.py`, `src/store/queries.py` or `schema.sql`, and its capsules are written through `Substrate.write()` and `Substrate.link()`.
 
-The substrate side knows about cubes in three places: four foundations in `sc.json` (`cube`, `lens`, `cube-face`, `neighbour`), a `default-cube` capsule holding the weights, and read-only cube support in `src/walk_cubes.py` and `src/explain.py`.
+The substrate side knows about cubes in three places: four foundations in `sc.json` (`cube`, `lens`, `cube-face`, `neighbour`), a `default-cube` capsule holding the weights, and read-only cube support in `src/answer/walk_cubes.py` and `src/answer/explain.py`.
 
 Removing Keystone Gate would mean deleting this folder, those foundations, `walk_cubes.py` with its walker and intent, and the cube capsules.
 

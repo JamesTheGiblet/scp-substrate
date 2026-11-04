@@ -4,9 +4,9 @@ import json
 import re
 import uuid
 
-from substrate import Substrate
-from parse import parse_sentence, cleanup_session, display_parse
-from generate import generate_sentence
+from store.substrate import Substrate
+from symlm.parse import parse_sentence, cleanup_session, display_parse
+from symlm.generate import generate_sentence
 
 
 def _extract_semantic(s, root_id, session_id):
@@ -104,7 +104,7 @@ def _log_turn(s, session_id, turn, user_text, response, parsed, semantic=None, c
 
 def respond(s, text, turn, session_id):
     """Classify input, respond at matched layer."""
-    import protocol as _p
+    from symlm import protocol as _p
 
     prev = _discourse_state(s, session_id)
     classification = _p.classify(s, text)
@@ -120,7 +120,7 @@ def respond(s, text, turn, session_id):
 
     elif layer == 7 or (layer == 3 and _is_question(text)):
         # First try querying the substrate for an answer
-        from ask import answer_question, render as _ask_render
+        from answer.ask import answer_question, render as _ask_render
         q = answer_question(s, text)
         if q is not None:
             response = _ask_render(q)

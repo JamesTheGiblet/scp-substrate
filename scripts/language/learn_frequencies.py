@@ -4,9 +4,9 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from collections import Counter
 
-from substrate import Substrate
-from parse import parse_sentence, cleanup_session
-from corpus import load_corpus
+from store.substrate import Substrate
+from symlm.parse import parse_sentence, cleanup_session
+from symlm.corpus import load_corpus
 
 
 def main():

@@ -18,7 +18,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 sys.path[:0] = [str(REPO / "src"), str(REPO / "keystone-gate")]
 
-from substrate import Substrate
+from store.substrate import Substrate
 from kg_view import collect, hubs, render, things, user_name
 
 EDGE = os.environ.get("EDGE", r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe")
