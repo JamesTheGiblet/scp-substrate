@@ -13,25 +13,6 @@ def what_supports(s, claim_id):
     """, (claim_id,)).fetchall()
 
 
-def support_tree(s, claim_id, max_depth=10):
-    """Recursive support tree for a claim."""
-    return s.conn.execute("""
-        WITH RECURSIVE support(id, depth, via) AS (
-            SELECT ?, 0, NULL
-            UNION ALL
-            SELECT l.target, s.depth + 1, l.type
-            FROM support s
-            JOIN links l ON l.source = s.id
-            WHERE l.type IN ('supported-by', 'derived-from')
-              AND s.depth < ?
-        )
-        SELECT c.id, c.foundation, s.depth, s.via, c.state_json
-        FROM support s
-        JOIN capsules c ON c.id = s.id
-        ORDER BY s.depth
-    """, (claim_id, max_depth)).fetchall()
-
-
 def observations(s):
     return s.by_foundation("foundation:observation")
 

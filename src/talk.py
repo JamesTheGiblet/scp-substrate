@@ -71,18 +71,6 @@ def _is_question(text):
     return False
 
 
-def _known_words(s, text):
-    words = re.findall(r"[a-z]+", text.lower())
-    out = []
-    for w in words:
-        c = s.get(f"lex/{w}")
-        if c:
-            st = c["state"]
-            out.append({"word": w, "pos": st["pos"],
-                        "features": st.get("features", {})})
-    return out
-
-
 def _log_turn(s, session_id, turn, user_text, response, parsed, semantic=None, classification=None):
     cid = f"conversation/{session_id}/{turn:03d}"
     state = {

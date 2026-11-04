@@ -1,3 +1,9 @@
+"""The store itself: capsules, the links between them, and the event log, in sc.db.
+
+Every write goes through Substrate: write() and supersede() for capsules,
+link() for links, and each one logs an event. Foundations are written only
+from sc.json by scripts/bootstrap.py. See docs/SPEC.md.
+"""
 import json, math, sqlite3
 from pathlib import Path
 
