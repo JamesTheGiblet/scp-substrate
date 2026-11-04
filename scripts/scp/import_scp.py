@@ -5,7 +5,7 @@ quarantined under state.source_format for later promotion.
 """
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import json
 
 from substrate import Substrate
@@ -75,7 +75,7 @@ def import_scp(s: Substrate, doc: dict, *, source_path: str = None) -> dict:
 
 
 def main():
-    usage = "usage: python scripts/import_scp.py <file.scp.json>"
+    usage = "usage: python scripts/scp/import_scp.py <file.scp.json>"
     if len(sys.argv) < 2:
         sys.exit(usage)
     if sys.argv[1] in ("-h", "--help"):

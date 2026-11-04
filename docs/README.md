@@ -22,4 +22,4 @@ What each document is for. The store holds **entities** (James, SCPBot, projects
 
 ## SCP documents
 
-[scp/](scp/) holds the signed SCP documents imported into the store: James's person and author documents, the circadian routines, and the substrate's own. Each comes as a `.scp.json` and its `.signed.scp.json`. Import one with `python scripts/import_scp.py docs/scp/<file>.signed.scp.json`.
+[scp/](scp/) holds the signed SCP documents imported into the store: James's person and author documents, the circadian routines, and the substrate's own. Each comes as a `.scp.json` and its `.signed.scp.json`. Import one with `python scripts/scp/import_scp.py docs/scp/<file>.signed.scp.json`.

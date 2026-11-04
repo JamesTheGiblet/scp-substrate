@@ -3,13 +3,13 @@
 Phase 1: metadata only. No content, no symbols, no imports.
 
 Usage:
-  python scripts/absorb_repo.py <path> --dry-run     # show what would happen
-  python scripts/absorb_repo.py <path> --write       # actually write
-  python scripts/absorb_repo.py <path>               # dry-run is default
+  python scripts/repos/absorb_repo.py <path> --dry-run     # show what would happen
+  python scripts/repos/absorb_repo.py <path> --write       # actually write
+  python scripts/repos/absorb_repo.py <path>               # dry-run is default
 """
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from repo_symbols import _extract_js_symbols, _extract_python_symbols, _extract_symbols_for
 import argparse
 import re

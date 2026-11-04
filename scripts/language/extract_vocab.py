@@ -1,7 +1,7 @@
 """Extract vocabulary from substrate content and seed new lexical entries.
 
 Sources:
-  - docs/*.scp.json (SCP documents)
+  - docs/scp/*.scp.json (SCP documents)
   - capsule state fields (knowledge, observation, principle, decision, session)
   - Python docstrings and comments
 
@@ -14,7 +14,7 @@ POS tagging: heuristic (context + morphology), flagged by confidence.
 """
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import argparse
 import ast
 import json
@@ -23,7 +23,7 @@ from collections import Counter, defaultdict
 
 from substrate import Substrate
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 
 # Words that signal the *next* word's POS
 DET = {"the", "a", "an", "this", "that", "these", "those", "my", "your",
@@ -73,11 +73,11 @@ def _walk_json_strings(obj):
 def collect_sources(s):
     """Yield (label, text) tuples."""
     # 1. SCP documents
-    for path in sorted((ROOT / "docs").glob("*.scp.json")):
+    for path in sorted((ROOT / "docs" / "scp").glob("*.scp.json")):
         try:
             data = json.loads(path.read_text())
             text = " ".join(_walk_json_strings(data))
-            yield f"docs/{path.name}", text
+            yield f"docs/scp/{path.name}", text
         except Exception as e:
             print(f"  warn: {path.name}: {e}")
 
@@ -96,7 +96,9 @@ def collect_sources(s):
             print(f"  skipped {row['id']}: {e}", file=sys.stderr)
 
     # 3. Python docstrings + comments
-    code = [p for d in ("src", "scripts", "seeds", "tests") for p in (ROOT / d).glob("*.py")]
+    # scripts/ is in folders by job, so it is searched all the way down
+    code = [p for d in ("src", "scripts", "seeds", "tests")
+            for p in (ROOT / d).glob("**/*.py" if d == "scripts" else "*.py")]
     for path in sorted(code, key=lambda p: p.name):
         try:
             src = path.read_text()

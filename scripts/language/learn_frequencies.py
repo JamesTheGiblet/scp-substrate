@@ -1,7 +1,7 @@
 """Parse every corpus sentence, count token occurrences, seed trust."""
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 from collections import Counter
 
 from substrate import Substrate

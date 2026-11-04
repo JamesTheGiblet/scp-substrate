@@ -32,12 +32,11 @@ scp-substrate/
 │
 ├── scripts/               run by hand
 │   ├── bootstrap.py       copy sc.json into sc.db
-│   ├── keygen.py          generate an Ed25519 keypair
-│   ├── sign_doc.py        sign an SCP document
-│   ├── import_scp.py      SCP document import (also import_person, import_circadian)
-│   ├── absorb_repo.py     index a local repo (also absorb_github)
-│   ├── repo_symbols.py    extract functions, classes and imports
-│   └── fill_styles.py, extract_vocab.py, learn_frequencies.py
+│   ├── archive_cubes.py   move capsules, their links and events into archive/
+│   ├── readme_shots.py    take the README's screenshots
+│   ├── scp/               keygen, sign_doc, import_scp (also import_person, import_circadian)
+│   ├── repos/             absorb_repo, absorb_github: index a repo; repo_symbols: its functions and imports
+│   └── language/          extract_vocab, fill_styles, learn_frequencies: the SymLM vocabulary
 │
 ├── seeds/                 scripts that create starting capsules
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py

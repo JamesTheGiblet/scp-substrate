@@ -151,9 +151,9 @@ scps forget-parse <session>    deletes one parse session
 ## Signing a document
 
 ```sh
-python scripts/keygen.py default       # writes ~/.config/scp/keys/default.json
-python scripts/sign_doc.py my-doc.scp.json -o my-doc.signed.scp.json
-python scripts/import_scp.py my-doc.signed.scp.json
+python scripts/scp/keygen.py default       # writes ~/.config/scp/keys/default.json
+python scripts/scp/sign_doc.py my-doc.scp.json -o my-doc.signed.scp.json
+python scripts/scp/import_scp.py my-doc.signed.scp.json
 ```
 
 `import_scp.py` verifies the signature and writes a `verification:*` capsule. A signature shows who signed a document. It does not say the document is true.
@@ -163,12 +163,12 @@ python scripts/import_scp.py my-doc.signed.scp.json
 ## Indexing repositories
 
 ```sh
-python scripts/absorb_repo.py /path/to/repo --dry-run
-python scripts/absorb_repo.py /path/to/repo --write
-python scripts/absorb_repo.py /path/to/repo --write --prune    # also deletes capsules for removed files
+python scripts/repos/absorb_repo.py /path/to/repo --dry-run
+python scripts/repos/absorb_repo.py /path/to/repo --write
+python scripts/repos/absorb_repo.py /path/to/repo --write --prune    # also deletes capsules for removed files
 
-python scripts/absorb_github.py owner/repo --dry-run
-python scripts/absorb_github.py owner/repo --write
+python scripts/repos/absorb_github.py owner/repo --dry-run
+python scripts/repos/absorb_github.py owner/repo --write
 ```
 
 Local indexing stores file hashes, line counts, imports and function and class names. GitHub indexing stores metadata and the file tree only. Neither stores file contents.

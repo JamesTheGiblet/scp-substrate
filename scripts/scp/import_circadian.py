@@ -9,13 +9,13 @@ Maps a routine document to:
   - `routine --follows--> <previous routine>` and inverse `precedes` (if follows_doc_id given)
 
 Usage:
-  python scripts/import_circadian.py <file.scp.json> [--signed]
+  python scripts/scp/import_circadian.py <file.scp.json> [--signed]
 
 The --signed flag expects a signed document; verifies before importing.
 """
 import sys
 from pathlib import Path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import argparse
 import json
 from datetime import datetime, timezone
