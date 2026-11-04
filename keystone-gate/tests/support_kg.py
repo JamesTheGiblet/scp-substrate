@@ -12,9 +12,9 @@ import sys
 import tempfile
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here.parent / "src"))
-sys.path.insert(0, str(_here))
+# keystone-gate, one folder up. Tests import its modules and its seeds
+_here = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(_here.parent / "src"), str(_here), str(_here / "seeds"), str(_here / "seeds" / "before-pivot")]
 
 import substrate
 from substrate import Substrate

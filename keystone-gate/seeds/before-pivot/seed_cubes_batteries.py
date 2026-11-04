@@ -3,12 +3,13 @@
 These assume two 18650 cells in series (2S). Cell figures come from Samsung's
 INR18650-30Q specification as a representative 3000mAh cell, so a specific pack
 may differ. Nobody has tested a pack here, so every face is a proposal.
-Run: python keystone-gate/seed_cubes_batteries.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_batteries.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

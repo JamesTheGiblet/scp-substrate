@@ -3,12 +3,13 @@
 The words are Claude's, written from conversation, so every face is a proposal
 and the validation is only a suggestion. They are tagged private, so later
 drafting and answers about them stay on this machine.
-Run: python keystone-gate/seed_cubes_james.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_james.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

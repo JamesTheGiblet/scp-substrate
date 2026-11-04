@@ -6,7 +6,8 @@ count for nothing until accepted. Reject or rewrite any that are not yours.
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 

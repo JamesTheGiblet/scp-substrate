@@ -2,12 +2,13 @@
 
 Each one is a pending proposal, so it counts for nothing until James accepts it
 in the grid. The reasons are Claude's, written from the cubes' claims.
-Run: python keystone-gate/seed_links_foundations.py
+Run: python keystone-gate/seeds/before-pivot/seed_links_foundations.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

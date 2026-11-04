@@ -48,7 +48,7 @@ scp-substrate/
 ├── images/                screenshots used in the README, taken by scripts/readme_shots.py
 ├── build/                 cubes.html, the generated page, tracked in git
 │   └── public/            the public snapshot, its own repo (JamesTheGiblet/cubes), ignored here
-├── keystone-gate/         see keystone-gate/README.md for its files
+├── keystone-gate/         the kg modules; seeds/, tests/ and view/ (the page) in folders. See keystone-gate/README.md
 └── legacy/                pre-SQLite JSON archive, ignored by git
 ```
 

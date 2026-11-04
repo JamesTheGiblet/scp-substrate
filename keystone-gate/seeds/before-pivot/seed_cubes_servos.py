@@ -4,12 +4,13 @@ Servo listings copy each other, so a figure repeated by many sellers is one
 source. These cubes separate datasheet copies from a seller's own measurements,
 and put disagreements in COUNTER. No original Tower Pro document was found, and
 nobody has tested these servos, so every face is a proposal.
-Run: python keystone-gate/seed_cubes_servos.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_servos.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

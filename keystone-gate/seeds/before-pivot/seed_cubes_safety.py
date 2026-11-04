@@ -4,12 +4,13 @@ Sources are the HSE, UK fire services, councils and Battery University where
 they could be found. These are reference notes, not a substitute for official
 guidance, a competent person, or the emergency services. Nobody has tested
 anything here, so every face is a proposal.
-Run: python keystone-gate/seed_cubes_safety.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_safety.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

@@ -3,12 +3,13 @@
 The boards are the ESP32-C3, Raspberry Pi 3 Model B+, Arduino Uno R3, BBC
 micro:bit V2 and Raspberry Pi Pico. Figures come from makers' sheets where they
 could be read. Nobody has tested these here, so every face is a proposal.
-Run: python keystone-gate/seed_cubes_boards.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_boards.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

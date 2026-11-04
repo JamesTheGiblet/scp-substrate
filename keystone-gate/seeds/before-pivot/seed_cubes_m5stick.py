@@ -4,12 +4,13 @@ Each FACT names what was compared: M5Stack's docs, M5Stack's driver code,
 Espressif's datasheet, and outside reviews. Disagreements go in COUNTER. The
 words are Claude's and nobody has tested these on a device, so every face is a
 proposal, and the suggested note says so.
-Run: python keystone-gate/seed_cubes_m5stick.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_m5stick.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

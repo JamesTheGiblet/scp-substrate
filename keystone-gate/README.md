@@ -263,6 +263,8 @@ Run these as `python keystone-gate/kg ...`.
 
 ## Files
 
+The modules sit at the top of `keystone-gate/`. Seeds, tests and the page's own files each have a folder.
+
 | File | Purpose |
 |---|---|
 | `kg` | CLI entry point |
@@ -275,39 +277,62 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_gate.py` | Gate rules and checkers |
 | `kg_hal.py` | Asks the substrate and gates the answer |
 | `kg_llm.py` | Model layer: Claude, Gemini, Ollama |
-| `kg_lens_links.py` | Lens links and clusters |
-| `kg_view.py` | Builds the page |
+| `kg_lllm.py` | LLLM, James's own model, drafting FACT from his own writing |
+| `kg_fill.py` | Models draft blank faces, LLLM first, in the background under `serve` |
+| `kg_entities.py`, `kg_entity_cli.py` | Entities, sorting old capsules, and `kg entity` |
+| `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
+| `kg_outline.py` | `kg import`: an entity, its subjects and claims from an outline (`docs/OUTLINE.md`) |
+| `kg_wiring.py` | `kg wiring`: nets traced from wiring claims, such as a common ground |
+| `kg_lens_links.py` | Lens links and clusters, and the Cluster by modes |
+| `kg_overlaps.py` | Overlaps valued by Leighton weight |
+| `kg_repos.py` | Claim cubes from a repo's README |
+| `kg_view.py` | Builds the page from `view/` |
 | `kg_serve.py` | Local server |
 | `kg_public.py` | The public snapshot, without private cubes or drafts |
 | `kg_lock.py` | Editing password |
-| `kg_repos.py` | Claim cubes from a repo's README |
-| `kg_overlaps.py` | Overlaps valued by Leighton weight |
-| `kg_fill.py` | Models draft blank faces, in the background under `serve` |
-| `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
-| `kg_entities.py`, `kg_entity_cli.py` | Entities, sorting old capsules, and `kg entity` |
-| `seed_entity_sorting.py` | Suggested sorting of what `james` links to, as proposals |
+| `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
+| `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |
+
+### `view/`
+
+| File | Purpose |
+|---|---|
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
-| `view_field_world.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, cluster forms, the time bar, moving around |
-| `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
+| `view_field_world.js`, `view_field_hubs.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, entities and their parts, drawing, cluster forms, the time bar, moving around |
+
+### `seeds/`
+
+Run a seed as `python keystone-gate/seeds/<file>`.
+
+| File | Purpose |
+|---|---|
 | `seed_sc.py` | Creates and updates `sc` capsules |
+| `seed_entity_sorting.py` | Suggested sorting of what `james` links to, as proposals |
+| `seed_claims_about_james.py` | Claims about James, linked to him as an entity |
+| `seed_claims_scpbot.py` | SCPBot's parts and wiring claims |
+| `seed_claims_replicant.py` | Replicant, its subjects and claims, flagged by how far each was checked |
+| `seed_forge_stack.py` | The Forge Stack as an entity, its layers as subjects, the details as claims |
+| `seed_projects.py` | The SCP substrate, LLLM, Canon and JIG as projects, with their claims |
+
+### `seeds/before-pivot/`
+
+The seeds from before 3 November 2026, when every cube was archived to start again on entities, subjects and claims. **Don't run them on the live store:** they would bring back archived cubes without subjects or entities. They stay because tests use their cubes as test data.
+
+| File | Purpose |
+|---|---|
 | `seed_cubes.py` | Project claims as draft cubes |
-| `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals. They are not your views until accepted |
+| `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals |
 | `seed_cubes_james.py` | Cubes about James, as drafts in Claude's words, tagged private |
-| `seed_cubes_m5stick.py` | M5StickC Plus2 cubes, cross-referenced across sources, as drafts |
-| `seed_cubes_servos.py` | SG90, MG90S and MG996R cubes, cross-referenced, as drafts |
-| `seed_cubes_batteries.py` | 7.4V 3000mAh Li-ion pack cubes, cross-referenced, as drafts |
-| `seed_cubes_sensors.py` | Distance sensors, buzzers, LEDs and switches, cross-referenced, as drafts |
-| `seed_cubes_wiring.py`, `seed_cubes_boards.py` | Wiring and dev board cubes, cross-referenced, as drafts |
-| `seed_cubes_safety.py` | Hardware safety cubes linked to the rest, as drafts. Reference notes, not official guidance |
-| `seed_cubes_robots.py` | Robot shapes and configurations, as drafts |
-| `seed_cubes_security.py` | Foundational security cubes, and marks safety cubes foundational |
-| `seed_links_foundations.py` | Suggested links from foundational cubes to related cubes, as proposals |
-| `seed_cubes_preferences.py` | Marks your principle cubes as foundational preferences, adds two drafts, and suggests links |
+| `seed_cubes_m5stick.py`, `seed_cubes_servos.py`, `seed_cubes_batteries.py`, `seed_cubes_sensors.py`, `seed_cubes_wiring.py`, `seed_cubes_boards.py`, `seed_cubes_robots.py` | Hardware cubes, cross-referenced across sources, as drafts |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
-| `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
-| `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |
-| `support_kg.py`, `test_*.py` | Tests |
+| `seed_cubes_related.py` | General-knowledge cubes drafted by Claude |
+| `seed_cubes_safety.py`, `seed_cubes_security.py`, `seed_cubes_preferences.py` | The foundational cubes: safety, security and preferences |
+| `seed_links_foundations.py` | Suggested links from foundational cubes to related cubes, as proposals |
+
+### `tests/`
+
+`support_kg.py` and `test_*.py`. `python tests/run.py` at the repo root runs them with the substrate's own tests.
 
 ## Tests
 

@@ -11,7 +11,8 @@ pins end up joined. Create-only: a claim whose id exists is skipped.
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 1 folder up
+_here = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 

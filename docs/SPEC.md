@@ -534,7 +534,7 @@ A paraphrase that misstates its quote, or a new lowercase word, still passes: th
 
 Keystone Gate is the first implementation of this pattern:
 
-- `keystone-gate/seed_sc.py` - seeds `sc/symlm-answerer`
+- `keystone-gate/seeds/seed_sc.py` - seeds `sc/symlm-answerer`
 - `keystone-gate/kg_gate.py` - `check()` and one `_check_*` function per rule
 - `keystone-gate/kg_hal.py` - `ask_gated()` - asks substrate, gates answer, returns pass or reject
 - `keystone-gate/kg_llm.py` - `ask_llm()` - walker, then Claude, Gemini and Ollama in turn, each through the gate, with fallback

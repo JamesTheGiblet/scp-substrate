@@ -7,7 +7,8 @@ datasheet or spec. Lenses are proposals; OPINION is the human's.
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_here.parent / "src"))
 sys.path.insert(0, str(_here))
 

@@ -3,12 +3,13 @@
 Foundational cubes are tagged `foundational`. Their rules are enforced in
 kg_cube.py and kg_fill.py, so the amber on the page means something. The facts
 here describe this project's own code and its sources.
-Run: python keystone-gate/seed_cubes_security.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_security.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

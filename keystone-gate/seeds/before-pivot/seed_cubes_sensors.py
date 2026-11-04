@@ -4,12 +4,13 @@ One real part stands in for each type: VL53L0X for time-of-flight, HC-SR04 for
 ultrasonic, Sharp GP2Y0A21 for IR distance, WS2812B for addressable LEDs and the
 Omron D2F for microswitches. Figures come from the datasheets where they could
 be read. Nobody has tested these here, so every face is a proposal.
-Run: python keystone-gate/seed_cubes_sensors.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_sensors.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

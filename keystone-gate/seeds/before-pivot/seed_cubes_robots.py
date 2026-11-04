@@ -4,12 +4,13 @@ Covers wheeled bases, arms and legged robots, with sums worked using this
 store's own servo and battery cubes. Sources are mostly reference articles, so
 they describe the geometry well and say less about real-world limits. Nobody
 has built these here, so every face is a proposal.
-Run: python keystone-gate/seed_cubes_robots.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_robots.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate

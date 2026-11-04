@@ -13,14 +13,15 @@ from trust import fused_trust
 
 
 _here = Path(__file__).resolve().parent
-TEMPLATE = _here / "view_template.html"
-PARTS = {name: _here / file for name, file in {
+VIEW = _here / "view"
+TEMPLATE = VIEW / "view_template.html"
+PARTS = {name: VIEW / file for name, file in {
     "/*STYLE*/": "view_style.css",
     "/*GRID*/": "view_grid.js",
     "/*BAR*/": "view_bar.js",
     "/*EDIT*/": "view_edit.js",
 }.items()}
-FIELD = [_here / f"view_field_{part}.js" for part in ("world", "hubs", "draw", "form", "time", "move")]
+FIELD = [VIEW / f"view_field_{part}.js" for part in ("world", "hubs", "draw", "form", "time", "move")]
 OUTPUT = _here.parent / "build" / "cubes.html"
 
 

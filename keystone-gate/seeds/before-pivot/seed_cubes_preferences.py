@@ -4,12 +4,13 @@ Your attested principle cubes are marked foundational and tagged `preference`.
 Their words and attestations stay as they are, and from now on they follow the
 foundational rules. Two new preference cubes are drafts in Claude's words for
 you to confirm. Suggested links tie each kind of foundation to what it governs.
-Run: python keystone-gate/seed_cubes_preferences.py
+Run: python keystone-gate/seeds/before-pivot/seed_cubes_preferences.py
 """
 import sys
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
+# keystone-gate, 2 folders up
+_here = Path(__file__).resolve().parents[2]
 sys.path[:0] = [str(_here.parent / "src"), str(_here)]
 
 from substrate import Substrate
