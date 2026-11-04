@@ -32,7 +32,7 @@ A thing that exists, with identity. People, robots, projects, places, organisati
 - **Kind:** a field saying what sort of entity it is, such as `person`, `robot`, `project` or `place`.
 - **Links:** an entity *uses* or *knows about* subjects, and *is part of* or *owns* other entities.
 
-**Status: partly built.** `kg entity add`, `link`, `list` and `show` exist, in `keystone-gate/kg_entities.py`. The entities so far are James, SCPBot, and the projects the Forge Stack, the SCP substrate, Replicant, LLLM, Canon and JIG; the rest of what James links to is still waiting to be sorted (below). The SCP substrate describes itself against the Forge Stack's five layers, gaps included, as claims about project/scp-substrate. On the page, an entity that uses subjects is a smaller green dot with its parts circling it, and each claim gathers round the first of its parts. In the grid, every entity and subject has a card; opening one shows what it is, its parts or who uses it, and only its claims.
+**Status: partly built.** `kg entity add`, `link`, `list` and `show` exist, in `keystone-gate/kg_entities.py`. The entities so far are James, SCPBot, the ACEBOTT spider chassis (part of SCPBot), and the projects the Forge Stack, the SCP substrate, Replicant, LLLM, Canon and JIG; the rest of what James links to is still waiting to be sorted (below). The SCP substrate describes itself against the Forge Stack's five layers, gaps included, as claims about project/scp-substrate. On the page, an entity that uses subjects is a smaller green dot with its parts circling it, and each claim gathers round the first of its parts. In the grid, every entity and subject has a card; opening one shows what it is, its parts or who uses it, and only its claims.
 
 ### Sorting what was already there
 
@@ -81,9 +81,9 @@ One statement, examined through the five lenses. This is the cube.
 
   A kind does not change how the claim is scored. Every kind is still examined through all five lenses.
 
-- **Subject:** a claim is *about* one or more subjects.
+- **Subject:** a claim is *about* one or more subjects, and can also be about one or more entities as a whole.
 
-**Status: built**, apart from kinds and subjects.
+**Status: built**, apart from kinds. A claim links to its subjects with `about-subject` and to its entities with `about-entity`.
 
 ## Lens and face
 
@@ -145,6 +145,7 @@ Between entities and subjects, the link types already used in the store carry th
 | entity | `described-by` | a document about it |
 | subject | `part-of` | subject |
 | claim | `about-subject` | subject |
+| claim | `about-entity` | entity |
 | claim | `derived-from` | evidence |
 
 A relationship records who made it and, if it came from a suggestion, the reason given. A link a model suggests stays a proposal until James accepts it and picks the word.

@@ -2,6 +2,8 @@
 
 How to get the cube page running and work through your cubes. Run every command from the repo folder, `C:\Users\gilbe\Documents\scp-substrate`.
 
+Each cube is one claim, about a subject (a part or topic) that belongs to an entity (you, SCPBot, a project). [VOCABULARY.md](VOCABULARY.md) explains the model. To see the page that way, press **Entities** under **Cluster by**, then pick an entity and one of its subjects.
+
 ## First time only
 
 1. Set the editing password. Nothing appears as you type, which is normal. Use at least 8 characters.

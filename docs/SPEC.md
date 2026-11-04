@@ -572,3 +572,33 @@ Needs a complete cube. It writes the attestation observation, which `fused_trust
 ### Browser access
 
 `kg cube serve` runs an HTTP server bound to 127.0.0.1. `POST /api/do` applies one action and returns the updated cubes and clusters. Each POST needs the `X-Cube-Token` header, issued when the server starts and embedded in the page. `POST /api/unlock` checks the editing password against the scrypt hash in `~/.config/scp/cube-edit.json` and returns a key. `/api/do` also needs that key in `X-Cube-Key`, otherwise it returns 401. The key is held in memory, lapses after 30 idle minutes, and `POST /api/lock` ends it. `POST /api/status` reports the pending drafts and sends the cubes when that count has moved. The `new` action queues the cube for `kg_fill.py`, and the `draft` action queues every cube with a blank, one at a time on a background thread. Drafts are proposals with `proposed_by` set to `model-draft:<model>`. Requests with another `Host` or `Origin` are refused.
+
+## 17. Entities, subjects and claims
+
+The model the store is built on since 3 November 2026. A claim is a cube (section 16), and entities and subjects give it a place. [VOCABULARY.md](VOCABULARY.md) gives the reasons and the status of each part. Like cubes, they use no new tables.
+
+### Capsules
+
+| ID | Foundation | Holds |
+|---|---|---|
+| `entity/<slug>` | `foundation:entity` | `name`, `kind`, `created_by`, `created_at`, and optional fields such as `definition`, `aliases` and `parts` |
+| `project/<slug>` | `foundation:project` | The same, for a project |
+| `james` | `foundation:person` | The same, for a person. The store's owner stays `james` |
+| `subject/<slug>` | `foundation:subject` | `name`, `kind` |
+| `proposal/sort/<id>` | `foundation:knowledge` | A proposed entity kind for an existing capsule, waiting for `kg entity accept` or `reject` |
+
+### Links
+
+| From | Link | To |
+|---|---|---|
+| entity | `uses`, `can` | subject |
+| entity | `part-of`, `owns`, `building`, `works-at`, `at` | entity |
+| claim | `about-subject` | subject |
+| claim | `about-entity` | entity |
+| claim | `derived-from` | evidence |
+
+`kg entity link` refuses any entity link not in this table. A claim's state may also hold `wires`, a list of pin-to-pin pairs, which `kg_wiring.py` joins into nets.
+
+### Building them
+
+One at a time: `kg entity add` makes an entity and `kg entity link` links it. `kg subject accept` makes a subject from a proposal, and `kg subject add` says a claim is about an existing subject. `kg import <outline>` makes an entity, its subjects and its claims from one file, checking every id first so that it writes all or nothing (`docs/OUTLINE.md`).

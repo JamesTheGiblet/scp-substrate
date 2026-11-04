@@ -1,8 +1,8 @@
-# Questions about the cubes
+# Questions about the page
 
 ## 1. What am I looking at?
 
-My notes, one idea per cube. Each cube holds one statement, such as "Separate supplies must share a common ground", and looks at it from five sides. Cubes on similar subjects sit together in clusters. You can click into a cluster, open a cube and read it, or switch to the grid to see them as a list.
+My notes, one claim per cube. Each cube holds one statement, such as "Separate supplies must share a common ground", and looks at it from five sides. Each claim is about a subject, such as a PCA9685 servo board or wiring, and subjects belong to the things I'm building or working on, such as my robot SCPBot. You can click into a cluster, open a cube and read it, or switch to the grid to see them as a list.
 
 ## 2. What are the five sides?
 
@@ -30,13 +30,15 @@ Treat it as a careful notebook, not a manual. Many hardware cubes were drafted f
 
 They're my foundations. Orange is safety, such as charging lithium batteries. Pink is security, such as keys and passwords. Blue is preferences, such as writing in British English. They follow stricter rules than the rest: I can't accept drafts for them in bulk, all five sides must be filled in, and the note has to be in my own words. They gather around the centre because everything else rests on them.
 
-## 7. What's the green glow in the middle?
+## 7. What's the green glow in the middle, and the smaller green dots?
 
-That's me. The knowledge is mine, so it sits around me. A green line runs from the centre to each cube I've checked, so a cube with no line hasn't been checked yet.
+The bright centre is me. The knowledge is mine, so it sits around me. A green line runs from the centre to each cube I've checked, so a cube with no line hasn't been checked yet. Cubes about me glow green too.
+
+Each smaller green dot is something I'm building or working on, such as SCPBot or one of my projects. The groups circling it are its parts, such as a servo board or a sensor, with the claims about each part. Click a dot for an overview of it.
 
 ## 8. How are cubes grouped, and why do they move?
 
-Cubes are grouped by the uncommon words they share, so some groupings are coincidences. The threads between cubes show what they have in common. The movement is there to keep a busy picture readable. Clusters drift slowly so they don't sit on top of each other, and the motion stops if your device is set to reduce motion.
+Cubes about one of the things I'm building gather round its dot, by part. The rest are grouped by the uncommon words they share, so some groupings are coincidences. **Cluster by** at the top regroups them: **Entities** by thing and part, **Tags** by label, or one lens at a time. The threads between cubes show what they have in common. The movement is there to keep a busy picture readable. Clusters drift slowly so they don't sit on top of each other, and the motion stops if your device is set to reduce motion.
 
 ## 9. Can I change anything, and does the page track me?
 
