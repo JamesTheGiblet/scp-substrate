@@ -79,7 +79,7 @@ python keystone-gate/kg cube notes     # a suggested validation note for each cu
 
 ## Using it on your phone
 
-Your phone uses the same page and the same data as this PC, so the PC must be on with `serve` running.
+Your phone uses the same page and the same data as this PC, so the PC must be on with `serve` running. If the PC will have no network, carry the store on the phone instead: see [PHONE.md](PHONE.md).
 
 First time only:
 

@@ -97,7 +97,7 @@ The grid lists every cube. The bar under each one shows its six sides, and a str
 
 ![A cube opened in the grid](images/grid-cube.png)
 
-The page works on a phone through Tailscale. See [docs/STARTUP.md](docs/STARTUP.md).
+The page works on a phone through Tailscale. See [docs/STARTUP.md](docs/STARTUP.md). To work on the phone with no laptop, see [docs/PHONE.md](docs/PHONE.md).
 
 <p>
   <img src="images/phone.png" alt="The cube page on a phone" width="260">

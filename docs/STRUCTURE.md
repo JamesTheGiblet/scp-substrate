@@ -41,7 +41,7 @@ scp-substrate/
 │
 ├── seeds/                 scripts that create starting capsules
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
-├── docs/                  SPEC, VOCABULARY, OUTLINE, STRUCTURE, STARTUP, FAQ, REASONING, SCP documents (*.scp.json)
+├── docs/                  SPEC, VOCABULARY, OUTLINE, STRUCTURE, STARTUP, PHONE, FAQ, REASONING, SCP documents (*.scp.json)
 ├── archive/               archived capsules, links and events, one sc-archive-<date>.db per archive
 ├── outlines/              outlines that kg import built entities from, kept as the record
 ├── images/                screenshots used in the README
