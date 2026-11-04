@@ -178,6 +178,14 @@
         "description": "A routing identifier. Neighbours know only IDs and query the ledger for detail."
       },
       "links": []
+    },
+    {
+      "id": "foundation:subject",
+      "state": {
+        "name": "subject",
+        "description": "Something one or more entities know about, such as a component or a topic. It exists once; claims are about it and entities use it. See docs/VOCABULARY.md."
+      },
+      "links": []
     }
   ]
 }

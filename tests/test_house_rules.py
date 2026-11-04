@@ -4,10 +4,10 @@ import re
 from support_substrate import *
 
 CODE = ([ROOT / "scps", ROOT / "keystone-gate" / "kg"]
-        + sorted(ROOT.glob("src/*.py")) + sorted(ROOT.glob("scripts/*.py"))
+        + sorted(ROOT.glob("src/*.py")) + sorted(ROOT.glob("scripts/**/*.py"))
         + sorted(ROOT.glob("seeds/*.py")) + sorted(ROOT.glob("tests/*.py"))
-        + sorted(ROOT.glob("keystone-gate/*.py")) + sorted(ROOT.glob("keystone-gate/*.js"))
-        + sorted(ROOT.glob("keystone-gate/*.css")) + sorted(ROOT.glob("keystone-gate/*.html")))
+        + sorted(ROOT.glob("keystone-gate/**/*.py")) + sorted(ROOT.glob("keystone-gate/view/*.js"))
+        + sorted(ROOT.glob("keystone-gate/view/*.css")) + sorted(ROOT.glob("keystone-gate/view/*.html")))
 
 
 def test_no_file_over_400_lines():

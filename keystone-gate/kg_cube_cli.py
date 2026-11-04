@@ -4,14 +4,22 @@ from substrate import Substrate
 
 def cmd_cube_new(args):
     from kg_agent import create_cube
+    from kg_entities import claim_link_error, link_claim
     s = Substrate()
-    tags = args.tag or None
-    result = create_cube(s, args.content, source=args.source, tags=tags)
+    links = {"subjects": args.subject or [], "entities": args.entity or [], "evidence": args.evidence or []}
+    if error := claim_link_error(s, **links):
+        s.close()
+        print(f"error: {error}")
+        return
+    result = create_cube(s, args.content, source=args.source, tags=args.tag or None)
+    made = link_claim(s, result["cube_id"], **links) if "error" not in result else []
     s.close()
     if "error" in result:
         print(f"error: {result['error']}")
         return
     print(f"Created: {result['cube_id']}")
+    for type_, target in made:
+        print(f"  {type_}: {target}")
     print(f"  content: {args.content!r}")
     if args.source:
         print(f"  source: {args.source}")
@@ -333,7 +341,7 @@ def cmd_cube_proposals(args):
 def cmd_cube_accept(args):
     from kg_agent import accept_proposal
     s = Substrate()
-    r = accept_proposal(s, args.proposal_id, accepted_by=args.by)
+    r = accept_proposal(s, args.proposal_id, accepted_by=args.by, word=args.word, reverse=args.reverse)
     s.close()
     if "error" in r:
         print(f"error: {r['error']}")

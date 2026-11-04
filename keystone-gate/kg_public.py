@@ -14,10 +14,12 @@ import subprocess
 from pathlib import Path
 
 from kg_overlaps import attach_overlaps, load_decisions
-from kg_view import collect, render, user_name
+from kg_view import collect, hubs, render, user_name
 
 
 OUTPUT = Path(__file__).resolve().parent.parent / "build" / "public" / "index.html"
+# The snapshot's own repo is private, but its name is an ordinary word in the cubes
+SNAPSHOT_REPO = "cubes"
 
 
 def private_repos(s, owner="JamesTheGiblet"):
@@ -30,7 +32,7 @@ def private_repos(s, owner="JamesTheGiblet"):
     names = {r["name"] for r in json.loads(done.stdout) if r["visibility"] != "PUBLIC"}
     rows = s.conn.execute("SELECT json_extract(state_json, '$.name') AS name FROM capsules "
                           "WHERE id LIKE 'repo/%' AND json_extract(state_json, '$.private')").fetchall()
-    return sorted(names | {r["name"] for r in rows if r["name"]})
+    return sorted((names | {r["name"] for r in rows if r["name"]}) - {SNAPSHOT_REPO})
 
 
 def _texts(cube):
@@ -54,8 +56,10 @@ def is_public(cube, private):
 
 def _scrub(cube, kept):
     faces = {lens: None if f and f.get("pending") else f for lens, f in cube["faces"].items()}
-    return {**cube, "faces": faces, "note_draft": None,
+    return {**cube, "faces": faces, "note_draft": None, "link_drafts": [],
             "neighbours": [n for n in cube["neighbours"] if n in kept],
+            "link_reasons": {k: v for k, v in cube.get("link_reasons", {}).items() if k in kept},
+            "link_words": {k: v for k, v in cube.get("link_words", {}).items() if k in kept},
             "contradicts": cube["contradicts"] if cube["contradicts"] in kept else None}
 
 
@@ -68,7 +72,7 @@ def write_snapshot(s, path=OUTPUT, private=None):
     private = private_repos(s) if private is None else private
     everything = collect(s)
     cubes = public_cubes(everything, private, load_decisions(s))
-    page = render(cubes, user=user_name(s))
+    page = render(cubes, user=user_name(s), hubs=hubs(s))
     # Check the finished page, not just the steps that made it
     data = json.dumps(cubes, ensure_ascii=False)
     leaked = [p.pattern for p in _names(private) if p.search(data)]

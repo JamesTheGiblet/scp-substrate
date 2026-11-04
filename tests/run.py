@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-files = sorted(ROOT.glob("tests/test_*.py")) + sorted(ROOT.glob("keystone-gate/test_*.py"))
+files = sorted(ROOT.glob("tests/test_*.py")) + sorted(ROOT.glob("keystone-gate/tests/test_*.py"))
 
 passed = failed = 0
 for f in files:

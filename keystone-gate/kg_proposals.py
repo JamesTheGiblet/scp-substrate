@@ -14,6 +14,11 @@ from kg_cube import LENSES, _now, _update_state, fill_face, link_neighbour
 # unordered cube pair for neighbour type. Running the same rule twice does
 # not create duplicate proposals — it updates the pending one in place.
 
+# The connecting words a link can carry, so it reads as a sentence:
+# "<from cube> protects <other cube>". Kept short so they mean the same each time.
+CONNECTING_WORDS = ["supports", "goes against", "protects", "limits", "depends on",
+                    "causes", "is part of", "is an example of"]
+
 
 def _face_proposals(s, cube_id, lens):
     """Return every proposal for (cube, lens), any status."""
@@ -181,8 +186,12 @@ def list_proposals(s, cube_id=None, status="pending"):
     return [{"id": r["id"], **json.loads(r["state_json"])} for r in rows]
 
 
-def accept_proposal(s, proposal_id, accepted_by):
-    """Accept a proposal: dispatch to fill_face or link_neighbour, mark accepted."""
+def accept_proposal(s, proposal_id, accepted_by, word=None, reverse=False):
+    """Accept a proposal: dispatch to fill_face or link_neighbour, mark accepted.
+
+    A neighbour link can carry a connecting word. It reads from the proposal's
+    cube to the other one, or the other way round when reverse is set.
+    """
     proposal = s.get(proposal_id)
     if not proposal:
         return {"error": f"proposal {proposal_id} not found"}
@@ -191,6 +200,8 @@ def accept_proposal(s, proposal_id, accepted_by):
         return {"error": f"proposal status is {st.get('status')!r}, not pending"}
 
     ptype = st.get("proposal_type")
+    if word is not None and (ptype != "neighbour" or word not in CONNECTING_WORDS):
+        return {"error": f"connecting word must be one of: {', '.join(CONNECTING_WORDS)}"}
 
     if ptype == "face":
         applied = fill_face(
@@ -214,6 +225,9 @@ def accept_proposal(s, proposal_id, accepted_by):
     new_state["accepted_by"] = accepted_by
     new_state["accepted_at"] = _now()
     new_state["applied"] = applied
+    if word:
+        new_state["word"] = word
+        new_state["from"] = st["other_cube_id"] if reverse else st["cube_id"]
     _update_state(s, proposal_id, new_state)
     return {"proposal_id": proposal_id, "status": "accepted", "applied": applied}
 

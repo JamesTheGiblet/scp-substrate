@@ -13,14 +13,15 @@ from trust import fused_trust
 
 
 _here = Path(__file__).resolve().parent
-TEMPLATE = _here / "view_template.html"
-PARTS = {name: _here / file for name, file in {
+VIEW = _here / "view"
+TEMPLATE = VIEW / "view_template.html"
+PARTS = {name: VIEW / file for name, file in {
     "/*STYLE*/": "view_style.css",
     "/*GRID*/": "view_grid.js",
     "/*BAR*/": "view_bar.js",
     "/*EDIT*/": "view_edit.js",
 }.items()}
-FIELD = [_here / f"view_field_{part}.js" for part in ("world", "draw", "time", "move")]
+FIELD = [VIEW / f"view_field_{part}.js" for part in ("world", "hubs", "draw", "form", "time", "move")]
 OUTPUT = _here.parent / "build" / "cubes.html"
 
 
@@ -80,9 +81,125 @@ def _repo(s, cube_id):
     return None
 
 
+def _link_notes(s):
+    """Suggested neighbour links waiting for you, and the reasons and connecting
+    words behind ones you accepted, listed on both cubes."""
+    drafts, reasons, words = {}, {}, {}
+    for p in list_proposals(s, status="any"):
+        if p.get("proposal_type") != "neighbour" or p.get("status") not in ("pending", "accepted"):
+            continue
+        for this, other in ((p["cube_id"], p["other_cube_id"]), (p["other_cube_id"], p["cube_id"])):
+            if p["status"] == "pending":
+                drafts.setdefault(this, []).append({"other": other, "proposal_id": p["id"],
+                                                    "why": p.get("rationale") or "", "from": p["cube_id"]})
+                continue
+            if p.get("rationale"):
+                reasons.setdefault(this, {})[other] = p["rationale"]
+            if p.get("word"):
+                words.setdefault(this, {})[other] = {"word": p["word"], "from": p["from"]}
+    return drafts, reasons, words
+
+
+def _you(s):
+    """The person entity the store belongs to, or None."""
+    row = s.get(user_name(s).lower())
+    return row["id"] if row and row["foundation"] == "foundation:person" else None
+
+
+GROUND_PINS = {"GND", "-", "IN-", "OUT-"}
+
+
+def _name(s, cid):
+    row = s.get(cid)
+    return (row["state"].get("name") or cid) if row else cid
+
+
+def hubs(s):
+    """Entities other than you that use subjects: each with its parts, who is
+    building it, and the nets its wiring claims join, for the overview panel."""
+    from kg_wiring import nets
+    you, out = _you(s), []
+    for e in s.by_foundation("foundation:entity") + s.by_foundation("foundation:project"):
+        parts = sorted(l["target"] for l in s.links_from(e["id"])
+                       if l["type"] == "uses" and l["target"].startswith("subject/"))
+        if e["id"] == you or not parts:
+            continue
+        notes = e["state"].get("parts") or {}
+        joined = [{"ground": all(p.rsplit(":", 1)[1] in GROUND_PINS for p in n["pins"]),
+                   "pins": [f"{_name(s, p.rsplit(':', 1)[0])} {p.rsplit(':', 1)[1]}" for p in n["pins"]]}
+                  for n in nets(s, e["id"])]
+        out.append({"id": e["id"], "name": e["state"].get("name", e["id"]), "kind": e["state"].get("kind"),
+                    "builders": sorted(user_name(s) if l["source"] == you else _name(s, l["source"])
+                                     for l in s.links_to(e["id"], "building")),
+                    "parts": [{"id": p, "name": _name(s, p), **notes.get(p, {})} for p in parts],
+                    "nets": joined})
+    return sorted(out, key=lambda h: h["id"])
+
+
+def things(s):
+    """Every entity and subject, for their places in the grid. Claim counts are
+    worked out on the page from each cube's own links."""
+    from kg_entities import RELATIONS, list_entities
+    from kg_subjects import list_subjects
+    you = _you(s)
+    name = lambda cid: user_name(s) if cid == you else _name(s, cid)
+    entities = []
+    unsorted = lambda cid: (s.get(f"proposal/sort/{cid}") or {"state": {}})["state"].get("status") == "pending"
+    for e in [e for e in list_entities(s) if not unsorted(e["id"])]:
+        out = [(l["type"], l["target"], True) for l in s.links_from(e["id"]) if l["type"] in RELATIONS]
+        into = [(l["type"], l["source"], False) for l in s.links_to(e["id"]) if l["type"] in RELATIONS]
+        entities.append({"id": e["id"], "name": name(e["id"]), "kind": e.get("kind") or e.get("role"),
+                         "you": e["id"] == you,
+                         "parts": sorted(t for kind, t, _ in out if kind == "uses" and t.startswith("subject/")),
+                         "links": [{"word": kind, "other": name(o), "out": fwd} for kind, o, fwd in out + into
+                                   if not (kind == "uses" and o.startswith("subject/"))]})
+    subjects = [{"id": x["id"], "name": x.get("name", x["id"]), "kind": x.get("kind"),
+                 "used_by": sorted(name(l["source"]) for l in s.links_to(x["id"], "uses"))}
+                for x in list_subjects(s)]
+    return {"entities": sorted(entities, key=lambda e: (not e["you"], e["name"].lower())),
+            "subjects": sorted(subjects, key=lambda x: x["name"].lower())}
+
+
+NO_PLACE = "No entity or subject"
+
+
+def _place(s, cube_id, hub, you):
+    """Where a claim belongs by entity and subject: its hub and part, else its
+    entity and its most specific subject (the one with fewest claims)."""
+    name = lambda cid: user_name(s) if cid == you else _name(s, cid)
+    if hub:
+        return " · ".join(name(x) for x in (hub["entity"], hub["part"]) if x)
+    subjects = _links(s, cube_id, "about-subject")
+    entities = [name(e) for e in _links(s, cube_id, "about-entity")]
+    narrow = min(subjects, key=lambda x: (len(s.links_to(x, "about-subject")), x), default=None)
+    return " · ".join(entities[:1] + ([name(narrow)] if narrow else [])) or NO_PLACE
+
+
+def _hub_of(s, cube_id, places):
+    """Where a claim sits on the page: by the first part it is about, else by
+    the entity it is about. places maps part and entity ids to their hub."""
+    subjects = _links(s, cube_id, "about-subject")
+    entities = _links(s, cube_id, "about-entity")
+    # A part two entities share sits with the entity the claim is about
+    for hub, parts in sorted(places, key=lambda p: p[0] not in entities):
+        part = next((p for p in parts if p in subjects), None)
+        if part:
+            return {"entity": hub, "part": part}
+    hub = next((h for h, _ in places if h in entities), None)
+    return {"entity": hub, "part": None} if hub else None
+
+
 def collect(s):
-    """Everything the page shows, one dict per cube."""
+    """Everything the page shows, one dict per cube. A cube with an about-entity
+    link to you glows green on the page."""
     cubes = []
+    you = _you(s)
+    places = [(h["id"], [p["id"] for p in h["parts"]]) for h in hubs(s)]
+    # A whole comes before its parts, so a claim about a part they share
+    # sits with SCPBot, not with the chassis that is part of it
+    inner = {h for h, _ in places for l in s.links_from(h) if l["type"] == "part-of"}
+    places.sort(key=lambda p: p[0] in inner)
+    link_drafts, link_reasons, link_words = _link_notes(s)
     for row in list_cubes(s):
         cube = show_cube(s, row["id"])
         validation = cube["validation"]
@@ -94,6 +211,11 @@ def collect(s):
             "created": s.get(cube["cube_id"])["state"].get("created_at"),
             "source": cube["source"],
             "tags": cube["tags"] or [],
+            "about_you": bool(you) and you in _links(s, cube["cube_id"], "about-entity"),
+            "hub": (hub := _hub_of(s, cube["cube_id"], places)),
+            "place": _place(s, cube["cube_id"], hub, you),
+            "subjects": _links(s, cube["cube_id"], "about-subject"),
+            "entities": _links(s, cube["cube_id"], "about-entity"),
             "group": _group(s, cube["cube_id"]),
             "repo": _repo(s, cube["cube_id"]),
             "score": cube["completeness"]["score"],
@@ -114,6 +236,9 @@ def collect(s):
             },
             "note_draft": (s.get(f"{cube['cube_id']}/validation-draft") or {"state": {}})["state"].get("content"),
             "neighbours": _links(s, cube["cube_id"], "neighbour"),
+            "link_drafts": link_drafts.get(cube["cube_id"], []),
+            "link_reasons": link_reasons.get(cube["cube_id"], {}),
+            "link_words": link_words.get(cube["cube_id"], {}),
             "contradicts": (cube["contradicts"] or {}).get("other"),
         })
     return attach_overlaps(cubes, load_decisions(s))
@@ -130,7 +255,7 @@ def user_name(s):
     return row["owner"].split()[0] if row and row["owner"] else "You"
 
 
-def render(cubes, api=None, user="You"):
+def render(cubes, api=None, user="You", hubs=(), things=None):
     """Fill the template. '<' is escaped so stored text cannot end the script."""
     data = _safe_json(cubes)
     page = TEMPLATE.read_text(encoding="utf-8")
@@ -139,6 +264,8 @@ def render(cubes, api=None, user="You"):
     for marker, path in PARTS.items():
         page = page.replace(marker, path.read_text(encoding="utf-8"))
     page = page.replace("/*API*/null", _safe_json(api)).replace('/*USER*/"You"', _safe_json(user))
+    page = page.replace("/*HUBS*/[]", _safe_json(list(hubs)))
+    page = page.replace("/*THINGS*/{}", _safe_json(things or {"entities": [], "subjects": []}))
     modes = all_modes(cubes) if cubes and "faces" in cubes[0] else {}
     return page.replace("/*CUBES*/[]", data).replace("/*MODES*/{}", _safe_json(modes))
 
@@ -147,5 +274,5 @@ def write_view(s, path=OUTPUT):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     cubes = collect(s)
-    path.write_text(render(cubes, user=user_name(s)), encoding="utf-8")
+    path.write_text(render(cubes, user=user_name(s), hubs=hubs(s), things=things(s)), encoding="utf-8")
     return {"path": path, "cubes": len(cubes)}

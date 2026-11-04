@@ -2,6 +2,8 @@
 
 How to get the cube page running and work through your cubes. Run every command from the repo folder, `C:\Users\gilbe\Documents\scp-substrate`.
 
+Each cube is one claim, about a subject (a part or topic) that belongs to an entity (you, SCPBot, a project). [VOCABULARY.md](VOCABULARY.md) explains the model. To see the page that way, press **Entities** under **Cluster by**, then pick an entity and one of its subjects.
+
 ## First time only
 
 1. Set the editing password. Nothing appears as you type, which is normal. Use at least 8 characters.
@@ -54,6 +56,7 @@ A tab opens at `http://127.0.0.1:8765/`. Leave the terminal running while you wo
    - **Accept** if it is right.
    - **Edit** to change it first.
    - **Reject** to drop it. The face goes blank.
+   - A **SUGGESTED LINK** row lower down is a link a model proposed to another cube, with its reason. Press **Link them** or **Not related**. Click the row to see the other cube first.
 5. When all five faces are done, use **Validate** under HUMAN VALIDATION to say why the claim holds.
 6. If you stand behind it, press **I stand behind this**. That attests the cube.
 
@@ -78,7 +81,7 @@ python keystone-gate/kg cube notes     # a suggested validation note for each cu
 
 ## Using it on your phone
 
-Your phone uses the same page and the same data as this PC, so the PC must be on with `serve` running.
+Your phone uses the same page and the same data as this PC, so the PC must be on with `serve` running. If the PC will have no network, carry the store on the phone instead: see [PHONE.md](PHONE.md).
 
 First time only:
 

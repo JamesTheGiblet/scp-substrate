@@ -1,0 +1,253 @@
+"""Entities, and sorting old capsules into entities and subjects. Run: python tests/run.py"""
+from support_kg import *
+
+
+def _store():
+    s = _fresh_kg_substrate()
+    with s.conn:
+        for fid in ("foundation:subject", "foundation:entity", "foundation:person", "foundation:project"):
+            s.conn.execute("INSERT INTO capsules (id, foundation, state_json, is_meta) "
+                           "VALUES (?, 'foundation:foundation', '{}', 1)", (fid,))
+    knowledge = lambda cid, **st: s.write({"id": cid, "foundation": "foundation:knowledge", "state": st})
+    s.write({"id": "james", "foundation": "foundation:person", "state": {"role": "builder"}})
+    knowledge("project/robot-arm", kind="project", name="robot-arm", status="active")
+    knowledge("qinetiq", kind="organisation", name="QinetiQ")
+    knowledge("tool/esp32", kind="tool", name="ESP32")
+    knowledge("esp32", kind="tool", name="ESP32")
+    knowledge("person/james-gilbert", kind="person")
+    s.link("james", "works-at", "qinetiq")
+    s.link("james", "uses", "tool/esp32")
+    s.link("james", "uses", "esp32")
+    s.link("tool/esp32", "used-in", "project/robot-arm")
+    s.link("james", "same-as", "person/james-gilbert")
+    s.link("person/james-gilbert", "same-as", "james")
+    return s
+
+
+def _accept(s, target, action, **kw):
+    from kg_entities import accept_sort, propose_sort
+    pid = propose_sort(s, target, action, "claude", **kw)["proposal_id"]
+    return accept_sort(s, pid, "james")
+
+
+def test_nothing_changes_until_accepted():
+    from kg_entities import propose_sort
+    s = _store()
+    try:
+        propose_sort(s, "qinetiq", "entity", "claude", kind="organisation", new_id="entity/qinetiq")
+        assert s.get("qinetiq")["foundation"] == "foundation:knowledge"
+        assert s.get("entity/qinetiq") is None
+    finally:
+        s.close()
+
+
+def test_an_entity_can_move_and_keep_its_links():
+    s = _store()
+    try:
+        r = _accept(s, "qinetiq", "entity", kind="organisation", new_id="entity/qinetiq")
+        assert r["id"] == "entity/qinetiq"
+        assert s.get("qinetiq") is None
+        row = s.get("entity/qinetiq")
+        assert row["foundation"] == "foundation:entity" and row["state"]["kind"] == "organisation"
+        assert {"type": "works-at", "target": "entity/qinetiq"} in [
+            {k: l[k] for k in ("type", "target")} for l in s.links_from("james")]
+        events = s.conn.execute("SELECT payload FROM events WHERE event_type = 'capsule.renamed' "
+                                "AND capsule_id = 'entity/qinetiq'").fetchall()
+        assert '"from": "qinetiq"' in events[0][0]
+    finally:
+        s.close()
+
+
+def test_a_project_keeps_its_id_and_becomes_a_project():
+    s = _store()
+    try:
+        _accept(s, "project/robot-arm", "entity", kind="project")
+        row = s.get("project/robot-arm")
+        assert row["foundation"] == "foundation:project" and row["state"]["status"] == "active"
+    finally:
+        s.close()
+
+
+def test_a_subject_moves_and_used_in_reads_the_right_way():
+    s = _store()
+    try:
+        assert _accept(s, "tool/esp32", "subject", kind="component")["id"] == "subject/esp32"
+        assert s.get("subject/esp32")["foundation"] == "foundation:subject"
+        links = [(l["type"], l["target"]) for l in s.links_from("project/robot-arm")]
+        assert ("uses", "subject/esp32") in links
+        assert not [l for l in s.links_from("subject/esp32") if l["type"] == "used-in"]
+    finally:
+        s.close()
+
+
+def test_a_duplicate_merges_without_doubling_links():
+    s = _store()
+    try:
+        _accept(s, "tool/esp32", "subject", kind="component")
+        _accept(s, "esp32", "merge", into="subject/esp32")
+        assert s.get("esp32") is None
+        uses = [l for l in s.links_from("james") if l["type"] == "uses"]
+        assert [l["target"] for l in uses] == ["subject/esp32"]
+        payload = s.conn.execute("SELECT payload FROM events WHERE event_type = 'capsule.merged'").fetchone()[0]
+        assert '"from": "esp32"' in payload and '"name": "ESP32"' in payload
+    finally:
+        s.close()
+
+
+def test_a_document_describes_its_entity():
+    s = _store()
+    try:
+        _accept(s, "person/james-gilbert", "describe", into="james")
+        links = [(l["type"], l["target"]) for l in s.links_from("james")]
+        assert ("described-by", "person/james-gilbert") in links and ("same-as", "person/james-gilbert") not in links
+        assert not [l for l in s.links_from("person/james-gilbert") if l["type"] == "same-as"]
+    finally:
+        s.close()
+
+
+def test_a_person_can_correct_a_proposal_when_accepting():
+    from kg_entities import accept_sort, propose_sort
+    s = _store()
+    try:
+        pid = propose_sort(s, "tool/esp32", "subject", "claude")["proposal_id"]
+        r = accept_sort(s, pid, "james", action="entity", entity_kind="board", new_id="entity/my-esp32")
+        assert r["id"] == "entity/my-esp32" and s.get("entity/my-esp32")["state"]["kind"] == "board"
+        assert "error" in accept_sort(s, pid, "james")
+    finally:
+        s.close()
+
+
+def test_a_rejection_sticks_and_changes_nothing():
+    from kg_entities import propose_sort, reject_sort
+    s = _store()
+    try:
+        pid = propose_sort(s, "qinetiq", "drop", "claude")["proposal_id"]
+        reject_sort(s, pid, "james", reason="keep it")
+        assert s.get("qinetiq") is not None
+        assert propose_sort(s, "qinetiq", "drop", "claude")["skipped"]
+    finally:
+        s.close()
+
+
+def test_entities_and_relations():
+    from kg_entities import add_entity, list_entities, relate
+    s = _store()
+    try:
+        assert add_entity(s, "SCPBot", "robot", "james")["id"] == "entity/scpbot"
+        assert add_entity(s, "Robot arm v2", "project", "james")["id"] == "project/robot-arm-v2"
+        assert "error" in relate(s, "entity/scpbot", "likes", "james")
+        assert "error" not in relate(s, "james", "building", "entity/scpbot")
+        ids = [e["id"] for e in list_entities(s)]
+        assert {"entity/scpbot", "project/robot-arm-v2", "james"} <= set(ids)
+    finally:
+        s.close()
+
+
+def test_a_claim_can_be_about_a_person_and_cite_a_document():
+    from kg_agent import create_cube
+    from kg_entities import claim_link_error, link_claim
+    from trust import trust_from_evidence
+    s = _store()
+    try:
+        assert "entity" in claim_link_error(s, entities=["tool/esp32"])
+        assert "evidence" in claim_link_error(s, evidence=["docs/nope"])
+        cid = create_cube(s, "James finishes what he is pointed at", tags=["private"])["cube_id"]
+        link_claim(s, cid, entities=["james"], evidence=["person/james-gilbert"])
+        links = {(l["type"], l["target"]) for l in s.links_from(cid)}
+        assert {("about-entity", "james"), ("derived-from", "person/james-gilbert")} <= links
+        assert "error" not in trust_from_evidence(s, cid)
+    finally:
+        s.close()
+
+
+def test_the_page_knows_a_claim_is_about_you():
+    from kg_agent import create_cube
+    from kg_entities import link_claim
+    from kg_view import collect
+    s = _store()
+    try:
+        s.write({"id": "person/james-gilbert", "foundation": "foundation:knowledge",
+                 "state": {"kind": "person", "owner": "James Gilbert"}})
+        mine = create_cube(s, "James learns by doing", tags=["private"])["cube_id"]
+        other = create_cube(s, "The ESP32 has two cores")["cube_id"]
+        link_claim(s, mine, entities=["james"])
+        about = {c["id"]: c["about_you"] for c in collect(s)}
+        assert about[mine] and not about[other]
+    finally:
+        s.close()
+
+
+def test_a_claim_sits_by_the_part_it_is_about():
+    from kg_agent import create_cube
+    from kg_entities import add_entity, link_claim, relate
+    from kg_view import collect, hubs
+    s = _store()
+    try:
+        s.write({"id": "person/james-gilbert", "foundation": "foundation:knowledge",
+                 "state": {"kind": "person", "owner": "James Gilbert"}})
+        bot = add_entity(s, "SCPBot", "robot", "james")["id"]
+        s.write({"id": "subject/pca9685", "foundation": "foundation:subject", "state": {"name": "PCA9685"}})
+        relate(s, bot, "uses", "subject/pca9685")
+        part = create_cube(s, "The PCA9685 drives 16 channels")["cube_id"]
+        whole = create_cube(s, "SCPBot stands on four legs")["cube_id"]
+        link_claim(s, part, subjects=["subject/pca9685"])
+        link_claim(s, whole, entities=[bot])
+        relate(s, "james", "building", bot)
+        [hub] = hubs(s)
+        assert hub["parts"] == [{"id": "subject/pca9685", "name": "PCA9685"}] and hub["kind"] == "robot"
+        assert hub["builders"] == ["James"] and hub["nets"] == []
+        from kg_view import things
+        found = things(s)
+        assert [e["name"] for e in found["entities"]][:1] == ["James"]
+        bot_row = next(e for e in found["entities"] if e["id"] == bot)
+        assert bot_row["parts"] == ["subject/pca9685"] and {"word": "building", "other": "James", "out": False} in bot_row["links"]
+        assert next(x for x in found["subjects"] if x["id"] == "subject/pca9685")["used_by"] == ["SCPBot"]
+        cubes = {c["id"]: c for c in collect(s)}
+        assert cubes[part]["subjects"] == ["subject/pca9685"] and cubes[whole]["entities"] == [bot]
+        where = {cid: c["hub"] for cid, c in cubes.items()}
+        assert where[part] == {"entity": bot, "part": "subject/pca9685"}
+        assert where[whole] == {"entity": bot, "part": None}
+    finally:
+        s.close()
+
+
+def test_a_shared_part_keeps_each_claim_with_its_own_entity():
+    from kg_agent import create_cube
+    from kg_entities import add_entity, link_claim, relate
+    from kg_view import collect
+    s = _store()
+    try:
+        a = add_entity(s, "Alpha", "robot", "james")["id"]
+        b = add_entity(s, "Beta", "robot", "james")["id"]
+        s.write({"id": "subject/lambda", "foundation": "foundation:subject", "state": {"name": "λ"}})
+        relate(s, a, "uses", "subject/lambda")
+        relate(s, b, "uses", "subject/lambda")
+        cid = create_cube(s, "Beta scores trust with λ")["cube_id"]
+        link_claim(s, cid, subjects=["subject/lambda"], entities=[b])
+        assert next(c for c in collect(s) if c["id"] == cid)["hub"] == {"entity": b, "part": "subject/lambda"}
+    finally:
+        s.close()
+
+
+def test_a_shared_part_sits_with_the_whole_not_its_part():
+    from kg_agent import create_cube
+    from kg_entities import add_entity, link_claim, relate
+    from kg_view import collect
+    s = _store()
+    try:
+        # The chassis sorts first by id, but it is part of the bot
+        chassis = add_entity(s, "Chassis", "chassis", "james", eid="entity/a-chassis")["id"]
+        bot = add_entity(s, "Bot", "robot", "james", eid="entity/b-bot")["id"]
+        s.write({"id": "subject/servo", "foundation": "foundation:subject", "state": {"name": "Servo"}})
+        relate(s, chassis, "uses", "subject/servo")
+        relate(s, bot, "uses", "subject/servo")
+        relate(s, chassis, "part-of", bot)
+        cid = create_cube(s, "A servo has metal gears")["cube_id"]
+        link_claim(s, cid, subjects=["subject/servo"])
+        assert next(c for c in collect(s) if c["id"] == cid)["hub"] == {"entity": bot, "part": "subject/servo"}
+    finally:
+        s.close()
+
+
+if __name__ == "__main__":
+    run_tests(globals())

@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cube Field</title>
+<link rel="icon" href="data:,">
+<style>
+/*STYLE*/
+</style>
+</head>
+<body>
+<div id="root">
+  <canvas id="field" aria-label="Your cubes as a 3D field. The grid view lists the same cubes."></canvas>
+  <div id="bar">
+    <nav id="crumbs" aria-label="Where you are"></nav>
+    <input id="fsearch" type="search" placeholder="Search" aria-label="Search cubes">
+    <button class="chip" data-f="all" aria-pressed="true">All</button>
+    <button class="chip" data-f="attested" aria-pressed="false">Attested</button>
+    <button class="chip" data-f="needs" aria-pressed="false">Needs you</button>
+    <button class="chip" id="checkdrafts" hidden></button>
+    <button class="chip" id="snap">Screenshot</button>
+    <button class="chip" id="togrid">Grid</button>
+  </div>
+  <div id="modes" aria-label="Cluster by"></div>
+  <div id="timebar">
+    <button class="chip" id="timeplay">Play</button>
+    <input id="timerange" type="range" min="0" max="0" value="0" aria-label="Go through time">
+    <span id="timelabel" role="status"></span>
+  </div>
+  <div id="key"></div>
+  <div id="tip" hidden></div>
+  <aside id="panel" hidden></aside>
+</div>
+<div id="toast" role="status" hidden></div>
+<dialog id="unlock">
+  <form>
+    <h3>Unlock editing</h3>
+    <input type="text" name="username" autocomplete="username" hidden>
+    <label>Password<input type="password" name="password" autocomplete="current-password" required></label>
+    <p id="unlockwrong" hidden>That password is wrong.</p>
+    <div class="actions"><button type="button" class="tool" id="unlockcancel">Cancel</button><button type="submit" class="tool">Unlock</button></div>
+  </form>
+</dialog>
+<dialog id="newcube">
+  <form>
+    <h3>New cube</h3>
+    <label>The claim<textarea name="content" rows="2" required></textarea></label>
+    <label>Tags, separated by commas<input name="tags"></label>
+    <label>Fact<textarea name="FACT" rows="2"></textarea></label>
+    <label>Counter<textarea name="COUNTER" rows="2"></textarea></label>
+    <label>Opinion<textarea name="OPINION" rows="2"></textarea></label>
+    <label>Fiction<textarea name="FICTION" rows="2"></textarea></label>
+    <label>Context<textarea name="CONTEXT" rows="2"></textarea></label>
+    <div class="actions"><button type="button" class="tool" id="newcancel">Cancel</button><button type="submit" class="tool">Send it in</button></div>
+  </form>
+</dialog>
+<main id="grid" hidden>
+  <p><button class="chip" id="tofield">Back to the field</button> <button class="chip" id="lock" hidden>Unlock to edit</button> <button class="chip" id="addcube" hidden>+ New cube</button> <button class="chip" id="fillblanks" hidden>Fill blanks</button></p>
+  <h1>Data Cubes</h1>
+  <p class="sub">Each side is a lens. Solid means filled, hollow means missing, and striped means accepted without being read. The bar shows all six sides at once.</p>
+  <div class="stats" id="stats"></div>
+  <div class="legend" id="legend"></div>
+  <div class="controls" id="controls"></div>
+  <div id="groups"></div>
+</main>
+<dialog id="detail"><button id="close" aria-label="Close">&times;</button><div class="detail" id="body"></div></dialog>
+
+<script>
+/*GRID*/
+</script>
+<script>
+/*FIELD*/
+</script>
+<script>
+/*EDIT*/
+</script>
+<script>
+/*BAR*/
+</script>
+</body>
+</html>

@@ -86,7 +86,9 @@ def extract_entity(s, text, intent):
             continue
         row = s.conn.execute("""
             SELECT id FROM capsules
-            WHERE foundation = 'foundation:knowledge'
+            WHERE foundation IN ('foundation:knowledge', 'foundation:entity', 'foundation:person',
+                                 'foundation:project', 'foundation:subject')
+              AND is_meta = 0
               AND (lower(json_extract(state_json, '$.text')) = ?
                    OR lower(json_extract(state_json, '$.name')) = ?)
             LIMIT 1

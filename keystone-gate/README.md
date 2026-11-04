@@ -65,14 +65,24 @@ To add a rule, add an entry to the `sc` capsule and a checker to `_RULES` in `kg
 
 ## Foundational cubes
 
-Safety and security cubes are tagged `foundational`. They appear in amber, gathered loosely around you at the centre, with amber strands that brighten once validated. Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
+Foundational cubes are tagged `foundational`, and come in three kinds, each with its own colour:
+
+| Tag | Kind | Colour | Examples |
+|---|---|---|---|
+| `safety` | Safety | Orange | Li-ion charging and fire, emergency stops, mains work |
+| `security` | Security | Pink | Keys and secrets, the page password, private text |
+| `preference` | Preferences | Blue | British English, Python, plain words in docs, files under 400 lines |
+
+A cube goes to the first kind its tags name, in that order. Each kind gathers in its own group around you at the centre, with strands in its colour that brighten once validated. `seed_cubes_preferences.py` marks your attested principle cubes as preferences, adds two drafts, and suggests links from each kind to what it governs.
+
+Their rules are enforced in `kg_cube.py` and `kg_fill.py`:
 
 - A face cannot be bulk accepted.
 - All five faces must be accepted before validating, where other cubes need two.
 - The validation note must be your own, and a suggested note is refused word for word.
 - Models cannot draft faces or suggest notes for them.
 
-The amber cluster grows its own form like the others, and its cubes drift and spin while the whole cluster turns around you. Cubes tagged `defining`, such as the ones about you, form a green ring outside it, turning the other way. Both stop turning while you have them open.
+Each group grows its own form like the other clusters, and its cubes drift and spin while the three groups turn around you together. Cubes tagged `defining` form a green ring outside them, turning the other way. A claim linked to you with `about-entity` glows green wherever it clusters. An entity that uses subjects, such as SCPBot, is a smaller green dot out from you, its parts circling it, and each claim about a part gathers round that part. A group stops turning while you have it open.
 
 These rules check the process, not the truth, and they work through the code only. Someone with direct access to `sc.db` can bypass them.
 
@@ -113,6 +123,22 @@ This reads the repo's README through `gh` and has a model write 3 to 6 claims. E
 
 Private repos go to Ollama only. Their cubes are tagged `private`, so later drafts stay local, and so does `kg ask --claude` when its evidence contains the text of a private cube's claim or filled face. That check matches text, so it can miss an answer that rewords the cube. These cubes are still stored in `sc.db`, so they travel wherever that file is pushed. A published page also includes them.
 
+## Subjects
+
+A subject is what a claim is about, such as Li-ion packs or the PCA9685. It exists once, as `subject/<slug>`, and each claim about it links to it with `about-subject`. See [docs/VOCABULARY.md](../docs/VOCABULARY.md).
+
+Subjects arrive as proposals naming the subject and the claims it would gather. `kg subject accept` creates it, and `--name` and `--only` let you rename it or keep fewer claims. A rejected proposal stays rejected unless its claims or reason change.
+
+The page does not show subjects yet.
+
+`kg cube new "<claim>" --subject subject/<slug>` makes a claim about a subject in one step.
+
+## Entities
+
+An entity is a thing that exists: a person, a project, a robot, an organisation, a place. Projects live at `project/<slug>`, everything else but people at `entity/<slug>`. `kg entity link` joins an entity to another entity or a subject, using one of `uses`, `part-of`, `owns`, `building`, `works-at`, `at` or `can`.
+
+The capsules that already linked to James are sorted into entities and subjects by proposals, which `seed_entity_sorting.py` writes and `kg entity accept` applies. See [docs/VOCABULARY.md](../docs/VOCABULARY.md) for what each action does.
+
 ## Overlaps
 
 ```sh
@@ -139,6 +165,8 @@ python keystone-gate/kg cube view                  # read-only file, build/cubes
 ```
 
 Cubes appear as 3D nodes grouped in clusters. Each cluster grows its own form: its cubes are joined by their shortest links with a soft skin around them, so the shape comes from where the cubes are and changes as they move. Click a cluster to enter it, and a cube to open it. Drag to orbit, scroll to zoom, and press Esc to go back. A grid view lists the same cubes.
+
+Click a thread between two cubes to pull it. The two cubes come together, their clusters stay lit and the rest fades, and a panel says why they are linked: the word they share, with it marked in both sentences, or the reason given for a link you accepted or a model suggested. Press Esc or click empty space to let go. The threads that only shape a cluster cannot be pulled.
 
 You are the green glow at the centre. A green strand runs to each cube you have validated, so a cube with no strand has not been vouched for, and the strands grow as you move along the time bar.
 
@@ -215,11 +243,27 @@ kg overlaps                         list overlapping work (--min)
 
 kg neighbour link <a> <b>           link two cubes both ways
 kg neighbour list <id>              list a cube's neighbours
+
+kg subject proposals                list suggested subjects (--status)
+kg subject accept <p> --by <name>   create the subject and link its claims (--name, --only)
+kg subject reject <p> --by <name>   reject a suggested subject (--reason)
+kg subject add <cube> <subject>     say a claim is about an existing subject
+kg subject list                     list subjects and their claims
+
+kg entity add <name> --kind <k> --by <name>   create an entity
+kg entity link <from> <relation> <to>        link an entity to an entity or subject
+kg entity list                      list entities
+kg entity show <id>                 an entity and its links
+kg entity proposals                 list sort proposals (--status)
+kg entity accept <p> --by <name>    apply one (--as, --kind, --id, --name, --into)
+kg entity reject <p> --by <name>    leave the capsule as it is (--reason)
 ```
 
 Run these as `python keystone-gate/kg ...`.
 
 ## Files
+
+The modules sit at the top of `keystone-gate/`. Seeds, tests and the page's own files each have a folder.
 
 | File | Purpose |
 |---|---|
@@ -233,33 +277,62 @@ Run these as `python keystone-gate/kg ...`.
 | `kg_gate.py` | Gate rules and checkers |
 | `kg_hal.py` | Asks the substrate and gates the answer |
 | `kg_llm.py` | Model layer: Claude, Gemini, Ollama |
-| `kg_lens_links.py` | Lens links and clusters |
-| `kg_view.py` | Builds the page |
-| `kg_serve.py` | Local server |
-| `kg_lock.py` | Editing password |
-| `kg_repos.py` | Claim cubes from a repo's README |
+| `kg_lllm.py` | LLLM, James's own model, drafting FACT from his own writing |
+| `kg_fill.py` | Models draft blank faces, LLLM first, in the background under `serve` |
+| `kg_entities.py`, `kg_entity_cli.py` | Entities, sorting old capsules, and `kg entity` |
+| `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
+| `kg_outline.py` | `kg import`: an entity, its subjects and claims from an outline (`docs/OUTLINE.md`) |
+| `kg_wiring.py` | `kg wiring`: nets traced from wiring claims, such as a common ground |
+| `kg_lens_links.py` | Lens links and clusters, and the Cluster by modes |
 | `kg_overlaps.py` | Overlaps valued by Leighton weight |
-| `kg_fill.py` | Models draft blank faces, in the background under `serve` |
+| `kg_repos.py` | Claim cubes from a repo's README |
+| `kg_view.py` | Builds the page from `view/` |
+| `kg_serve.py` | Local server |
+| `kg_public.py` | The public snapshot, without private cubes or drafts |
+| `kg_lock.py` | Editing password |
+| `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
+| `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |
+
+### `view/`
+
+| File | Purpose |
+|---|---|
 | `view_template.html` | The page's HTML. `kg_view.py` joins the parts below into it |
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
-| `view_field_world.js`, `view_field_draw.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, drawing, the time bar, moving around |
-| `kg_stats.py`, `kg_router.py` | Counts and neighbour listing |
+| `view_field_world.js`, `view_field_hubs.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, entities and their parts, drawing, cluster forms, the time bar, moving around |
+
+### `seeds/`
+
+Run a seed as `python keystone-gate/seeds/<file>`.
+
+| File | Purpose |
+|---|---|
 | `seed_sc.py` | Creates and updates `sc` capsules |
+| `seed_entity_sorting.py` | Suggested sorting of what `james` links to, as proposals |
+| `seed_claims_about_james.py` | Claims about James, linked to him as an entity |
+| `seed_claims_scpbot.py` | SCPBot's parts and wiring claims |
+| `seed_claims_replicant.py` | Replicant, its subjects and claims, flagged by how far each was checked |
+| `seed_forge_stack.py` | The Forge Stack as an entity, its layers as subjects, the details as claims |
+| `seed_projects.py` | The SCP substrate, LLLM, Canon and JIG as projects, with their claims |
+
+### `seeds/before-pivot/`
+
+The seeds from before 3 November 2026, when every cube was archived to start again on entities, subjects and claims. **Don't run them on the live store:** they would bring back archived cubes without subjects or entities. They stay because tests use their cubes as test data.
+
+| File | Purpose |
+|---|---|
 | `seed_cubes.py` | Project claims as draft cubes |
-| `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals. They are not your views until accepted |
+| `seed_opinions.py` | Suggested OPINION drafts by Claude, as proposals |
 | `seed_cubes_james.py` | Cubes about James, as drafts in Claude's words, tagged private |
-| `seed_cubes_m5stick.py` | M5StickC Plus2 cubes, cross-referenced across sources, as drafts |
-| `seed_cubes_servos.py` | SG90, MG90S and MG996R cubes, cross-referenced, as drafts |
-| `seed_cubes_batteries.py` | 7.4V 3000mAh Li-ion pack cubes, cross-referenced, as drafts |
-| `seed_cubes_sensors.py` | Distance sensors, buzzers, LEDs and switches, cross-referenced, as drafts |
-| `seed_cubes_wiring.py`, `seed_cubes_boards.py` | Wiring and dev board cubes, cross-referenced, as drafts |
-| `seed_cubes_safety.py` | Hardware safety cubes linked to the rest, as drafts. Reference notes, not official guidance |
-| `seed_cubes_robots.py` | Robot shapes and configurations, as drafts |
-| `seed_cubes_security.py` | Foundational security cubes, and marks safety cubes foundational |
+| `seed_cubes_m5stick.py`, `seed_cubes_servos.py`, `seed_cubes_batteries.py`, `seed_cubes_sensors.py`, `seed_cubes_wiring.py`, `seed_cubes_boards.py`, `seed_cubes_robots.py` | Hardware cubes, cross-referenced across sources, as drafts |
 | `seed_cubes_pca9685.py` | Cubes from Adafruit's PCA9685 guide |
-| `seed_cubes_related.py` | General-knowledge cubes drafted by Claude, not from a stored document. Check figures against a datasheet or spec |
-| `requirements.txt` | Anthropic SDK, needed only for Claude under `--claude` |
-| `support_kg.py`, `test_*.py` | Tests |
+| `seed_cubes_related.py` | General-knowledge cubes drafted by Claude |
+| `seed_cubes_safety.py`, `seed_cubes_security.py`, `seed_cubes_preferences.py` | The foundational cubes: safety, security and preferences |
+| `seed_links_foundations.py` | Suggested links from foundational cubes to related cubes, as proposals |
+
+### `tests/`
+
+`support_kg.py` and `test_*.py`. `python tests/run.py` at the repo root runs them with the substrate's own tests.
 
 ## Tests
 

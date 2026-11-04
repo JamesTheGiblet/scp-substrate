@@ -4,6 +4,8 @@ A personal knowledge store in one SQLite file, with tools for querying it, track
 
 It is a single-user project and it is early. Read [Limits](#limits) and [Known issues](#known-issues) before relying on it.
 
+![The cube page: you at the green centre, with SCPBot, the ACEBOTT chassis and each project as smaller green dots, their parts circling them](images/overview.png)
+
 ## Parts
 
 - **Substrate:** stores capsules (JSON records), links between them, and a log of events.
@@ -14,6 +16,8 @@ It is a single-user project and it is early. Read [Limits](#limits) and [Known i
 ## How data is organised
 
 Everything stored is a capsule, a link or an event. A capsule's type is its foundation.
+
+The model being built on top of this, with entities, subjects, claims, evidence and relationships, is set out in [docs/VOCABULARY.md](docs/VOCABULARY.md). To start a new project from a written outline, see [docs/OUTLINE.md](docs/OUTLINE.md).
 
 Foundations are defined in `sc.json`. Run `scripts/bootstrap.py` to copy them into `sc.db`; this does not happen automatically. Instances (people, projects, documents, repos, symbols, cubes, conversation turns) live only in `sc.db`.
 
@@ -65,6 +69,49 @@ python keystone-gate/kg cube view                  # read-only snapshot, build/c
 
 Press **Unlock to edit** in the grid view to change anything. The password protects the page only, not `sc.db` or the `kg` commands.
 
+### What the page looks like
+
+Each smaller green dot is an entity: SCPBot, the ACEBOTT chassis, or one of the projects. Its parts circle it, each with the claims about that part. Press **Entities** under **Cluster by** and pick one, or open the page at `#entity:entity/scpbot`, for an overview: its parts, how many claims each has, and the wiring traced from its wiring claims.
+
+![SCPBot with its parts circling it, and its overview: parts, claim counts and the common ground traced from its wiring](images/entity-scpbot.png)
+
+Click a cube to open it. Its five lenses and your validation float around it, and the panel shows each one in full.
+
+![An attested cube opened, with its five lenses and your validation around it](images/cube-open.png)
+
+Click a thread between two cubes to pull it. The two cubes come together, the rest fades, and the panel says why they are linked. For a word match, the shared word is marked in both sentences.
+
+![Pulling a thread that two cubes share through one word](images/pull-word-match.png)
+
+A dashed thread is a suggested link you have not accepted. The foundational cubes gather around you in three colours: orange for safety, pink for security and blue for preferences.
+
+**Cluster by** regroups the cubes and shows only what that grouping holds, here the claims that came from a repo.
+
+![The cubes grouped by repo](images/repos.png)
+
+The bar at the bottom steps back through time. This is the store as it was on the evening of 3 November, with 29 cubes, soon after every cube was archived to start again on entities, subjects and claims.
+
+![The time bar moved back to 3 November](images/time-bar.png)
+
+The grid lists every cube. The bar under each one shows its six sides, and a striped side was accepted without being read. Editing happens here, after you unlock it.
+
+![The grid view](images/grid.png)
+
+Every entity and subject has a card in the grid. Opening one shows what it is, its parts or who uses it, and only its claims.
+
+![SCPBot's card in the grid: its kind, who is building it, the chassis that is part of it, and its parts](images/grid-entity.png)
+
+![A cube opened in the grid](images/grid-cube.png)
+
+The page works on a phone through Tailscale. See [docs/STARTUP.md](docs/STARTUP.md). To work on the phone with no laptop, see [docs/PHONE.md](docs/PHONE.md).
+
+<p>
+  <img src="images/phone.png" alt="The cube page on a phone" width="260">
+  <img src="images/phone-entity.png" alt="SCPBot and its overview on a phone" width="260">
+</p>
+
+These pictures come from the full local store. The public snapshot leaves out private cubes and drafts, so it shows less.
+
 To review them at the terminal:
 
 ```sh
@@ -104,9 +151,9 @@ scps forget-parse <session>    deletes one parse session
 ## Signing a document
 
 ```sh
-python scripts/keygen.py default       # writes ~/.config/scp/keys/default.json
-python scripts/sign_doc.py my-doc.scp.json -o my-doc.signed.scp.json
-python scripts/import_scp.py my-doc.signed.scp.json
+python scripts/scp/keygen.py default       # writes ~/.config/scp/keys/default.json
+python scripts/scp/sign_doc.py my-doc.scp.json -o my-doc.signed.scp.json
+python scripts/scp/import_scp.py my-doc.signed.scp.json
 ```
 
 `import_scp.py` verifies the signature and writes a `verification:*` capsule. A signature shows who signed a document. It does not say the document is true.
@@ -116,12 +163,12 @@ python scripts/import_scp.py my-doc.signed.scp.json
 ## Indexing repositories
 
 ```sh
-python scripts/absorb_repo.py /path/to/repo --dry-run
-python scripts/absorb_repo.py /path/to/repo --write
-python scripts/absorb_repo.py /path/to/repo --write --prune    # also deletes capsules for removed files
+python scripts/repos/absorb_repo.py /path/to/repo --dry-run
+python scripts/repos/absorb_repo.py /path/to/repo --write
+python scripts/repos/absorb_repo.py /path/to/repo --write --prune    # also deletes capsules for removed files
 
-python scripts/absorb_github.py owner/repo --dry-run
-python scripts/absorb_github.py owner/repo --write
+python scripts/repos/absorb_github.py owner/repo --dry-run
+python scripts/repos/absorb_github.py owner/repo --write
 ```
 
 Local indexing stores file hashes, line counts, imports and function and class names. GitHub indexing stores metadata and the file tree only. Neither stores file contents.
@@ -139,7 +186,8 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 | `seeds/` | Scripts that create starting capsules. Most are create-only, so capsules are authoritative after the first run |
 | `tests/` | `run.py` runs every test file. `test_house_rules.py` checks the line limit on code and page files, and silent exception handlers |
 | `keystone-gate/` | Cubes, gate, model layer, page and server |
-| `docs/` | `SPEC.md`, `STRUCTURE.md`, `REASONING.md`, and signed SCP documents |
+| `docs/` | `SPEC.md`, `VOCABULARY.md`, `STRUCTURE.md`, `REASONING.md`, and signed SCP documents |
+| `archive/` | Archived capsules, links and events, made by `scripts/archive_cubes.py` |
 
 `docs/STRUCTURE.md` has the full file list.
 

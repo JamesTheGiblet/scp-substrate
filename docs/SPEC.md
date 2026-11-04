@@ -54,7 +54,7 @@ A foundation is a capsule with:
 · foundation = "foundation:foundation" (self-hosting)
 · state containing at least name; optionally description, schema, allowed_links
 
-The 18 foundations loaded at v0.1.0:
+The 19 foundations loaded at v0.1.0:
 
 ```
 foundation:foundation
@@ -75,6 +75,7 @@ foundation:cube
 foundation:lens
 foundation:cube-face
 foundation:neighbour
+foundation:subject
 ```
 
 Foundations are the invariant of the system. Adding one is a versioned edit to sc.json; removing one soft-deprecates it (state.deprecated = true) but does not delete it, since instances may still reference it.
@@ -117,7 +118,7 @@ CREATE TABLE events (
 );
 ```
 
-Append-only. Never updated, never deleted. Every write through Substrate.write(), link(), supersede() and every engine fire logs an event.
+Append-only. Never updated, never deleted, except by archiving: `scripts/archive_cubes.py` moves the events of the capsules it archives into `archive/sc-archive-<date>.db` and logs an `archive.moved` event in their place. The ledger is sc.db and its archives together. Every write through Substrate.write(), link(), supersede() and every engine fire logs an event.
 
 Event types in use:
 
@@ -126,6 +127,8 @@ capsule.written the capsule {"foundation": "..."}
 capsule.imported the capsule {"source": "<path>"}
 capsule.superseded the old capsule {"new_id": "<id>"}
 capsule.renamed the capsule {"from": "<old id>"}
+capsule.reclassified the capsule {"foundation": "..."}, from kg entity accept
+capsule.merged the kept capsule {"from": "<old id>", "state": {...}}
 capsule.deleted the capsule {"reason": "..."}, from absorb_repo.py --prune
 capsule.filled the capsule {"from": "placeholder"}
 link.added the source {"type": "...", "target": "..."}
@@ -133,6 +136,7 @@ link.retyped the source {"target": "...", "new_type": "..."}
 rule.fired the rule {"source": "...", "type": "...", "target": "..."}
 trust.computed the instance {"model": "...", "score": 0.87, "prev": null}
 foundation.reloaded NULL {"version": "0.1.0", "hash": "...", "count": 11}
+archive.moved NULL {"archive": "archive/sc-archive-2026-11-03.db", "kept_tags": [...], "counts": {...}}
 
 Events are the ledger. Nothing in the system reconstructs state from events; the events are for audit, not for replay. This is a deliberate choice — replay is a v2 concern.
 
@@ -530,7 +534,7 @@ A paraphrase that misstates its quote, or a new lowercase word, still passes: th
 
 Keystone Gate is the first implementation of this pattern:
 
-- `keystone-gate/seed_sc.py` - seeds `sc/symlm-answerer`
+- `keystone-gate/seeds/seed_sc.py` - seeds `sc/symlm-answerer`
 - `keystone-gate/kg_gate.py` - `check()` and one `_check_*` function per rule
 - `keystone-gate/kg_hal.py` - `ask_gated()` - asks substrate, gates answer, returns pass or reject
 - `keystone-gate/kg_llm.py` - `ask_llm()` - walker, then Claude, Gemini and Ollama in turn, each through the gate, with fallback
@@ -568,3 +572,33 @@ Needs a complete cube. It writes the attestation observation, which `fused_trust
 ### Browser access
 
 `kg cube serve` runs an HTTP server bound to 127.0.0.1. `POST /api/do` applies one action and returns the updated cubes and clusters. Each POST needs the `X-Cube-Token` header, issued when the server starts and embedded in the page. `POST /api/unlock` checks the editing password against the scrypt hash in `~/.config/scp/cube-edit.json` and returns a key. `/api/do` also needs that key in `X-Cube-Key`, otherwise it returns 401. The key is held in memory, lapses after 30 idle minutes, and `POST /api/lock` ends it. `POST /api/status` reports the pending drafts and sends the cubes when that count has moved. The `new` action queues the cube for `kg_fill.py`, and the `draft` action queues every cube with a blank, one at a time on a background thread. Drafts are proposals with `proposed_by` set to `model-draft:<model>`. Requests with another `Host` or `Origin` are refused.
+
+## 17. Entities, subjects and claims
+
+The model the store is built on since 3 November 2026. A claim is a cube (section 16), and entities and subjects give it a place. [VOCABULARY.md](VOCABULARY.md) gives the reasons and the status of each part. Like cubes, they use no new tables.
+
+### Capsules
+
+| ID | Foundation | Holds |
+|---|---|---|
+| `entity/<slug>` | `foundation:entity` | `name`, `kind`, `created_by`, `created_at`, and optional fields such as `definition`, `aliases` and `parts` |
+| `project/<slug>` | `foundation:project` | The same, for a project |
+| `james` | `foundation:person` | The same, for a person. The store's owner stays `james` |
+| `subject/<slug>` | `foundation:subject` | `name`, `kind` |
+| `proposal/sort/<id>` | `foundation:knowledge` | A proposed entity kind for an existing capsule, waiting for `kg entity accept` or `reject` |
+
+### Links
+
+| From | Link | To |
+|---|---|---|
+| entity | `uses`, `can` | subject |
+| entity | `part-of`, `owns`, `building`, `works-at`, `at` | entity |
+| claim | `about-subject` | subject |
+| claim | `about-entity` | entity |
+| claim | `derived-from` | evidence |
+
+`kg entity link` refuses any entity link not in this table. A claim's state may also hold `wires`, a list of pin-to-pin pairs, which `kg_wiring.py` joins into nets.
+
+### Building them
+
+One at a time: `kg entity add` makes an entity and `kg entity link` links it. `kg subject accept` makes a subject from a proposal, and `kg subject add` says a claim is about an existing subject. `kg import <outline>` makes an entity, its subjects and its claims from one file, checking every id first so that it writes all or nothing (`docs/OUTLINE.md`).

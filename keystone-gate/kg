@@ -13,6 +13,10 @@ sys.path.insert(0, str(_here))
 
 from substrate import Substrate
 from kg_cube_cli import *
+from kg_subject_cli import add_subject_parser
+from kg_entity_cli import add_entity_parser
+from kg_wiring import add_wiring_parser
+from kg_outline import add_outline_parser
 
 
 def cmd_stats(args):
@@ -203,6 +207,10 @@ def main():
     sp_new.add_argument("content")
     sp_new.add_argument("--source", default=None)
     sp_new.add_argument("--tag", action="append", default=None)
+    sp_new.add_argument("--subject", action="append", default=None, help="subject/<slug> this claim is about")
+    sp_new.add_argument("--entity", action="append", default=None, help="an entity this claim is about, such as james")
+    sp_new.add_argument("--from", dest="evidence", action="append", default=None,
+                        help="a capsule this claim is derived from, such as a document")
     sp_new.set_defaults(func=cmd_cube_new)
 
     sp_fill = sp_sub.add_parser("fill", help="fill one lens face")
@@ -278,6 +286,8 @@ def main():
     sp_c_acc = sp_sub.add_parser("accept", help="accept a proposal")
     sp_c_acc.add_argument("proposal_id")
     sp_c_acc.add_argument("--by", required=True)
+    sp_c_acc.add_argument("--word", help="connecting word for a link, such as protects or depends on")
+    sp_c_acc.add_argument("--reverse", action="store_true", help="read the link from the other cube")
     sp_c_acc.set_defaults(func=cmd_cube_accept)
 
     sp_c_rej = sp_sub.add_parser("reject", help="reject a proposal")
@@ -302,6 +312,11 @@ def main():
     sp_n_list = sp_sub.add_parser("list", help="list neighbours of a cube")
     sp_n_list.add_argument("cube_id")
     sp_n_list.set_defaults(func=cmd_neighbour_list)
+
+    add_subject_parser(sub)
+    add_entity_parser(sub)
+    add_wiring_parser(sub)
+    add_outline_parser(sub)
 
     args = ap.parse_args()
     args.func(args)

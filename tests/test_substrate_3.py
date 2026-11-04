@@ -189,7 +189,7 @@ def test_keygen_help_writes_no_key():
     home = Path(tempfile.mkdtemp())
     try:
         env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
-        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "keygen.py"), "--help"],
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "scp" / "keygen.py"), "--help"],
                            capture_output=True, text=True, env=env)
         assert r.returncode == 0, r.stderr
         assert list(home.iterdir()) == [], list(home.iterdir())
@@ -261,7 +261,7 @@ def test_import_scp_document():
 
 def test_import_scp_help_exits_cleanly():
     import subprocess
-    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "import_scp.py"), "--help"],
+    r = subprocess.run([sys.executable, str(ROOT / "scripts" / "scp" / "import_scp.py"), "--help"],
                        capture_output=True, text=True)
     assert r.returncode == 0 and "usage" in r.stdout, r
 

@@ -32,18 +32,22 @@ scp-substrate/
 │
 ├── scripts/               run by hand
 │   ├── bootstrap.py       copy sc.json into sc.db
-│   ├── keygen.py          generate an Ed25519 keypair
-│   ├── sign_doc.py        sign an SCP document
-│   ├── import_scp.py      SCP document import (also import_person, import_circadian)
-│   ├── absorb_repo.py     index a local repo (also absorb_github)
-│   ├── repo_symbols.py    extract functions, classes and imports
-│   └── fill_styles.py, extract_vocab.py, learn_frequencies.py
+│   ├── archive_cubes.py   move capsules, their links and events into archive/
+│   ├── readme_shots.py    take the README's screenshots
+│   ├── scp/               keygen, sign_doc, import_scp (also import_person, import_circadian)
+│   ├── repos/             absorb_repo, absorb_github: index a repo; repo_symbols: its functions and imports
+│   └── language/          extract_vocab, fill_styles, learn_frequencies: the SymLM vocabulary
 │
 ├── seeds/                 scripts that create starting capsules
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
-├── docs/                  SPEC, STRUCTURE, REASONING, SCP documents (*.scp.json)
-├── build/                 generated page, tracked in git
-├── keystone-gate/         see keystone-gate/README.md for its files
+├── docs/                  README (what each doc is for), VOCABULARY, SPEC, OUTLINE, STARTUP, PHONE, FAQ, REASONING, STRUCTURE
+│   └── scp/               signed SCP documents (*.scp.json) imported into the store
+├── archive/               archived capsules, links and events, one sc-archive-<date>.db per archive, and old README screenshots in images-<date>/
+├── outlines/              outlines that kg import built entities from, kept as the record
+├── images/                screenshots used in the README, taken by scripts/readme_shots.py
+├── build/                 cubes.html, the generated page, tracked in git
+│   └── public/            the public snapshot, its own repo (JamesTheGiblet/cubes), ignored here
+├── keystone-gate/         the kg modules; seeds/, tests/ and view/ (the page) in folders. See keystone-gate/README.md
 └── legacy/                pre-SQLite JSON archive, ignored by git
 ```
 
