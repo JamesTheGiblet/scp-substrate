@@ -37,9 +37,9 @@
     });
   }
 
-  // Hubs hold their claims only when clustering by tags or by entity. Any
-  // other mode is about that mode's clusters, so the hubs step aside.
-  const hubsShown = () => mode === "TAGS" || mode === "PLACES";
+  // Hubs hold their claims in the opening view, by tags and by entity. A
+  // single lens or repos is about that mode's clusters, so the hubs step aside.
+  const hubsShown = () => mode === "ALL" || mode === "TAGS" || mode === "PLACES";
   // Claims about a hub's parts leave their word clusters for the hub
   function gatherHubs(placed) {
     hubGroups().forEach(cl => { cl.nodes = []; });
