@@ -39,6 +39,8 @@ scp-substrate/
 │   └── language/          extract_vocab, fill_styles, learn_frequencies: the SymLM vocabulary
 │
 ├── seeds/                 scripts that create starting capsules
+│   ├── substrate/         the substrate's own: lexicon, grammar, corpus, intents, protocol
+│   └── claims/            claims, entities and subjects; before-pivot/ holds the old cube seeds
 ├── tests/                 run.py, test_substrate_N.py, test_house_rules.py, support_substrate.py
 ├── docs/                  README (what each doc is for), VOCABULARY, SPEC, OUTLINE, STARTUP, PHONE, FAQ, REASONING, STRUCTURE
 │   └── scp/               signed SCP documents (*.scp.json) imported into the store
@@ -47,7 +49,7 @@ scp-substrate/
 ├── images/                screenshots used in the README, taken by scripts/readme_shots.py
 ├── build/                 cubes.html, the generated page, tracked in git
 │   └── public/            the public snapshot, its own repo (JamesTheGiblet/cubes), ignored here
-├── keystone-gate/         the kg modules; seeds/, tests/ and view/ (the page) in folders. See keystone-gate/README.md
+├── keystone-gate/         the kg modules; tests/ and view/ (the page) in folders. Its seeds are in seeds/claims/. See keystone-gate/README.md
 └── legacy/                pre-SQLite JSON archive, ignored by git
 ```
 

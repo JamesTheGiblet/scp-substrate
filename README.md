@@ -183,7 +183,7 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 | `sc.json`, `sc.db`, `schema.sql` | Foundations, data, schema |
 | `src/` | Substrate, engines, crypto, SymLM, walkers |
 | `scripts/` | Bootstrap, keys, importers, indexers, vocabulary tools |
-| `seeds/` | Scripts that create starting capsules. Most are create-only, so capsules are authoritative after the first run |
+| `seeds/` | Scripts that create starting capsules: `substrate/` for the substrate's own, `claims/` for claims, entities and subjects. See [seeds/README.md](seeds/README.md) |
 | `tests/` | `run.py` runs every test file. `test_house_rules.py` checks the line limit on code and page files, and silent exception handlers |
 | `keystone-gate/` | Cubes, gate, model layer, page and server |
 | `docs/` | `SPEC.md`, `VOCABULARY.md`, `STRUCTURE.md`, `REASONING.md`, and signed SCP documents |

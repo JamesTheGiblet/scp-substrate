@@ -97,7 +97,7 @@ def collect_sources(s):
 
     # 3. Python docstrings + comments
     # scripts/ is in folders by job, so it is searched all the way down
-    code = [p for d in ("src", "scripts", "seeds", "tests")
+    code = [p for d in ("src", "scripts", "seeds/substrate", "tests")
             for p in (ROOT / d).glob("**/*.py" if d == "scripts" else "*.py")]
     for path in sorted(code, key=lambda p: p.name):
         try:

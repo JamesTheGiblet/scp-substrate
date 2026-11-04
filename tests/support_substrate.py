@@ -2,7 +2,7 @@
 import sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
-for _d in ("src", "scripts", "scripts/scp", "scripts/repos", "scripts/language", "seeds"):
+for _d in ("src", "scripts", "scripts/scp", "scripts/repos", "scripts/language", "seeds/substrate"):
     sys.path.insert(0, str(ROOT / _d))
 import json
 import traceback

@@ -263,7 +263,7 @@ Run these as `python keystone-gate/kg ...`.
 
 ## Files
 
-The modules sit at the top of `keystone-gate/`. Seeds, tests and the page's own files each have a folder.
+The modules sit at the top of `keystone-gate/`, with folders for tests and the page's own files. Its seeds are in the repo's `seeds/claims/`.
 
 | File | Purpose |
 |---|---|
@@ -301,9 +301,9 @@ The modules sit at the top of `keystone-gate/`. Seeds, tests and the page's own 
 | `view_style.css`, `view_grid.js`, `view_bar.js`, `view_edit.js` | Styling, grid view, top bar, editing |
 | `view_field_world.js`, `view_field_hubs.js`, `view_field_draw.js`, `view_field_form.js`, `view_field_time.js`, `view_field_move.js` | The 3D view: layout, entities and their parts, drawing, cluster forms, the time bar, moving around |
 
-### `seeds/`
+### `seeds/claims/` (in the repo root)
 
-Run a seed as `python keystone-gate/seeds/<file>`.
+Run a seed as `python seeds/claims/<file>`.
 
 | File | Purpose |
 |---|---|
@@ -315,7 +315,7 @@ Run a seed as `python keystone-gate/seeds/<file>`.
 | `seed_forge_stack.py` | The Forge Stack as an entity, its layers as subjects, the details as claims |
 | `seed_projects.py` | The SCP substrate, LLLM, Canon and JIG as projects, with their claims |
 
-### `seeds/before-pivot/`
+### `seeds/claims/before-pivot/`
 
 The seeds from before 3 November 2026, when every cube was archived to start again on entities, subjects and claims. **Don't run them on the live store:** they would bring back archived cubes without subjects or entities. They stay because tests use their cubes as test data.
 

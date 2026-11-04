@@ -224,7 +224,7 @@ def ask_llm(s, question, client=None, models=None):
 
     sc = load_sc(s, SC_ID)
     if sc is None:
-        walker["fallback_reason"] = f"{SC_ID} is missing: run keystone-gate/seeds/seed_sc.py"
+        walker["fallback_reason"] = f"{SC_ID} is missing: run seeds/claims/seed_sc.py"
         return walker
 
     evidence = render_answer(result)

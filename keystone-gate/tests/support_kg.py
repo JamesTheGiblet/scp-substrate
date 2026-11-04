@@ -14,7 +14,8 @@ from pathlib import Path
 
 # keystone-gate, one folder up. Tests import its modules and its seeds
 _here = Path(__file__).resolve().parents[1]
-sys.path[:0] = [str(_here.parent / "src"), str(_here), str(_here / "seeds"), str(_here / "seeds" / "before-pivot")]
+sys.path[:0] = [str(_here.parent / "src"), str(_here), str(_here.parent / "seeds" / "claims"),
+                 str(_here.parent / "seeds" / "claims" / "before-pivot")]
 
 import substrate
 from substrate import Substrate
