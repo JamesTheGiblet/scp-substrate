@@ -161,20 +161,27 @@
         n.v[1] -= r[0] * tilt * .16 * dt;
       }
     }
-    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
-      const a = nodes[i], b = nodes[j];
-      if (a.cluster.rigid && b.cluster.rigid && !(a.cluster.loose && b.cluster.loose)) continue;
-      const d = [a.p[0] - b.p[0], a.p[1] - b.p[1], a.p[2] - b.p[2]];
-      const dist = Math.max(Math.hypot(...d), 1);
-      if (dist > 240) continue;
-      const force = 13000 / (dist * dist) * dt;
-      for (let k = 0; k < 3; k++) { a.v[k] += d[k] / dist * force; b.v[k] -= d[k] / dist * force; }
+    // Every pair of cubes runs each frame, so this loop stays plain numbers:
+    // far pairs leave before any square root, and nothing is allocated
+    for (let i = 0; i < nodes.length; i++) {
+      const a = nodes[i], ap = a.p, av = a.v, aStill = a.cluster.rigid && !a.cluster.loose;
+      for (let j = i + 1; j < nodes.length; j++) {
+        const b = nodes[j];
+        if (a.cluster.rigid && b.cluster.rigid && (aStill || !b.cluster.loose)) continue;
+        const bp = b.p, dx = ap[0] - bp[0], dy = ap[1] - bp[1], dz = ap[2] - bp[2];
+        const d2 = dx * dx + dy * dy + dz * dz;
+        if (d2 > 57600) continue;
+        const dist = Math.max(Math.sqrt(d2), 1), f = 13000 / (dist * dist * dist) * dt, bv = b.v;
+        av[0] += dx * f; av[1] += dy * f; av[2] += dz * f;
+        bv[0] -= dx * f; bv[1] -= dy * f; bv[2] -= dz * f;
+      }
     }
     for (const l of links) {
       if (l.kind === "bridge" || l.kind === "proposed" || l.a.cluster !== l.b.cluster) continue;
-      const d = [l.b.p[0] - l.a.p[0], l.b.p[1] - l.a.p[1], l.b.p[2] - l.a.p[2]];
-      const pull = (Math.hypot(...d) - 110) * .28 * dt / Math.max(Math.hypot(...d), 1);
-      for (let k = 0; k < 3; k++) { l.a.v[k] += d[k] * pull; l.b.v[k] -= d[k] * pull; }
+      const ap = l.a.p, bp = l.b.p, dx = bp[0] - ap[0], dy = bp[1] - ap[1], dz = bp[2] - ap[2];
+      const len = Math.sqrt(dx * dx + dy * dy + dz * dz), pull = (len - 110) * .28 * dt / Math.max(len, 1);
+      l.a.v[0] += dx * pull; l.a.v[1] += dy * pull; l.a.v[2] += dz * pull;
+      l.b.v[0] -= dx * pull; l.b.v[1] -= dy * pull; l.b.v[2] -= dz * pull;
     }
     // A pulled strand draws its two cubes towards each other, out of their clusters
     if (focus.link) {
