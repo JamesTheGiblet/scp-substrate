@@ -8,7 +8,7 @@ What each document is for. The store holds **entities** (James, SCPBot, projects
 |---|---|
 | [STARTUP.md](STARTUP.md) | Running the cube page, checking drafts, adding claims, using it on your phone through Tailscale |
 | [PHONE.md](PHONE.md) | Carrying the store on the phone when the laptop has no network |
-| [OUTLINE.md](OUTLINE.md) | Starting a new entity, with its subjects and claims, from a plain-text outline |
+| [OUTLINE.md](OUTLINE.md) | Starting a new entity, with its subjects and claims, from a plain-text outline or a CSV (template: [claims-template.csv](claims-template.csv)) |
 | [FAQ.md](FAQ.md) | Questions a visitor to the public page might ask |
 
 ## The model

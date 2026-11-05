@@ -94,11 +94,8 @@ def test_a_words_column_suggests_links():
     from kg_csv import write
     s = _store()
     try:
-        made = write(s, "entity,subject,claim,words
-SCPBot,MG90S,The MG90S stalls.,stall
-"
-                        "Rover,Wheel motor,The wheel motor stalls on carpet.,stall; carpet
-", "james")
+        made = write(s, "entity,subject,claim,words\nSCPBot,MG90S,The MG90S stalls.,stall\n"
+                        "Rover,Wheel motor,The wheel motor stalls on carpet.,stall; carpet\n", "james")
         assert made["suggested"] == 1, made
         sug = [p for p in list_proposals(s, status="pending") if p.get("proposed_by") == "neighbour_by_words"]
         assert {sug[0]["cube_id"], sug[0]["other_cube_id"]} == set(made["claims"]), sug

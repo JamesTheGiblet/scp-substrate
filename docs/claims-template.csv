@@ -1,0 +1,4 @@
+entity,entity_kind,subject,subject_kind,uses,claim,id,source,tags,words,from,also,FACT,COUNTER,supports
+SCPBot,,MG90S,,yes,The MG90S draws about 700 mA when it stalls.,,Measured on the bench supply,needs-check,stall; current-draw,,,,,
+SCPBot,,UBEC,,yes,The UBEC holds 5 V with all servos stalled.,,,,stall; brownout,,,,,
+Rover,robot,Wheel motor,component,yes,A wheel motor needs a driver board; a GPIO pin can't power it.,,Stated by James,,current-draw,,,,,

@@ -238,6 +238,7 @@ kg cube snapshot                    write the public copy, without private cubes
 kg cube password                    set the password that unlocks editing
 kg cube serve --by <name>           run the editable page (--port, --no-open)
 kg cube relate <id> <word> <other>  link two claims: <id> supports <other>, depends-on and so on (--note)
+kg cube words <id> [words...]       your words for linking (--remove); claims sharing one get a suggested link
 kg cube contradicts <id> <other>    flag a contradiction; the link is goes-against
 kg cube tick [id]                   run rules, creating proposals
 kg cube draft [id]                  have a model draft blank faces
@@ -286,11 +287,11 @@ The modules sit at the top of `keystone-gate/`, with folders for tests and the p
 | `kg` | CLI entry point |
 | `kg_cube_cli.py` | `kg cube` and `kg neighbour` commands |
 | `kg_evidence_cli.py` | `kg evidence`; the evidence itself is in `src/store/evidence.py` |
-| `kg_claim_links.py` | `kg cube relate` and `kg cube contradicts`; the words and links are in `src/store/claim_links.py` |
+| `kg_claim_links.py` | `kg cube relate`, `kg cube contradicts` and `kg cube words`; the connecting words and links are in `src/store/claim_links.py` |
 | `kg_agent.py` | Imports `kg_cube.py` and `kg_proposals.py` as one module |
 | `kg_cube.py` | Cubes, faces, validation, attestation, neighbours |
 | `kg_proposals.py` | Proposals |
-| `kg_rules.py` | Rules that create proposals, including suggested links between claims on the same subject that share two words other than its name |
+| `kg_rules.py` | Rules that create proposals, including suggested links between claims on the same subject that share two words other than its name, and between claims sharing one of your words |
 | `kg_review.py` | Terminal review |
 | `kg_gate.py` | Gate rules and checkers |
 | `kg_hal.py` | Asks the substrate and gates the answer |
@@ -300,6 +301,7 @@ The modules sit at the top of `keystone-gate/`, with folders for tests and the p
 | `kg_entities.py`, `kg_entity_cli.py` | Entities, sorting old capsules, and `kg entity` |
 | `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
 | `kg_outline.py` | `kg import`: an entity, its subjects and claims from an outline (`docs/OUTLINE.md`) |
+| `kg_csv.py` | `kg import <file>.csv` and the page's **Import CSV**: one row per claim, with entities and subjects made if needed |
 | `kg_wiring.py` | `kg wiring`: nets traced from wiring claims, such as a common ground |
 | `kg_lens_links.py` | Lens links and clusters, and the Cluster by modes |
 | `kg_overlaps.py` | Overlaps valued by Leighton weight |
