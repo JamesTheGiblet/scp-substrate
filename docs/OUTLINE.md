@@ -15,7 +15,9 @@ Without `--write` nothing is written. The import checks every id the outline poi
 |---|---|---|
 | `# entity <name>` | the thing being modelled | `kind:` (project, robot, person, ...), `id:` to choose the id, and any relation: `part-of:`, `uses:`, `owns:`, `at:`, `works-at:`, `can:`. `building: james` links the other way: James is building it. |
 | `## subject <name>` | a part, concept or topic of the entity | `kind:`, and `uses: yes` when the entity uses it (it then circles the entity's dot on the page) |
-| `### claim <sentence>` | a claim, about the subject above it, or about the entity as a whole if it comes before any subject | `source:`, `from:` (evidence ids), `also:` (more subject ids it is about), `tags:`, `id:`, and lens lines |
+| `### claim <sentence>` | a claim, about the subject above it, or about the entity as a whole if it comes before any subject | `source:`, `from:` (evidence ids), `also:` (more subject ids it is about), `tags:`, `id:`, lens lines, and links to other claims: `supports:`, `goes-against:`, `protects:`, `limits:`, `depends-on:`, `causes:`, `is-part-of:`, `is-an-example-of:` |
+
+A link line names claim ids, in the outline or already in the store, and reads as a sentence from the claim it is under: `supports: cube/x` means this claim supports `cube/x`.
 
 A subject that already exists is reused, never copied, so `## subject PCA9685` in a new robot's outline joins the PCA9685 that SCPBot already uses.
 
@@ -44,6 +46,12 @@ uses: yes
 ### claim Rover drives its steering servos from one PCA9685.
 source: Stated by James
 FACT: Two steering servos use channels 0 and 1.
+
+### claim Rover's steering servos run from their own 5 V supply.
+id: cube/rover-servo-supply
+
+### claim The PCA9685 can't power servos from its logic supply.
+supports: cube/rover-servo-supply
 
 ## subject Wheel motor
 kind: component

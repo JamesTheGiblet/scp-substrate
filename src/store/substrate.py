@@ -70,12 +70,12 @@ class Substrate:
                 VALUES ('capsule.written', ?, ?)
             """, (capsule["id"], json.dumps({"foundation": capsule["foundation"]})))
 
-    def link(self, source, type_, target):
+    def link(self, source, type_, target, metadata=None):
         with self.conn:
             self.conn.execute("""
-                INSERT OR IGNORE INTO links (source, type, target)
-                VALUES (?, ?, ?)
-            """, (source, type_, target))
+                INSERT OR IGNORE INTO links (source, type, target, metadata)
+                VALUES (?, ?, ?, ?)
+            """, (source, type_, target, json.dumps(metadata or {})))
             self.conn.execute("""
                 INSERT INTO events (event_type, capsule_id, payload)
                 VALUES ('link.added', ?, ?)

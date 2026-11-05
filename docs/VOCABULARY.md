@@ -150,7 +150,7 @@ Between entities and subjects, the link types already used in the store carry th
 
 A relationship records who made it and, if it came from a suggestion, the reason given. A link a model suggests stays a proposal until James accepts it and picks the word.
 
-**Status: partly built.** Connecting words between claims are built (`kg cube accept --word`), but none has been used yet. `kg entity link` makes the entity links and allows only the ones in this table, apart from `described-by`, which sorting makes. Links between subjects are not built.
+**Status: partly built.** Between claims, the word is the link's type (`supports`, `goes-against`, `depends-on`, `is-part-of` and so on), with who made it in the link's metadata. `kg cube relate` makes one, an outline line such as `supports: cube/<id>` makes one, and accepting a suggested link with a word makes one. `kg cube tick` suggests links between claims on the same subject that share two words other than the subject's name. Answers show each claim's links. `kg entity link` makes the entity links and allows only the ones in this table, apart from `described-by`, which sorting makes. Links between subjects are not built.
 
 ---
 
@@ -195,7 +195,7 @@ Status is separate from lens. A FACT can be unattested, and an OPINION can be at
 | Draft | Not yet looked at as a whole | No validation, or validation gone stale |
 | Observed | James has looked at it and recorded why it holds | Validated |
 | Attested | James vouches for it. Needs 100% | Attested |
-| Disputed | Something credible goes against it, and that is unresolved | `contradicts` set |
+| Disputed | Something credible goes against it, and that is unresolved | `contradicts` set, with a `goes-against` link |
 | Rejected | James has decided it does not hold. It stays, for the record | Not built |
 | Deprecated | It held once, but no longer does or has been replaced | Not built |
 

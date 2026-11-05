@@ -1,6 +1,7 @@
 """Proposals. Rules and drafts suggest changes to cubes; humans decide."""
 import json
 
+from store.claim_links import WORDS, relate
 from kg_cube import LENSES, _now, _update_state, fill_face, link_neighbour
 
 
@@ -16,8 +17,7 @@ from kg_cube import LENSES, _now, _update_state, fill_face, link_neighbour
 
 # The connecting words a link can carry, so it reads as a sentence:
 # "<from cube> protects <other cube>". Kept short so they mean the same each time.
-CONNECTING_WORDS = ["supports", "goes against", "protects", "limits", "depends on",
-                    "causes", "is part of", "is an example of"]
+CONNECTING_WORDS = list(WORDS)
 
 
 def _face_proposals(s, cube_id, lens):
@@ -189,8 +189,9 @@ def list_proposals(s, cube_id=None, status="pending"):
 def accept_proposal(s, proposal_id, accepted_by, word=None, reverse=False):
     """Accept a proposal: dispatch to fill_face or link_neighbour, mark accepted.
 
-    A neighbour link can carry a connecting word. It reads from the proposal's
-    cube to the other one, or the other way round when reverse is set.
+    A neighbour link can carry a connecting word, which then becomes the link
+    itself. It reads from the proposal's cube to the other one, or the other
+    way round when reverse is set.
     """
     proposal = s.get(proposal_id)
     if not proposal:
@@ -209,6 +210,9 @@ def accept_proposal(s, proposal_id, accepted_by, word=None, reverse=False):
             confidence=st.get("confidence"),
             filled_by=f"proposal:{st.get('proposed_by', '?')} (accepted by {accepted_by})",
         )
+    elif ptype == "neighbour" and word:
+        a, b = (st["other_cube_id"], st["cube_id"]) if reverse else (st["cube_id"], st["other_cube_id"])
+        applied = relate(s, a, word, b, accepted_by, note=st.get("rationale"))
     elif ptype == "neighbour":
         applied = link_neighbour(
             s, st["cube_id"], st["other_cube_id"],

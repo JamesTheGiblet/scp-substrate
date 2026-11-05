@@ -26,10 +26,6 @@ sys.path.insert(0, str(_here))
 from kg_agent import LENSES, propose_face, propose_neighbour
 
 
-def _cube_tags(cube_state):
-    return set(t.lower() for t in (cube_state.get("tags") or []))
-
-
 # Words too generic to prove a text match on their own
 _STOP = {
     "have", "with", "this", "that", "from", "they", "there", "these",
@@ -185,33 +181,44 @@ def _rule_counter_from_contradicts(s, cube_state):
     }]
 
 
-# --- Rule 5: neighbour_by_tag -------------------------------------------
-def _rule_neighbour_by_tag(s, cube_state):
-    cube_tags = _cube_tags(cube_state)
-    if not cube_tags:
-        return []
-    # Find other cubes that share at least one tag
+# --- Rule 5: neighbour_on_subject ---------------------------------------
+# Tags now say where a claim came from (needs-check, seller), so sharing one
+# says nothing about meaning. Two claims on the same subject that say the
+# same words probably bear on each other; James picks the word that says how.
+NEIGHBOURS_PER_CUBE = 3
+
+
+def _rule_neighbour_on_subject(s, cube_state):
+    from kg_lens_links import _terms, _word
+    from store.claim_links import relations
     cube_id = cube_state.get("_cube_id")  # injected by run_rules
     if not cube_id:
         return []
-    rows = s.conn.execute(
-        "SELECT id, state_json FROM capsules WHERE foundation = 'foundation:cube' AND is_meta = 0"
-    ).fetchall()
-    proposals = []
-    for r in rows:
-        if r["id"] == cube_id:
-            continue
-        other_state = json.loads(r["state_json"])
-        other_tags = _cube_tags(other_state)
-        shared = cube_tags & other_tags
-        if shared:
-            proposals.append({
-                "type": "neighbour",
-                "other_cube_id": r["id"],
-                "proposed_by": "neighbour_by_tag",
-                "rationale": f"shared tags: {sorted(shared)}",
-            })
-    return proposals
+    linked = {other for _, other, _ in relations(s, cube_id)}
+    # Saying the subject's or entity's own name is being about it, not
+    # saying the same thing, so names don't count as shared words
+    named = lambda cid: set().union(*[_terms(" ".join([n["state"].get("name", ""), *(
+        a if isinstance(a := n["state"].get("aliases") or [], list) else a.split(","))]))
+        for l in s.links_from(cid) if l["type"] in ("about-subject", "about-entity") if (n := s.get(l["target"]))])
+    mine = set(_terms(cube_state.get("content"))) - named(cube_id)
+    found = {}
+    for subj in sorted(l["target"] for l in s.links_from(cube_id) if l["type"] == "about-subject"):
+        for l in s.links_to(subj, "about-subject"):
+            other = l["source"]
+            if other == cube_id or other in linked or other in found:
+                continue
+            words = set(_terms((s.get(other) or {"state": {}})["state"].get("content"))) - named(other)
+            shared = mine & words
+            if len(shared) >= 2:
+                found[other] = (subj, shared)
+    best = sorted(found.items(), key=lambda f: (-len(f[1][1]), f[0]))[:NEIGHBOURS_PER_CUBE]
+    return [{
+        "type": "neighbour",
+        "other_cube_id": other,
+        "proposed_by": "neighbour_on_subject",
+        "rationale": f"both about {(s.get(subj) or {'state': {}})['state'].get('name', subj)}, "
+                     f"and both say {', '.join(sorted(_word(w) for w in shared))}",
+    } for other, (subj, shared) in best]
 
 
 RULES = [
@@ -219,7 +226,7 @@ RULES = [
     {"id": "counter_from_alternatives",  "propose": _rule_counter_from_alternatives},
     {"id": "context_from_source",        "propose": _rule_context_from_source},
     {"id": "counter_from_contradicts",   "propose": _rule_counter_from_contradicts},
-    {"id": "neighbour_by_tag",           "propose": _rule_neighbour_by_tag},
+    {"id": "neighbour_on_subject",       "propose": _rule_neighbour_on_subject},
 ]
 
 

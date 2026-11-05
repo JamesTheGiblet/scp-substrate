@@ -17,7 +17,9 @@
 Lines under a heading are `key: value`. Under an entity, a key from
 RELATIONS links the entity to that id; `building: james` links the other way.
 Under a subject, `uses: yes` says the entity uses it, and `kind:` names its
-kind. Under a claim, `also:` names more subjects it is about. A claim before any subject is about the entity as a whole. A lens line
+kind. Under a claim, `also:` names more subjects it is about, and a
+connecting word such as `supports: cube/<id>` or `depends-on: cube/<id>`
+links it to another claim. A claim before any subject is about the entity as a whole. A lens line
 is offered as a draft for the person to confirm, never as a filled face.
 Imported by kg. See docs/VOCABULARY.md.
 """
@@ -83,13 +85,27 @@ def plan(s, entities):
     return lines
 
 
+def _claim_id(c):
+    return c["keys"].get("id") or f"cube/{'-'.join(re.findall(r'[a-z0-9]+', c['text'].lower())[:8])}"
+
+
+def _claims(entities):
+    return [c for e in entities for c in e["claims"] + [c for sub in e["subjects"] for c in sub["claims"]]]
+
+
 def problems(s, entities):
     """Every id the outline points at that isn't in the store, checked before
     anything is written, so an outline goes in whole or not at all."""
+    from store.claim_links import WORDS
     from kg_entities import RELATIONS
     from kg_subjects import _slug
     out = []
     coming = {f"subject/{_slug(sub['name'])}" for e in entities for sub in e["subjects"]}
+    claims = {_claim_id(c) for c in _claims(entities)}
+    for c in _claims(entities):
+        for key in set(c["keys"]) & set(WORDS.values()):
+            out += [f"{c['text'][:40]!r}: {key} {v} is not a claim" for v in _ids(c["keys"][key])
+                    if (s.get(v) or {}).get("foundation") != "foundation:cube" and v not in claims]
     for e in entities:
         for key, value in e["keys"].items():
             if key in RELATIONS:
@@ -144,6 +160,15 @@ def apply(s, entities, by):
                     for lens, text in c["lenses"].items():
                         propose_face(s, made_claim, lens, text, f"outline:{by}", rationale="from the outline")
                         made["drafts"] += 1
+    # Links between claims go in last, once every claim they name exists
+    from store.claim_links import WORDS, relate
+    made["links"] = 0
+    for c in _claims(entities):
+        for word, key in WORDS.items():
+            for other in _ids(c["keys"].get(key, "")):
+                if "error" in (r := relate(s, _claim_id(c), word, other, by, note="from an outline")):
+                    raise ValueError(f"{c['text'][:50]!r}: {r['error']}")
+                made["links"] += 1
     return made
 
 
@@ -151,7 +176,7 @@ def _claim(s, c, eid, sid, by, made):
     from kg_agent import create_cube
     from kg_entities import claim_link_error, link_claim
     keys = c["keys"]
-    cid = keys.get("id") or f"cube/{'-'.join(re.findall(r'[a-z0-9]+', c['text'].lower())[:8])}"
+    cid = _claim_id(c)
     if s.get(cid):
         made["skipped"].append(cid)
         return None
@@ -187,7 +212,7 @@ def cmd_import(args):
     finally:
         s.close()
     print(f"made {len(made['entities'])} entities, {len(made['subjects'])} subjects, {len(made['claims'])} claims "
-          f"and {made['drafts']} lens drafts; skipped {len(made['skipped'])} claims that exist")
+          f"and {made['drafts']} lens drafts, linked {made['links']} pairs of claims; skipped {len(made['skipped'])} claims that exist")
 
 
 def add_outline_parser(sub):

@@ -214,7 +214,7 @@ def test_cube_contradicts():
         c = s.get(r1["cube_id"])
         assert c["state"]["contradicts"]["other"] == r2["cube_id"]
         link = s.conn.execute(
-            "SELECT 1 FROM links WHERE source=? AND type='contradicts' AND target=?",
+            "SELECT 1 FROM links WHERE source=? AND type='goes-against' AND target=?",
             (r1["cube_id"], r2["cube_id"]),
         ).fetchone()
         assert link

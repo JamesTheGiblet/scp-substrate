@@ -78,31 +78,28 @@ def test_rule_counter_from_alternatives():
         s.close()
 
 
-def test_rule_neighbour_by_tag():
+def test_rule_neighbour_on_subject():
     from kg_agent import create_cube, list_proposals
     from kg_rules import run_rules
     s = _seed_decision_substrate()
     try:
-        a = create_cube(s, "cube about databases")["cube_id"]
-        b = create_cube(s, "another cube about databases")["cube_id"]
-        # Both tagged "database"
-        for cid in (a, b):
-            c = s.get(cid)
-            st = dict(c["state"]); st["tags"] = ["database"]
-            import json as _j
-            with s.conn:
-                s.conn.execute(
-                    "UPDATE capsules SET state_json=? WHERE id=?",
-                    (_j.dumps(st), cid),
-                )
-        run_rules(s, a, only_rules=["neighbour_by_tag"])
-        props = list_proposals(s, cube_id=a, status="pending")
-        neigh = [p for p in props if p.get("proposal_type") == "neighbour"]
-        assert len(neigh) == 1
-        assert neigh[0]["other_cube_id"] == b
+        with s.conn:
+            s.conn.execute("INSERT OR IGNORE INTO capsules (id, foundation, state_json, is_meta) "
+                           "VALUES ('foundation:subject', 'foundation:foundation', '{}', 1)")
+        s.write({"id": "subject/mg90s", "foundation": "foundation:subject", "state": {"name": "MG90S"}})
+        a = create_cube(s, "The servo stalls when its current spikes.", tags=["needs-check"])["cube_id"]
+        b = create_cube(s, "A stalled servo draws its peak current.", tags=["needs-check"])["cube_id"]
+        c = create_cube(s, "The servo horn is plastic.", tags=["needs-check"])["cube_id"]
+        d = create_cube(s, "Peak current stalls the regulator.", tags=["needs-check"])["cube_id"]
+        for cid in (a, b, c):
+            s.link(cid, "about-subject", "subject/mg90s")
+        run_rules(s, a, only_rules=["neighbour_on_subject"])
+        neigh = [p for p in list_proposals(s, cube_id=a, status="pending") if p.get("proposal_type") == "neighbour"]
+        # b shares the subject and two words; c only the subject; d only words; a shared tag counts for nothing
+        assert [p["other_cube_id"] for p in neigh] == [b], neigh
+        assert neigh[0]["rationale"].startswith("both about MG90S, and both say "), neigh
     finally:
         s.close()
-
 
 def test_rule_skips_filled_lens():
     from kg_agent import create_cube, fill_face

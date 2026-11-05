@@ -214,6 +214,11 @@ def cmd_cube_show(args):
     print(f"  created: {data['created_at']}")
     if data.get("contradicts"):
         print(f"  contradicts: {data['contradicts']['other']} ({data['contradicts'].get('note') or 'no note'})")
+    from store.claim_links import relations
+    s = Substrate()
+    for word, other, out in relations(s, data["cube_id"]):
+        print(f"  {word} {other}" if out else f"  {other} {word} this")
+    s.close()
     print()
 
     print("  Faces:")
@@ -266,17 +271,6 @@ def cmd_cube_list(args):
     for c in cubes:
         marker = "[complete]" if c["complete"] else "[incomplete]"
         print(f"  {c['id']:45} {c['score']:.2f} {marker}")
-
-
-def cmd_cube_contradicts(args):
-    from kg_agent import set_contradicts
-    s = Substrate()
-    result = set_contradicts(s, args.cube_id, args.other_id, note=args.note)
-    s.close()
-    if "error" in result:
-        print(f"error: {result['error']}")
-        return
-    print(f"{result['cube_id']} contradicts {result['contradicts']}")
 
 
 def cmd_neighbour_link(args):

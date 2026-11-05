@@ -179,8 +179,9 @@ def validate(s, cube_id, validator, note=None):
     return {"face_id": face_id, "validator": validator}
 
 
-def set_contradicts(s, cube_id, other_cube_id, note=None):
-    """Flag that this cube contradicts another."""
+def set_contradicts(s, cube_id, other_cube_id, note=None, by="james"):
+    """Flag that this cube contradicts another: it goes against the other."""
+    from store.claim_links import relate
     c = s.get(cube_id)
     if not c:
         return {"error": f"cube {cube_id} not found"}
@@ -189,11 +190,7 @@ def set_contradicts(s, cube_id, other_cube_id, note=None):
     new_state = dict(c["state"])
     new_state["contradicts"] = {"other": other_cube_id, "note": note, "set_at": _now()}
     _update_state(s, cube_id, new_state)
-    if not s.conn.execute(
-        "SELECT 1 FROM links WHERE source=? AND type='contradicts' AND target=?",
-        (cube_id, other_cube_id),
-    ).fetchone():
-        s.link(cube_id, "contradicts", other_cube_id)
+    relate(s, cube_id, "goes against", other_cube_id, by, note=note)
     return {"cube_id": cube_id, "contradicts": other_cube_id}
 
 

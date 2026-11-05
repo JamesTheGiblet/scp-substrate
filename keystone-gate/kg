@@ -13,6 +13,7 @@ sys.path.insert(0, str(_here))
 
 from store.substrate import Substrate
 from kg_cube_cli import *
+from kg_claim_links import cmd_cube_contradicts, cmd_cube_relate
 from kg_subject_cli import add_subject_parser
 from kg_entity_cli import add_entity_parser
 from kg_wiring import add_wiring_parser
@@ -276,6 +277,14 @@ def main():
     sp_con.add_argument("other_id")
     sp_con.add_argument("--note", default=None)
     sp_con.set_defaults(func=cmd_cube_contradicts)
+
+    sp_rel = sp_sub.add_parser("relate", help="link one claim to another with a connecting word")
+    sp_rel.add_argument("cube_id")
+    sp_rel.add_argument("word", help="supports, goes-against, protects, limits, depends-on, causes, is-part-of or is-an-example-of")
+    sp_rel.add_argument("other_id")
+    sp_rel.add_argument("--by", default="james")
+    sp_rel.add_argument("--note", default=None)
+    sp_rel.set_defaults(func=cmd_cube_relate)
 
     sp_c_prop = sp_sub.add_parser("proposals", help="list proposals for a cube")
     sp_c_prop.add_argument("cube_id", nargs="?", default=None)

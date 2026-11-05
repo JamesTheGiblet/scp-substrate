@@ -13,9 +13,9 @@ The rule behind the gate and the model layer is that an LLM handles wording, not
 
 ## Boundary with the substrate
 
-Keystone Gate adds no code to `src/store/substrate.py`, `src/store/rules.py`, `src/store/queries.py` or `schema.sql`, and its capsules are written through `Substrate.write()` and `Substrate.link()`.
+Keystone Gate adds no code to `src/store/substrate.py`, `src/store/rules.py`, `src/store/queries.py` or `schema.sql`, and its capsules are written through `Substrate.write()` and `Substrate.link()`. A link can carry metadata, such as who made it; the links table always had the column.
 
-The substrate side knows about cubes in three places: four foundations in `sc.json` (`cube`, `lens`, `cube-face`, `neighbour`), a `default-cube` capsule holding the weights, and read-only cube support in `src/answer/walk_cubes.py` and `src/answer/explain.py`.
+The substrate side knows about cubes in four places: four foundations in `sc.json` (`cube`, `lens`, `cube-face`, `neighbour`), a `default-cube` capsule holding the weights, read-only cube support in `src/answer/walk_cubes.py` and `src/answer/explain.py`, and the links between claims in `src/store/claim_links.py`, which answers read too.
 
 Removing Keystone Gate would mean deleting this folder, those foundations, `walk_cubes.py` with its walker and intent, and the cube capsules.
 
@@ -230,12 +230,13 @@ kg cube view                        write and open the read-only page
 kg cube snapshot                    write the public copy, without private cubes or drafts
 kg cube password                    set the password that unlocks editing
 kg cube serve --by <name>           run the editable page (--port, --no-open)
-kg cube contradicts <id> <other>    flag a contradiction
+kg cube relate <id> <word> <other>  link two claims: <id> supports <other>, depends-on and so on (--note)
+kg cube contradicts <id> <other>    flag a contradiction; the link is goes-against
 kg cube tick [id]                   run rules, creating proposals
 kg cube draft [id]                  have a model draft blank faces
 kg cube notes [id]                  have a model suggest validation notes
 kg cube proposals [id]              list proposals (--status)
-kg cube accept <proposal> --by <n>  apply a proposal
+kg cube accept <proposal> --by <n>  apply a proposal; a suggested link takes --word, and --reverse
 kg cube reject <proposal> --by <n>  reject a proposal (--reason)
 
 kg repo add <owner/name> ...        write claim cubes from each repo's README
@@ -269,10 +270,11 @@ The modules sit at the top of `keystone-gate/`, with folders for tests and the p
 |---|---|
 | `kg` | CLI entry point |
 | `kg_cube_cli.py` | `kg cube` and `kg neighbour` commands |
+| `kg_claim_links.py` | `kg cube relate` and `kg cube contradicts`; the words and links are in `src/store/claim_links.py` |
 | `kg_agent.py` | Imports `kg_cube.py` and `kg_proposals.py` as one module |
 | `kg_cube.py` | Cubes, faces, validation, attestation, neighbours |
 | `kg_proposals.py` | Proposals |
-| `kg_rules.py` | Rules that create proposals |
+| `kg_rules.py` | Rules that create proposals, including suggested links between claims on the same subject that share two words other than its name |
 | `kg_review.py` | Terminal review |
 | `kg_gate.py` | Gate rules and checkers |
 | `kg_hal.py` | Asks the substrate and gates the answer |

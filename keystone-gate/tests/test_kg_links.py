@@ -1,4 +1,6 @@
 """Links that carry a connecting word. Run: python tests/run.py"""
+import json
+
 from support_kg import *
 
 
@@ -58,6 +60,50 @@ def test_a_link_without_a_word_still_works():
         assert accept_proposal(s, pid, "james")["status"] == "accepted"
         cube = next(c for c in collect(s) if c["id"] == a)
         assert b in cube["neighbours"] and cube["link_words"] == {}
+    finally:
+        s.close()
+
+
+def test_the_word_is_the_link_in_the_store():
+    from kg_agent import accept_proposal
+    s = _fresh_kg_substrate()
+    try:
+        a, b, pid = _pair(s)
+        accept_proposal(s, pid, "james", word="depends on", reverse=True)
+        links = [(l["type"], l["target"]) for l in s.links_from(b)]
+        assert ("depends-on", a) in links and ("neighbour", a) not in links, links
+    finally:
+        s.close()
+
+
+def test_relate_links_two_claims_and_says_who():
+    from store.claim_links import relate, relations
+    s = _fresh_kg_substrate()
+    try:
+        a, b, _ = _pair(s)
+        assert relate(s, a, "protects", b, "james", note="the fuse blows first") == {"from": a, "word": "protects", "to": b}
+        assert relate(s, a, "goes-against", b, "james")["word"] == "goes against"
+        meta = json.loads(s.conn.execute("SELECT metadata FROM links WHERE type='protects'").fetchone()[0])
+        assert meta["by"] == "james" and meta["note"] == "the fuse blows first"
+        assert relations(s, b) == [("goes against", a, False), ("protects", a, False)]
+        assert "error" in relate(s, a, "is near", b, "james")
+        assert "error" in relate(s, a, "supports", a, "james")
+        assert "error" in relate(s, a, "supports", "default-cube", "james")
+    finally:
+        s.close()
+
+
+def test_an_answer_says_how_its_claims_connect():
+    from answer.walk_cubes import walk_what_believe
+    from store.claim_links import relate
+    s = _fresh_kg_substrate()
+    try:
+        a, b, _ = _pair(s)
+        relate(s, a, "protects", b, "james")
+        detail = walk_what_believe(s, "james", "fuse pack")["detail"]
+        assert f"link: this protects {b}" in detail, detail
+        detail = walk_what_believe(s, "james", "wire current rating")["detail"]
+        assert f"link: {a} protects this" in detail, detail
     finally:
         s.close()
 

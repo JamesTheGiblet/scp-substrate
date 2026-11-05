@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 
 from kg_agent import LENSES, list_cubes, list_proposals, show_cube
+from store.claim_links import relations
 from kg_lens_links import all_modes
 from kg_overlaps import attach_overlaps, load_decisions
 from store.trust import fused_trust
@@ -82,9 +83,9 @@ def _repo(s, cube_id):
 
 
 def _link_notes(s):
-    """Suggested neighbour links waiting for you, and the reasons and connecting
-    words behind ones you accepted, listed on both cubes."""
-    drafts, reasons, words = {}, {}, {}
+    """Suggested neighbour links waiting for you, and the reasons behind ones
+    you accepted, listed on both cubes."""
+    drafts, reasons = {}, {}
     for p in list_proposals(s, status="any"):
         if p.get("proposal_type") != "neighbour" or p.get("status") not in ("pending", "accepted"):
             continue
@@ -95,9 +96,14 @@ def _link_notes(s):
                 continue
             if p.get("rationale"):
                 reasons.setdefault(this, {})[other] = p["rationale"]
-            if p.get("word"):
-                words.setdefault(this, {})[other] = {"word": p["word"], "from": p["from"]}
-    return drafts, reasons, words
+    return drafts, reasons
+
+
+def _said(s, cube_id):
+    """The claims this one is linked to by a connecting word, and the word,
+    with the claim its sentence starts from."""
+    return {other: {"word": word, "from": cube_id if out else other}
+            for word, other, out in relations(s, cube_id)}
 
 
 def _you(s):
@@ -199,9 +205,10 @@ def collect(s):
     # sits with SCPBot, not with the chassis that is part of it
     inner = {h for h, _ in places for l in s.links_from(h) if l["type"] == "part-of"}
     places.sort(key=lambda p: p[0] in inner)
-    link_drafts, link_reasons, link_words = _link_notes(s)
+    link_drafts, link_reasons = _link_notes(s)
     for row in list_cubes(s):
         cube = show_cube(s, row["id"])
+        said = _said(s, row["id"])
         validation = cube["validation"]
         attestation = cube["attestation"]
         cubes.append({
@@ -235,10 +242,10 @@ def collect(s):
                 "at": attestation.get("attested_at"),
             },
             "note_draft": (s.get(f"{cube['cube_id']}/validation-draft") or {"state": {}})["state"].get("content"),
-            "neighbours": _links(s, cube["cube_id"], "neighbour"),
+            "neighbours": sorted(set(_links(s, cube["cube_id"], "neighbour")) | set(said)),
             "link_drafts": link_drafts.get(cube["cube_id"], []),
             "link_reasons": link_reasons.get(cube["cube_id"], {}),
-            "link_words": link_words.get(cube["cube_id"], {}),
+            "link_words": said,
             "contradicts": (cube["contradicts"] or {}).get("other"),
         })
     return attach_overlaps(cubes, load_decisions(s))

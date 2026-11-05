@@ -86,5 +86,34 @@ def test_an_outline_needs_an_entity_first():
         assert "after an # entity" in str(e)
 
 
+def test_an_outline_links_its_claims():
+    from kg_outline import apply, parse
+    s = _store()
+    try:
+        text = OUTLINE.replace("tags: needs-check\n", "tags: needs-check\nsupports: cube/rover-test\n")
+        text = text.replace("### claim Rover is a test robot.", "### claim Rover is a test robot.\nid: cube/rover-test")
+        made = apply(s, parse(text), "james")
+        assert made["links"] == 1
+        wheel = next(c for c in made["claims"] if c != "cube/rover-test")
+        assert ("supports", "cube/rover-test") in [(l["type"], l["target"]) for l in s.links_from(wheel)]
+    finally:
+        s.close()
+
+
+def test_an_outline_link_must_name_a_claim():
+    from kg_outline import apply, parse
+    s = _store()
+    try:
+        text = OUTLINE.replace("tags: needs-check\n", "tags: needs-check\ndepends-on: subject/battery\n")
+        try:
+            apply(s, parse(text), "james")
+            raise AssertionError("expected a problem")
+        except ValueError as e:
+            assert "depends-on subject/battery is not a claim" in str(e), e
+        assert not s.get("entity/rover")
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

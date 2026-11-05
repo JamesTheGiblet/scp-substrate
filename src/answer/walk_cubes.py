@@ -2,6 +2,7 @@
 import json
 import re
 
+from store.claim_links import relations
 from store.trust import fused_trust
 
 
@@ -47,6 +48,9 @@ def _render(s, cube_id, content):
     for label, lens in (("view", "OPINION"), ("against", "COUNTER")):
         text = _face(s, cube_id, lens)
         lines.append(f"    {label}: {text or '(not written yet)'}")
+    # How it connects to other claims, as sentences
+    lines += [f"    link: this {word} {other}" if out else f"    link: {other} {word} this"
+              for word, other, out in relations(s, cube_id)]
     return lines
 
 
@@ -129,9 +133,10 @@ def walk_what_believe(s, entity_id, text):
     best = scored[:3]
     lines = []
     for _, _, cid, st in best:
-        lines += _render(s, cid, st.get("content"))
+        shown = _render(s, cid, st.get("content"))
         if about := sorted(_name(s, t) for t in _about(s, cid)):
-            lines.insert(len(lines) - 2, f"    about: {', '.join(about)}")
+            shown.insert(3, f"    about: {', '.join(about)}")
+        lines += shown
     on = f" on {', '.join(sorted(named.values()))}" if named else ""
     return {"ok": True, "summary": f"{len(scored)} cube(s) match{on}, closest {len(best)}:",
             "detail": "\n".join(lines)}
