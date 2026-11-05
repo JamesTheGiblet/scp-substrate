@@ -85,3 +85,23 @@ python keystone-gate/kg import claims.csv --write   # makes it
 | `supports`, `goes-against`, `depends-on` and the other connecting words | claim ids this one links to |
 
 Names are matched against existing entities, subjects and their aliases, ignoring case. A cell can hold several values separated by commas or semicolons; a cell containing a comma needs quotes, which Excel adds when it saves.
+
+## Reviewing drafts on a sheet
+
+Model drafts wait for you, five per claim. To clear them in a spreadsheet instead of one at a time:
+
+```
+python keystone-gate/kg cube sheet                  # writes drafts-to-review.csv, about 50 drafts, whole claims only
+python keystone-gate/kg import drafts-to-review.csv           # check what it will do
+python keystone-gate/kg import drafts-to-review.csv --write   # do it
+```
+
+Or upload the filled sheet with **Import CSV** on the page. In each row, fill in:
+
+| Column | Means |
+|---|---|
+| `decision` | `accept` takes the draft, `reject` drops it, `edit` uses your text instead. Blank skips the row, so it comes back on the next sheet |
+| `your_text` | with `edit`, the words to use |
+| `words` | your words for linking the claim, on any of its rows |
+
+Every row is checked before anything is written. Run `kg cube sheet` again for the next 50. If Excel asks, save as **CSV UTF-8**, so λ and quotes survive.

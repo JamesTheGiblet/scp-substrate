@@ -239,6 +239,7 @@ kg cube password                    set the password that unlocks editing
 kg cube serve --by <name>           run the editable page (--port, --no-open)
 kg cube relate <id> <word> <other>  link two claims: <id> supports <other>, depends-on and so on (--note)
 kg cube words <id> [words...]       your words for linking (--remove); claims sharing one get a suggested link
+kg cube sheet                       write about 50 waiting drafts to a CSV to review (--limit, --out); kg import applies it
 kg cube contradicts <id> <other>    flag a contradiction; the link is goes-against
 kg cube tick [id]                   run rules, creating proposals
 kg cube draft [id]                  have a model draft blank faces
@@ -301,6 +302,7 @@ The modules sit at the top of `keystone-gate/`, with folders for tests and the p
 | `kg_entities.py`, `kg_entity_cli.py` | Entities, sorting old capsules, and `kg entity` |
 | `kg_subjects.py`, `kg_subject_cli.py` | Subjects, their proposals, and `kg subject` |
 | `kg_outline.py` | `kg import`: an entity, its subjects and claims from an outline (`docs/OUTLINE.md`) |
+| `kg_sheet.py` | `kg cube sheet`: drafts out to a CSV, and your accept, reject or edit back in |
 | `kg_csv.py` | `kg import <file>.csv` and the page's **Import CSV**: one row per claim, with entities and subjects made if needed |
 | `kg_wiring.py` | `kg wiring`: nets traced from wiring claims, such as a common ground |
 | `kg_lens_links.py` | Lens links and clusters, and the Cluster by modes |

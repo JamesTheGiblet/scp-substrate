@@ -7,3 +7,6 @@ drift-report.txt
 .env
 
 build/public/
+# Review sheets from kg cube sheet
+sheets/
+drafts-to-review.csv

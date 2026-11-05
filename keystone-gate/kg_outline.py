@@ -202,12 +202,26 @@ def _claim(s, c, eid, sid, by, made, via="an outline"):
 
 
 def cmd_import(args):
-    # utf-8-sig drops the mark Excel puts at the start of a saved CSV
-    with open(args.path, encoding="utf-8-sig") as f:
-        text = f.read()
+    # utf-8-sig drops the mark Excel puts at the start of a saved CSV; a
+    # plain "CSV (Comma delimited)" save from Excel is Windows-1252 instead
+    try:
+        with open(args.path, encoding="utf-8-sig") as f:
+            text = f.read()
+    except UnicodeDecodeError:
+        with open(args.path, encoding="cp1252") as f:
+            text = f.read()
     is_csv = args.path.lower().endswith(".csv")
     s = Substrate()
     try:
+        import kg_sheet
+        if is_csv and kg_sheet.is_sheet(text):
+            lines, found = kg_sheet.preview(s, text)
+            if not args.write or found:
+                print("\n".join(lines + [f"problem: {p}" for p in found]))
+                print("\nNothing written." + ("" if found else " Run again with --write to do these."))
+                return
+            print(kg_sheet.write(s, text, args.by))
+            return
         if is_csv:
             from kg_csv import parse as parse_csv
             entities = parse_csv(s, text)

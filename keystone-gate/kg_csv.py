@@ -132,12 +132,20 @@ def _subject(s, e, row):
 
 
 def preview(s, text):
-    """What importing would make, and anything that stops it: (lines, problems)."""
+    """What importing would make, and anything that stops it: (lines, problems).
+    A review sheet from kg cube sheet goes to kg_sheet instead."""
+    import kg_sheet
+    if kg_sheet.is_sheet(text):
+        return kg_sheet.preview(s, text)
     entities = parse(s, text)
     return plan(s, entities), problems(s, entities)
 
 
 def write(s, text, by):
+    """Import it. Returns what was made, or for a review sheet what was done."""
+    import kg_sheet
+    if kg_sheet.is_sheet(text):
+        return kg_sheet.write(s, text, by)
     return apply(s, parse(s, text), by, via="a CSV")
 
 

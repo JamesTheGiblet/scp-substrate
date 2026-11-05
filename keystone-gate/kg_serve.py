@@ -84,7 +84,8 @@ def _import(s, data, by):
     if not isinstance(text, str) or not text.strip():
         raise ValueError("csv is required")
     if data.get("write") is True:
-        return {"made": summary(write(s, text, by))}
+        made = write(s, text, by)
+        return {"made": made if isinstance(made, str) else summary(made)}
     lines, problems = preview(s, text)
     return {"plan": lines, "problems": problems}
 
