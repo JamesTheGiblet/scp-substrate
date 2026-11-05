@@ -236,6 +236,10 @@ On 3 November 2026 every cube was archived, in two steps by `scripts/archive_cub
 
 The repo index, SymLM's language data, the foundations and `person/james-gilbert` stayed in `sc.db`.
 
+On 5 November 2026 SymLM's talk logs went too:
+
+- `sc-archive-talk-logs-2026-11-05.db`: 127 observations from the 31 October `symlm` chat tests, 85 conversation turns and 42 unparsed lines, with their events. Nothing linked to them, and `kg_gate` never used them as evidence. `symlm/talk.py` still writes new ones.
+
 ---
 
 ## Old words and new
