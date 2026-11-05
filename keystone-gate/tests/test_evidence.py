@@ -45,7 +45,7 @@ def test_evidence_adds_by_its_kind():
         # A measurement counts as much as a validation; a listing a quarter of one
         assert _standing(s, a) == 0.73 and _standing(s, b) == 0.56
         assert evidence_of(s, a) == [{"id": "evidence/ubec-on-the-meter", "kind": "measurement",
-                                      "weight": 1.0, "title": "UBEC output on the multimeter"}]
+                                      "weight": 1.0, "title": "UBEC output on the multimeter", "changed": False}]
     finally:
         s.close()
 
@@ -145,6 +145,36 @@ def test_source_lines_name_their_evidence():
                 "Inferred from the listing images; the listing doesn't say",
                 "Checked against the scp-substrate code on 2026-11-03: a search of the code"):
         assert ids(src) == [], src
+
+
+def test_evidence_counts_half_once_its_file_changes():
+    from kg_agent import create_cube
+    from store.evidence import add_evidence, changed, checked, cite
+    s = _store()
+    try:
+        cid = create_cube(s, "Standing runs from 0 to 1.")["cube_id"]
+        f = {"id": "file/demo/trust.py", "foundation": "foundation:knowledge",
+             "state": {"kind": "source-file", "path": "trust.py", "sha256": "aaa"}}
+        s.write(f)
+        add_evidence(s, "demo-trust", "code", "demo: trust.py", "james", path="trust.py", repo="repo/demo")
+        cite(s, cid, "evidence/demo-trust")
+        # Never checked: nothing to compare against, so it counts in full
+        assert not changed(s, s.get("evidence/demo-trust")) and _standing(s, cid) == 0.68
+        assert checked(s, "evidence/demo-trust", "james")["version"] == "aaa"
+        assert ("cites-file", "file/demo/trust.py") in [(l["type"], l["target"]) for l in s.links_from("evidence/demo-trust")]
+        # Re-indexing finds the file changed
+        s.write({**f, "state": {**f["state"], "sha256": "bbb"}})
+        assert changed(s, s.get("evidence/demo-trust")) and _standing(s, cid) == 0.59
+        # Checked again, it counts in full
+        checked(s, "evidence/demo-trust", "james")
+        assert _standing(s, cid) == 0.68
+        # Gone from the index counts as changed
+        with s.conn:
+            s.conn.execute("DELETE FROM capsules WHERE id = 'file/demo/trust.py'")
+        assert changed(s, s.get("evidence/demo-trust"))
+        assert "error" in checked(s, "evidence/demo-trust", "james")
+    finally:
+        s.close()
 
 
 if __name__ == "__main__":

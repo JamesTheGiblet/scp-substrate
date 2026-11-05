@@ -10,7 +10,7 @@ const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fi
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };
 // What a claim rests on, in one line; with none, it is only your word
 const restsOn = c => (c.evidence || []).length
-  ? "Rests on: " + c.evidence.map(e => `${e.title} (${e.kind.replace("-", " ")})`).join("; ")
+  ? "Rests on: " + c.evidence.map(e => `${e.title} (${e.kind.replace("-", " ")}${e.changed ? ", changed since checked" : ""})`).join("; ")
   : "Rests on no evidence yet: your word only";
 const POSE = { FACT: [-18, -24], COUNTER: [-18, -114], CONTEXT: [-18, -204], FICTION: [-18, 66], OPINION: [-72, -24], HUMAN: [72, -24] };
 // Foundational cubes come in three kinds, each with its own colour. A cube goes

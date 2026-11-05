@@ -2,6 +2,7 @@
 import json
 import re
 
+from answer.spelling import correct
 from store.claim_links import relations
 from store.evidence import evidence_of
 from store.trust import fused_trust
@@ -46,7 +47,8 @@ def _render(s, cube_id, content):
     standing = fused_trust(s, cube_id).get("posterior", 0.5)
     found = evidence_of(s, cube_id)
     # Kinds in plain words: person-document is a label, not a name the gate can find
-    rests = "; ".join(f"{e['title']} ({e['kind'].replace('-', ' ')})" for e in found) or "nothing yet, your word only"
+    rests = "; ".join(f"{e['title']} ({e['kind'].replace('-', ' ')}{', changed since checked' if e['changed'] else ''})"
+                      for e in found) or "nothing yet, your word only"
     lines = [f"  {cube_id}", f"    {content}",
              f"    {_status(s, cube_id)}, standing {standing:.2f}", f"    rests on: {rests}"]
     for label, lens in (("view", "OPINION"), ("against", "COUNTER")):
@@ -83,7 +85,7 @@ def _named(s, topic):
             for name in _names(row["state"]):
                 words = _stems(name)
                 if words and words <= topic:
-                    found[row["id"]] = row["state"].get("name", row["id"])
+                    found[row["id"]] = {"name": row["state"].get("name", row["id"]), "words": words}
                     break
     return found
 
@@ -92,14 +94,28 @@ def _about(s, cube_id):
     return {l["target"] for l in s.links_from(cube_id) if l["type"] in ("about-subject", "about-entity")}
 
 
+def _wholes_parts(s, tid):
+    """An entity and every entity that is part of it, all the way down. SCPBot
+    reaches its chassis, and the Forge Stack its projects."""
+    found, todo = {tid}, [tid]
+    while todo:
+        for l in s.links_to(todo.pop(), "part-of"):
+            if l["source"] not in found:
+                found.add(l["source"])
+                todo.append(l["source"])
+    return found
+
+
 def _reach(s, named):
     """What a claim may be about to count as on a named thing: the thing, and
-    for an entity, the parts it uses. SCPBot reaches its MG90S."""
+    for an entity, its own parts and the parts of what it is made of. SCPBot
+    reaches its MG90S, and its chassis's legs."""
     reach = {}
     for tid in named:
         reach[tid] = {tid}
         if not tid.startswith("subject/"):
-            reach[tid] |= {l["target"] for l in s.links_from(tid) if l["type"] == "uses"}
+            for eid in _wholes_parts(s, tid):
+                reach[tid] |= {eid} | {l["target"] for l in s.links_from(eid) if l["type"] == "uses"}
     return reach
 
 
@@ -107,7 +123,9 @@ def walk_what_believe(s, entity_id, text):
     """Find cubes on a topic. With no topic, list the attested ones. A claim
     about a subject or entity the question names ranks above a word match."""
     # Code names such as kg_agent are subjects, not topic words
-    topic = _stems(re.sub(r"\w+_\w+", " ", text))
+    text, fixes = correct(s, re.sub(r"\w+_\w+", " ", text), skip=_ASKING)
+    read_as = " ".join(f'Read "{a}" as "{b}".' for a, b in fixes)
+    topic = _stems(text)
     cubes = _cubes(s)
     if not topic:
         found = [(cid, st) for cid, st in cubes if s.get(f"{cid}/attestation")
@@ -123,14 +141,20 @@ def walk_what_believe(s, entity_id, text):
     scored = []
     for cid, st in cubes:
         words = f"{cid} {st.get('content', '')} {' '.join(st.get('tags') or [])}"
-        overlap = len(topic & _stems(words))
+        about = _about(s, cid)
+        on_things = [tid for tid, parts in reach.items() if parts & about]
+        # A named thing's name is counted by the link to it, not again as a
+        # word, so "SCPBot's legs" ranks by legs among the claims on SCPBot.
+        # A claim that says the name without the link still gets the word.
+        rest = topic - set().union(*(named[t]["words"] for t in on_things))
+        overlap = len(rest & _stems(words))
         # Each named thing the claim is on counts as much as a shared word,
         # and wins a tie, so a link adds to the words but can't drown them
-        on = sum(1 for parts in reach.values() if parts & _about(s, cid)) if reach else 0
+        on = len(on_things)
         if overlap or on:
             scored.append((overlap + on, on, cid, st))
     if not scored:
-        return {"ok": True, "summary": "No cube covers that yet.", "detail": None}
+        return {"ok": True, "summary": f"{read_as} No cube covers that yet.".strip(), "detail": None}
 
     # Cubes a person has examined come first among equals
     scored.sort(key=lambda row: (-row[0], -row[1], not s.get(f"{row[2]}/face/human-validation"), row[2]))
@@ -141,8 +165,8 @@ def walk_what_believe(s, entity_id, text):
         if about := sorted(_name(s, t) for t in _about(s, cid)):
             shown.insert(4, f"    about: {', '.join(about)}")
         lines += shown
-    on = f" on {', '.join(sorted(named.values()))}" if named else ""
-    return {"ok": True, "summary": f"{len(scored)} cube(s) match{on}, closest {len(best)}:",
+    on = f" on {', '.join(sorted(n['name'] for n in named.values()))}" if named else ""
+    return {"ok": True, "summary": f"{read_as} {len(scored)} cube(s) match{on}, closest {len(best)}:".strip(),
             "detail": "\n".join(lines)}
 
 

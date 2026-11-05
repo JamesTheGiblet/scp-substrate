@@ -22,7 +22,8 @@ scp-substrate/
 │   │                      evidence (what claims rest on, and its weights),
 │   │                      claim_links (supports, goes-against and the other words)
 │   ├── answer/            ask (intent matching), walkers (one per kind of question),
-│   │                      walk_cubes (answers from cubes), explain, why
+│   │                      walk_cubes (answers from cubes), spelling (misspelt
+│   │                      questions read as the store's words), explain, why
 │   └── symlm/             the SymLM language layer: parse, generate, corpus,
 │                          analysis, protocol, feedback, talk
 │

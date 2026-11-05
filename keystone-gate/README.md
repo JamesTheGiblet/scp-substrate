@@ -59,6 +59,13 @@ An `sc` capsule is a contract: a list of rule names, stored as data. `kg_gate.py
 
 `kg ask` shows an answer only if it passes; otherwise it prints the violations. `scps ask` does not use the gate, and neither does anything else that calls `ask.answer_question` directly.
 
+What a question about claims finds (`src/answer/walk_cubes.py`):
+
+- A subject or entity the question names brings up the claims about it. An entity also reaches the subjects it uses and every entity that is `part-of` it, all the way down, so "SCPBot's legs" finds the chassis's leg claims and "the Forge Stack's replay" finds Canon's and JIG's.
+- A named thing's own name is counted by its links, not again as a word, so the other words in the question decide the order.
+- A misspelt word is read as the store's own word (`src/answer/spelling.py`): a stored typo first, then the closest word in the claims and names, within one edit or two for a long word, a swap of neighbouring letters counting as one. A word in SymLM's lexicon is left alone. The answer starts by saying what it read each word as.
+- Each claim says what it rests on and how it links to other claims.
+
 The gate checks references, not reasoning. A passing answer can still be wrong. It cannot catch a single invented word such as "bigfoot", and `no_llm_prior` shows where an answer came from, not that its words follow from the walk.
 
 To add a rule, add an entry to the `sc` capsule and a checker to `_RULES` in `kg_gate.py`.
@@ -250,6 +257,8 @@ kg evidence cite <claim> <evidence>...       say a claim is derived from it
 kg evidence of <claim>              what a claim rests on, and what each piece adds
 kg evidence show <id>               one piece and the claims it backs
 kg evidence list                    every piece and how many claims it backs
+kg evidence checked <id>...         record that a cited file was checked as it is now (--all for every unrecorded one)
+kg evidence changed                 evidence whose file changed since it was checked, and the claims to recheck
 
 kg subject proposals                list suggested subjects (--status)
 kg subject accept <p> --by <name>   create the subject and link its claims (--name, --only)

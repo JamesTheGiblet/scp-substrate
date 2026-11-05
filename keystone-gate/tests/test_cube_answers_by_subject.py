@@ -15,6 +15,14 @@ def _seed():
         part = create_cube(s, "It stalls under a heavy load.", cube_id="cube/zx-stalls-under-load")["cube_id"]
         link_claim(s, part, subjects=["subject/zx-gearmotor"])
         create_cube(s, "Plastic gears wear out in time.", cube_id="cube/plastic-gears-wear")
+        # Rigbot, its arm, a claim about the arm, and a Rigbot claim that says Rigbot
+        rig = add_entity(s, "Rigbot", "robot", "james", eid="entity/rigbot")["id"]
+        arm = add_entity(s, "Rigbot arm", "assembly", "james", eid="entity/rigbot-arm")["id"]
+        relate(s, arm, "part-of", rig)
+        grip = create_cube(s, "Its gripper fingers slip on glass.", cube_id="cube/rigbot-arm-fingers-slip")["cube_id"]
+        link_claim(s, grip, entities=[arm])
+        loud = create_cube(s, "Rigbot is loud.", cube_id="cube/rigbot-is-loud")["cube_id"]
+        link_claim(s, loud, entities=[rig])
     finally:
         s.close()
 
@@ -46,6 +54,12 @@ def test_a_named_subject_ranks_above_a_word_match():
 
 def test_an_alias_names_the_entity():
     assert "on Testbot" in _ask("what do I believe about tinkerbot")
+
+
+def test_a_whole_reaches_the_claims_about_what_it_is_made_of():
+    answer = _ask("what do I know about Rigbot's fingers")
+    # The arm is part of Rigbot; saying "Rigbot" earns no extra word match
+    assert answer.index("cube/rigbot-arm-fingers-slip") < answer.index("cube/rigbot-is-loud"), answer
 
 
 def test_a_question_naming_nothing_still_matches_words():

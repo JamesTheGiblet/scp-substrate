@@ -114,7 +114,9 @@ What a claim rests on. Datasheets, guides, test logs, videos, papers, forum thre
 
 - **Kinds and weights:** measurement 1.0, datasheet, code and doc 0.75, person-document 0.5, listing and review 0.25. The weight is what it adds to a claim's standing; a validation adds 1.0. James's own word and a model's general knowledge are not evidence.
 
-**Status: built.** `foundation:evidence`, `src/store/evidence.py` and `kg evidence` (add, cite, of, show, list). On 5 November 2026 `scripts/evidence_from_sources.py` read every claim's `source` line and made 26 pieces of evidence, linked from 111 claims, alongside James's person document. Code files are cited where they are now, so `src/trust.py` is cited as `src/store/trust.py`. Answers and the page say what each claim rests on, or that it rests on James's word only. Before the archive, `source/<slug>` capsules did this job; they went with the cubes that cited them.
+**Status: built.** `foundation:evidence`, `src/store/evidence.py` and `kg evidence` (add, cite, of, show, list). On 5 November 2026 `scripts/evidence_from_sources.py` read every claim's `source` line and made 26 pieces of evidence, linked from 111 claims, alongside James's person document. Code files are cited where they are now, so `src/trust.py` is cited as `src/store/trust.py`. Answers and the page say what each claim rests on, or that it rests on James's word only.
+
+Evidence that cites a file in an indexed repo (`repo` and `path`) records the file's version when it is checked, and links to the file's index capsule with `cites-file`. When re-indexing (`scripts/repos/absorb_repo.py`, `absorb_github.py`) finds the file changed or gone, the evidence counts half and says "changed since checked" until `kg evidence checked` records the new version; `kg evidence changed` lists what to recheck. On 5 November 2026 the versions were recorded from the index as it stood, for the 8 scp-substrate pieces and 6 Replicant ones. Canon, JIG and LLLM are not indexed: GitHub does not find them by those names. Before the archive, `source/<slug>` capsules did this job; they went with the cubes that cited them.
 
 ## Relationship
 

@@ -218,7 +218,8 @@ def collect(s):
             "content": cube["content"],
             "created": s.get(cube["cube_id"])["state"].get("created_at"),
             "source": cube["source"],
-            "evidence": [{"title": e["title"], "kind": e["kind"]} for e in evidence_of(s, cube["cube_id"])],
+            "evidence": [{"title": e["title"], "kind": e["kind"], "changed": e["changed"]}
+                         for e in evidence_of(s, cube["cube_id"])],
             "tags": cube["tags"] or [],
             "about_you": bool(you) and you in _links(s, cube["cube_id"], "about-entity"),
             "hub": (hub := _hub_of(s, cube["cube_id"], places)),
