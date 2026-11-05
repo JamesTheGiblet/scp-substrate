@@ -14,6 +14,7 @@ sys.path.insert(0, str(_here))
 from store.substrate import Substrate
 from kg_cube_cli import *
 from kg_claim_links import cmd_cube_contradicts, cmd_cube_relate, cmd_cube_words
+from kg_gaps import cmd_cube_gaps
 from kg_sheet import cmd_cube_sheet
 from kg_subject_cli import add_subject_parser
 from kg_entity_cli import add_entity_parser
@@ -299,6 +300,10 @@ def main():
     sp_sheet.add_argument("--limit", type=int, default=50, help="about how many drafts (whole claims only)")
     sp_sheet.add_argument("--out", default="drafts-to-review.csv")
     sp_sheet.set_defaults(func=cmd_cube_sheet)
+    sp_gaps = sp_sub.add_parser("gaps", help="list claims with lenses to write; --out writes them as a CSV to fill in")
+    sp_gaps.add_argument("--out", help="write a sheet here, e.g. sheets/gaps.csv")
+    sp_gaps.add_argument("--limit", type=int, help="at most this many claims")
+    sp_gaps.set_defaults(func=cmd_cube_gaps)
 
     sp_c_prop = sp_sub.add_parser("proposals", help="list proposals for a cube")
     sp_c_prop.add_argument("cube_id", nargs="?", default=None)

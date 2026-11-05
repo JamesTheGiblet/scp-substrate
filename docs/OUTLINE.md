@@ -105,3 +105,12 @@ Or upload the filled sheet with **Import CSV** on the page. In each row, fill in
 | `words` | your words for linking the claim, on any of its rows |
 
 Every row is checked before anything is written. Run `kg cube sheet` again for the next 50. If Excel asks, save as **CSV UTF-8**, so λ and quotes survive.
+
+## Writing missing lenses on a sheet
+
+```
+python keystone-gate/kg cube gaps                         # list claims with lenses still to write
+python keystone-gate/kg cube gaps --out sheets/gaps.csv   # the same claims as a sheet
+```
+
+One row per claim: `claim_id, entity, subject, claim, missing, tags`, then a column per lens. Write the lenses, add tags if you want, and import the file with `kg import` or **Import CSV**. Each lens goes in as a draft to confirm, replacing the model's draft for that lens; filled faces are left alone. New tags are added to the claim.

@@ -213,14 +213,15 @@ def cmd_import(args):
     is_csv = args.path.lower().endswith(".csv")
     s = Substrate()
     try:
-        import kg_sheet
-        if is_csv and kg_sheet.is_sheet(text):
-            lines, found = kg_sheet.preview(s, text)
+        import kg_gaps, kg_sheet
+        sheet = kg_sheet if kg_sheet.is_sheet(text) else kg_gaps if kg_gaps.is_gaps(text) else None
+        if is_csv and sheet:
+            lines, found = sheet.preview(s, text)
             if not args.write or found:
                 print("\n".join(lines + [f"problem: {p}" for p in found]))
                 print("\nNothing written." + ("" if found else " Run again with --write to do these."))
                 return
-            print(kg_sheet.write(s, text, args.by))
+            print(sheet.write(s, text, args.by))
             return
         if is_csv:
             from kg_csv import parse as parse_csv
