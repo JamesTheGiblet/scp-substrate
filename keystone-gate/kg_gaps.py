@@ -70,10 +70,44 @@ def _texts(text):
             for n, r in _rows(text) for lens in LENSES if (r.get(lens) or "").strip()]
 
 
+def _is_claim(s, cid):
+    return (s.get(cid) or {}).get("foundation") == "foundation:cube"
+
+
+def _new_claims(s, text):
+    """Rows naming a claim that doesn't exist yet, with an entity and a claim
+    to make it from, as a claims CSV for kg_csv; empty if there are none."""
+    rows = [r for _, r in _rows(text) if (r.get("CLAIM_ID") or "").strip() and not _is_claim(s, r["CLAIM_ID"].strip())
+            and (r.get("ENTITY") or "").strip() and (r.get("CLAIM") or "").strip()]
+    if not rows:
+        return ""
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["entity", "subject", "claim", "id", "tags", *LENSES])
+    for r in rows:
+        writer.writerow([r.get("ENTITY"), r.get("SUBJECT") or "", r["CLAIM"], r["CLAIM_ID"].strip(),
+                         r.get("TAGS") or "", *[r.get(l) or "" for l in LENSES]])
+    return out.getvalue()
+
+
 def preview(s, text):
+    """What the sheet would do, and what stops it. A row whose claim doesn't
+    exist yet makes it, with its entity and subject, as a claims CSV would."""
+    from kg_csv import parse
+    from kg_outline import plan, problems as missing
     lines, problems = [], []
+    if new := _new_claims(s, text):
+        try:
+            entities = parse(s, new)
+            lines += plan(s, entities)
+            problems += missing(s, entities)
+        except ValueError as e:
+            problems.append(str(e))
+    made = {r["ID"].strip() for _, r in _rows(new)} if new else set()
     for n, cid, lens, _ in _texts(text):
-        if not s.get(cid) or s.get(cid)["foundation"] != "foundation:cube":
+        if cid in made:
+            continue
+        if not _is_claim(s, cid):
             problems.append(f"row {n}: {cid or 'no claim_id'} is not a claim")
         elif s.get(f"{cid}/face/{lens}"):
             lines.append(f"keep   {lens:8} {cid} (already filled)")
@@ -85,13 +119,18 @@ def preview(s, text):
         new = row and [t for t in _tags(r) if t not in (row["state"].get("tags") or [])]
         if new and row["foundation"] == "foundation:cube":
             lines.append(f"tags   {cid}: {', '.join(new)}")
-    return list(dict.fromkeys(lines)), problems
+    return list(dict.fromkeys(lines)), list(dict.fromkeys(problems))
 
 
 def write(s, text, by):
     if problems := preview(s, text)[1]:
         raise ValueError("; ".join(problems))
     from kg_cube import _update_state
+    made = None
+    if new := _new_claims(s, text):
+        from kg_csv import parse
+        from kg_outline import apply
+        made = apply(s, parse(s, new), by, via="a gaps sheet")
     drafted = replaced = tagged = 0
     for _, r in _rows(text):
         row = s.get((r.get("CLAIM_ID") or "").strip())
@@ -100,12 +139,14 @@ def write(s, text, by):
             _update_state(s, row["id"], {**row["state"], "tags": old + new})
             tagged += 1
     for _, cid, lens, content in _texts(text):
-        if s.get(f"{cid}/face/{lens}"):
+        if made and cid in made["claims"] or s.get(f"{cid}/face/{lens}"):
             continue
         status = propose_face(s, cid, lens, content, f"sheet:{by}", rationale="from a gaps sheet").get("status")
         drafted += status == "created"
         replaced += status == "updated"
-    return (f"added {drafted} drafts and rewrote {replaced} model drafts with your text, "
+    fresh = (f"made {len(made['claims'])} claims, {len(made['entities'])} entities and "
+             f"{len(made['subjects'])} subjects with {made['drafts']} lens drafts; ") if made else ""
+    return (fresh + f"added {drafted} drafts and rewrote {replaced} model drafts with your text, "
             f"tagged {tagged} claims; "
             f"review them with kg cube sheet")
 

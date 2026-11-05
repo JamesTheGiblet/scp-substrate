@@ -46,5 +46,27 @@ def test_a_filled_gaps_sheet_goes_in_as_drafts():
         s.close()
 
 
+def test_a_new_claim_on_a_gaps_sheet_is_made():
+    from kg_agent import list_proposals
+    from kg_csv import preview, write
+    s = _store()
+    with s.conn:
+        for fid in ("foundation:subject", "foundation:entity"):
+            s.conn.execute("INSERT INTO capsules (id, foundation, state_json, is_meta) "
+                           "VALUES (?, 'foundation:foundation', '{}', 1)", (fid,))
+    try:
+        sheet = ("claim_id,entity,subject,claim,missing,tags,FACT,COUNTER\n"
+                 "cube/caps-are-polarised,Parts,Capacitors,Electrolytics are polarised.,,needs-check,A stripe marks the negative.,Ceramics aren't.\n"
+                 "cube/nothing,,,,,,Hello.,\n")
+        lines, problems = preview(s, sheet)
+        assert "make entity entity/parts" in lines and problems == ["row 3: cube/nothing is not a claim"], (lines, problems)
+        assert write(s, sheet.splitlines(True)[0] + sheet.splitlines(True)[1], "james").startswith(
+            "made 1 claims, 1 entities and 1 subjects with 2 lens drafts"), "write"
+        drafts = {p["lens"] for p in list_proposals(s, cube_id="cube/caps-are-polarised")}
+        assert drafts == {"FACT", "COUNTER"} and s.get("cube/caps-are-polarised")["state"]["tags"] == ["needs-check"]
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())
