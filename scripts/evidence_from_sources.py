@@ -30,7 +30,7 @@ FILE = re.compile(r"[\w./-]+\.(?:py|md|json|sql)\b|rust/wasm/|keystone-gate/kg\b
 MOVED = {"src/trust.py": "src/store/trust.py", "src/signing.py": "src/store/signing.py",
          "scripts/import_person.py": "scripts/scp/import_person.py"}
 REPOS = {"Replicant": ("replicant", "repo/jamesthegiblet/replicant"),
-         "LLLM": ("lllm", None),
+         "LLLM": ("lllm", "repo/jamesthegiblet/lllm"),
          "Canon": ("canon", "repo/jamesthegiblet/canon"),
          "JIG": ("jig", "repo/jamesthegiblet/jig"),
          "scp-substrate": ("scp-substrate", "repo/scp-substrate")}
