@@ -63,7 +63,9 @@ trust instance state: {n0: 1.0, k: 0.01, age_days: 0}
 ```
 
 Evidence trust (trust.trust_from_evidence)
-Walks the graph for incoming observes and verifies links to a target. Observations contribute score * e^(-k * age). Verifications contribute ±1.0 * e^(-k * age) (sign depends on validity). Summed.
+Walks the graph for incoming observes and verifies links to a target. Observations contribute score * e^(-k * age). Verifications contribute ±1.0 * e^(-k * age) (sign depends on validity). For a claim it also adds the evidence the claim is derived from, weighted by kind (a measurement 1.0, a datasheet, code file or doc 0.75, James's person document 0.5, a listing or one review 0.25), and 0.5 for each claim that supports it, minus 0.5 for each that goes against it, halved when nobody has validated that other claim. Claim links count one step only. Summed.
+
+James's word on its own and a model's general knowledge are not evidence, so a claim resting only on them stays at 0.5 until it is validated or backed.
 
 ```
 obs-001 --observes--> everything-is-capsules  (score 1.8)

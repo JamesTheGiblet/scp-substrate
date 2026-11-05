@@ -8,6 +8,7 @@ from pathlib import Path
 
 from kg_agent import LENSES, list_cubes, list_proposals, show_cube
 from store.claim_links import relations
+from store.evidence import evidence_of
 from kg_lens_links import all_modes
 from kg_overlaps import attach_overlaps, load_decisions
 from store.trust import fused_trust
@@ -217,6 +218,7 @@ def collect(s):
             "content": cube["content"],
             "created": s.get(cube["cube_id"])["state"].get("created_at"),
             "source": cube["source"],
+            "evidence": [{"title": e["title"], "kind": e["kind"]} for e in evidence_of(s, cube["cube_id"])],
             "tags": cube["tags"] or [],
             "about_you": bool(you) and you in _links(s, cube["cube_id"], "about-entity"),
             "hub": (hub := _hub_of(s, cube["cube_id"], places)),

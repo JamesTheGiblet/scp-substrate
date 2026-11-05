@@ -18,6 +18,7 @@ from kg_subject_cli import add_subject_parser
 from kg_entity_cli import add_entity_parser
 from kg_wiring import add_wiring_parser
 from kg_outline import add_outline_parser
+from kg_evidence_cli import add_evidence_parser
 
 
 def cmd_stats(args):
@@ -326,6 +327,7 @@ def main():
     add_entity_parser(sub)
     add_wiring_parser(sub)
     add_outline_parser(sub)
+    add_evidence_parser(sub)
 
     args = ap.parse_args()
     args.func(args)

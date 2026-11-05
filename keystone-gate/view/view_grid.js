@@ -8,6 +8,10 @@ const THINGS = /*THINGS*/{};
 const LENSES = ["FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT"];
 const VAR = { FACT: "fact", COUNTER: "counter", OPINION: "opinion", FICTION: "fiction", CONTEXT: "context", HUMAN: "human" };
 const LABEL = { attested: "Attested", validated: "Validated", stale: "Validation stale", retracted: "Attestation retracted", draft: "Needs you" };
+// What a claim rests on, in one line; with none, it is only your word
+const restsOn = c => (c.evidence || []).length
+  ? "Rests on: " + c.evidence.map(e => `${e.title} (${e.kind.replace("-", " ")})`).join("; ")
+  : "Rests on no evidence yet: your word only";
 const POSE = { FACT: [-18, -24], COUNTER: [-18, -114], CONTEXT: [-18, -204], FICTION: [-18, 66], OPINION: [-72, -24], HUMAN: [72, -24] };
 // Foundational cubes come in three kinds, each with its own colour. A cube goes
 // to the first kind its tags name.
@@ -192,6 +196,7 @@ function open(c) {
   right.append(el("h3", "", c.content), el("p", "id", c.id));
   const facts = [LABEL[c.status], Math.round(c.score * 100) + "% complete", "standing " + c.standing.toFixed(2)];
   if (c.source) facts.push(c.source);
+  facts.push(restsOn(c));
   if (foundationOf(c)) facts.unshift(`Foundational ${foundationOf(c)[1].toLowerCase()}: read each face and write your own note`);
   right.append(el("p", "facts", facts.join(" · ")));
 

@@ -3,6 +3,7 @@ import json
 import re
 
 from store.claim_links import relations
+from store.evidence import evidence_of
 from store.trust import fused_trust
 
 
@@ -43,8 +44,11 @@ def _face(s, cube_id, lens):
 
 def _render(s, cube_id, content):
     standing = fused_trust(s, cube_id).get("posterior", 0.5)
+    found = evidence_of(s, cube_id)
+    # Kinds in plain words: person-document is a label, not a name the gate can find
+    rests = "; ".join(f"{e['title']} ({e['kind'].replace('-', ' ')})" for e in found) or "nothing yet, your word only"
     lines = [f"  {cube_id}", f"    {content}",
-             f"    {_status(s, cube_id)}, standing {standing:.2f}"]
+             f"    {_status(s, cube_id)}, standing {standing:.2f}", f"    rests on: {rests}"]
     for label, lens in (("view", "OPINION"), ("against", "COUNTER")):
         text = _face(s, cube_id, lens)
         lines.append(f"    {label}: {text or '(not written yet)'}")
@@ -135,7 +139,7 @@ def walk_what_believe(s, entity_id, text):
     for _, _, cid, st in best:
         shown = _render(s, cid, st.get("content"))
         if about := sorted(_name(s, t) for t in _about(s, cid)):
-            shown.insert(3, f"    about: {', '.join(about)}")
+            shown.insert(4, f"    about: {', '.join(about)}")
         lines += shown
     on = f" on {', '.join(sorted(named.values()))}" if named else ""
     return {"ok": True, "summary": f"{len(scored)} cube(s) match{on}, closest {len(best)}:",

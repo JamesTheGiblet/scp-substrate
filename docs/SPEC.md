@@ -197,9 +197,11 @@ Evidence trust — from the substrate graph:
 ```
 score = Σ (observation.score * e^(-k * obs_age))
       + Σ (verification_weight * e^(-k * ver_age))
+      + Σ (evidence weight, by kind)
+      + Σ (±0.5 per claim that supports or goes against it, halved if nobody has validated that claim)
 ```
 
-where a valid verification contributes +1.0, invalid -1.0. Parameter k is taken from the trust instance's state if the capsule has an about link; if not, k=0 and evidence is undecayed.
+where a valid verification contributes +1.0, invalid -1.0. Evidence weights are in `src/store/evidence.py`: a measurement 1.0, a datasheet, code file or doc 0.75, James's person document 0.5, a listing or one review 0.25. Claim links count one step only, so claims backing each other in a loop can't raise themselves. Parameter k is taken from the trust instance's state if the capsule has an about link; if not, k=0 and evidence is undecayed.
 
 Fusion — Bayesian combination:
 

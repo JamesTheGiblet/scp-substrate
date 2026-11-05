@@ -186,6 +186,14 @@
         "description": "Something one or more entities know about, such as a component or a topic. It exists once; claims are about it and entities use it. See docs/VOCABULARY.md."
       },
       "links": []
+    },
+    {
+      "id": "foundation:evidence",
+      "state": {
+        "name": "evidence",
+        "description": "What a claim rests on, such as a README, a datasheet, a listing or a measurement. It exists once; claims are derived from it, and its kind sets what it adds to their standing. See docs/VOCABULARY.md."
+      },
+      "links": []
     }
   ]
 }

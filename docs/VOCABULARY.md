@@ -112,7 +112,9 @@ What a claim rests on. Datasheets, guides, test logs, videos, papers, forum thre
 - **Fields:** `kind` (datasheet, test-log, observation, paper and so on), `title`, and `url` or `path` where there is one.
 - **Links:** a claim is *derived from* evidence. A face can name the evidence it quotes, mostly FACT.
 
-**Status: not built.** Before the archive, `source/<slug>` capsules did this job, linked by `derived-from`. They went with the cubes that cited them. They are to become `evidence/<slug>`.
+- **Kinds and weights:** measurement 1.0, datasheet, code and doc 0.75, person-document 0.5, listing and review 0.25. The weight is what it adds to a claim's standing; a validation adds 1.0. James's own word and a model's general knowledge are not evidence.
+
+**Status: built.** `foundation:evidence`, `src/store/evidence.py` and `kg evidence` (add, cite, of, show, list). On 5 November 2026 `scripts/evidence_from_sources.py` read every claim's `source` line and made 26 pieces of evidence, linked from 111 claims, alongside James's person document. Code files are cited where they are now, so `src/trust.py` is cited as `src/store/trust.py`. Answers and the page say what each claim rests on, or that it rests on James's word only. Before the archive, `source/<slug>` capsules did this job; they went with the cubes that cited them.
 
 ## Relationship
 

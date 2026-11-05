@@ -3,11 +3,14 @@ import json
 import math
 from datetime import datetime, timezone
 
+from store.evidence import evidence_of
 from store.substrate import Substrate
 
 
 FOUNDATION = "foundation:leighton-weight"
 DEFAULT_MODEL = "default-trust-model"
+# What a supporting claim adds to standing, or one going against it takes off
+CLAIM_LINK_WEIGHT = 0.5
 
 
 def _is_number(x):
@@ -133,7 +136,9 @@ def compute_all(s: Substrate):
 
 
 def trust_from_evidence(s: Substrate, capsule_id: str):
-    """Aggregate evidence (observations + verifications) about a capsule.
+    """Aggregate evidence about a capsule: observations, verifications, the
+    evidence it is derived from (store/evidence.py), and claims that support
+    it or go against it (store/claim_links.py).
 
     Two shapes supported:
       1. Trust instance (has `about → claim` and numeric `k` in state):
@@ -189,6 +194,23 @@ def trust_from_evidence(s: Substrate, capsule_id: str):
         evidence.append({"id": r["id"], "kind": "verification",
                         "raw_score": raw, "age_days": age, "weighted": w,
                         "source": state.get("key_id")})
+
+    # Evidence the claim is derived from, weighted by its kind
+    for e in evidence_of(s, claim_id):
+        total += e["weight"]
+        evidence.append({"id": e["id"], "kind": e["kind"], "raw_score": e["weight"],
+                         "weighted": e["weight"], "source": e["title"]})
+
+    # Other claims that support it or go against it. One step only, so claims
+    # backing each other in a loop can't raise themselves. A claim a person
+    # has validated counts in full, one nobody has looked at counts half.
+    for link_type, sign in (("supports", 1.0), ("goes-against", -1.0)):
+        for l in s.links_to(claim_id, link_type):
+            looked_at = bool(s.links_to(l["source"], "observes"))
+            w = sign * CLAIM_LINK_WEIGHT * (1.0 if looked_at else 0.5)
+            total += w
+            evidence.append({"id": l["source"], "kind": link_type, "raw_score": w,
+                             "weighted": w, "source": l["source"]})
 
     return {
         "trust_instance": capsule_id,

@@ -18,7 +18,9 @@ scp-substrate/
 │   ├── store/             substrate (Substrate class, DB access, decay), rules,
 │   │                      rules_sequence (grammar rules), trust (parameter and
 │   │                      evidence trust, fusion), queries (read-only),
-│   │                      signing (sign, verify, did:key), ed25519 (pure Python)
+│   │                      signing (sign, verify, did:key), ed25519 (pure Python),
+│   │                      evidence (what claims rest on, and its weights),
+│   │                      claim_links (supports, goes-against and the other words)
 │   ├── answer/            ask (intent matching), walkers (one per kind of question),
 │   │                      walk_cubes (answers from cubes), explain, why
 │   └── symlm/             the SymLM language layer: parse, generate, corpus,
@@ -27,6 +29,7 @@ scp-substrate/
 ├── scripts/               run by hand
 │   ├── bootstrap.py       copy sc.json into sc.db
 │   ├── archive_cubes.py   move capsules, their links and events into archive/
+│   ├── evidence_from_sources.py  make evidence from each claim's source line
 │   ├── readme_shots.py    take the README's screenshots
 │   ├── scp/               keygen, sign_doc, import_scp (also import_person, import_circadian)
 │   ├── repos/             absorb_repo, absorb_github: index a repo; repo_symbols: its functions and imports

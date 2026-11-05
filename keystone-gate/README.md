@@ -245,6 +245,12 @@ kg overlaps                         list overlapping work (--min)
 kg neighbour link <a> <b>           link two cubes both ways
 kg neighbour list <id>              list a cube's neighbours
 
+kg evidence add <slug> --kind <k> --title "<t>"  add evidence (--url, --path, --repo, --note)
+kg evidence cite <claim> <evidence>...       say a claim is derived from it
+kg evidence of <claim>              what a claim rests on, and what each piece adds
+kg evidence show <id>               one piece and the claims it backs
+kg evidence list                    every piece and how many claims it backs
+
 kg subject proposals                list suggested subjects (--status)
 kg subject accept <p> --by <name>   create the subject and link its claims (--name, --only)
 kg subject reject <p> --by <name>   reject a suggested subject (--reason)
@@ -270,6 +276,7 @@ The modules sit at the top of `keystone-gate/`, with folders for tests and the p
 |---|---|
 | `kg` | CLI entry point |
 | `kg_cube_cli.py` | `kg cube` and `kg neighbour` commands |
+| `kg_evidence_cli.py` | `kg evidence`; the evidence itself is in `src/store/evidence.py` |
 | `kg_claim_links.py` | `kg cube relate` and `kg cube contradicts`; the words and links are in `src/store/claim_links.py` |
 | `kg_agent.py` | Imports `kg_cube.py` and `kg_proposals.py` as one module |
 | `kg_cube.py` | Cubes, faces, validation, attestation, neighbours |
