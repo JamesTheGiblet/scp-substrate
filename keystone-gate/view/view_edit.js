@@ -5,6 +5,7 @@
   const $ = id => document.getElementById(id);
   const toast = $("toast"), detail = $("detail"), form = $("newcube"), fresh = $("addcube");
   const fill = $("fillblanks"), check = $("checkdrafts"), title = document.title;
+  const importer = $("importcsv"), toImport = $("toimport"), plan = $("importplan"), go = $("importgo");
   const lockButton = $("lock"), unlock = $("unlock"), wrong = $("unlockwrong");
   let key = null, shown = null, seen = null, lastError = null;
   // Lets a password manager tell this page's password apart
@@ -23,7 +24,7 @@
   };
   const setKey = value => {
     key = value;
-    fresh.hidden = fill.hidden = !key;
+    fresh.hidden = fill.hidden = toImport.hidden = !key;
     lockButton.textContent = key ? "Lock" : "Unlock to edit";
     reopen();
   };
@@ -213,13 +214,58 @@
     e.preventDefault();
     const field = name => form.querySelector(`[name="${name}"]`);
     const faces = Object.fromEntries(LENSES.map(l => [l, field(l).value]));
-    const tags = field("tags").value.split(",");
+    const tags = field("tags").value.split(","), words = field("words").value.split(",");
     form.close();
-    const reply = await act({ action: "new", content: field("content").value, tags, faces }, null, "Here it comes");
+    const reply = await act({ action: "new", content: field("content").value, tags, words, faces }, null, "Here it comes");
     if (reply) {
       e.target.reset();
       $("tofield").click();
     }
+  });
+
+  // A CSV is checked first: the plan and any problems show before anything is written
+  let csvText = null;
+  toImport.addEventListener("click", () => {
+    csvText = null;
+    plan.hidden = true;
+    go.disabled = true;
+    importer.querySelector("form").reset();
+    importer.showModal();
+  });
+  $("importcancel").addEventListener("click", () => importer.close());
+  importer.querySelector('input[name="file"]').addEventListener("change", async e => {
+    const file = e.target.files[0];
+    go.disabled = true;
+    if (!file) return;
+    csvText = await file.text();
+    let res, reply;
+    try {
+      [res, reply] = await post("/api/do", { action: "import", csv: csvText });
+    } catch (err) {
+      return say("The server has stopped. Run kg cube serve again.");
+    }
+    if (res.status === 401) {
+      importer.close();
+      setKey(null);
+      return say("Locked. Unlock to edit.");
+    }
+    plan.hidden = false;
+    if (!res.ok) {
+      plan.textContent = reply.error || "That file did not read.";
+      return;
+    }
+    const { plan: lines, problems } = reply.result;
+    plan.textContent = problems.length
+      ? "Fix these first, nothing has been written:\n" + problems.map(p => "  " + p).join("\n")
+      : lines.join("\n");
+    go.disabled = problems.length > 0;
+  });
+  importer.querySelector("form").addEventListener("submit", async e => {
+    e.preventDefault();
+    if (!csvText) return;
+    importer.close();
+    const reply = await act({ action: "import", csv: csvText, write: true });
+    if (reply) say(reply.result.made);
   });
 
   window.cubeEdit = { decorate };

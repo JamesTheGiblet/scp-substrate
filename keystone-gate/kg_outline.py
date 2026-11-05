@@ -19,7 +19,7 @@ RELATIONS links the entity to that id; `building: james` links the other way.
 Under a subject, `uses: yes` says the entity uses it, and `kind:` names its
 kind. Under a claim, `also:` names more subjects it is about, and a
 connecting word such as `supports: cube/<id>` or `depends-on: cube/<id>`
-links it to another claim. A claim before any subject is about the entity as a whole. A lens line
+links it to another claim, and `words:` gives your own words for linking. A claim before any subject is about the entity as a whole. A lens line
 is offered as a draft for the person to confirm, never as a filled face.
 Imported by kg. See docs/VOCABULARY.md.
 """
@@ -72,17 +72,21 @@ def parse(text):
 def plan(s, entities):
     """What importing would do: one line per thing, saying made or kept."""
     from kg_entities import entity_id
-    from kg_subjects import _slug
     lines = []
     for e in entities:
         eid = e["keys"].get("id") or entity_id(e["name"], e["keys"].get("kind", "entity"))
         lines.append(f"{'keep' if s.get(eid) else 'make'} entity {eid}")
         for sub in e["subjects"]:
-            sid = f"subject/{_slug(sub['name'])}"
+            sid = _subject_id(sub)
             lines.append(f"  {'keep' if s.get(sid) else 'make'} subject {sid}")
             lines += [f"    claim: {c['text'][:70]}" for c in sub["claims"]]
         lines += [f"  claim about the whole: {c['text'][:70]}" for c in e["claims"]]
     return lines
+
+
+def _subject_id(sub):
+    from kg_subjects import _slug
+    return sub["keys"].get("id") or f"subject/{_slug(sub['name'])}"
 
 
 def _claim_id(c):
@@ -98,9 +102,8 @@ def problems(s, entities):
     anything is written, so an outline goes in whole or not at all."""
     from store.claim_links import WORDS
     from kg_entities import RELATIONS
-    from kg_subjects import _slug
     out = []
-    coming = {f"subject/{_slug(sub['name'])}" for e in entities for sub in e["subjects"]}
+    coming = {_subject_id(sub) for e in entities for sub in e["subjects"]}
     claims = {_claim_id(c) for c in _claims(entities)}
     for c in _claims(entities):
         for key in set(c["keys"]) & set(WORDS.values()):
@@ -122,12 +125,13 @@ def _ids(value):
     return [v.strip() for v in value.split(",") if v.strip()]
 
 
-def apply(s, entities, by):
+def apply(s, entities, by, via="an outline"):
     """Make what the outline names. Existing entities and subjects are reused,
-    and a claim whose id exists is skipped. Returns what was made."""
+    and a claim whose id exists is skipped. Returns what was made. via says
+    where it came from, in each new claim's source and subject's reason."""
     from kg_entities import RELATIONS, add_entity, entity_id, relate
     from kg_proposals import propose_face
-    from kg_subjects import _slug, accept_subject, propose_subject
+    from kg_subjects import accept_subject, propose_subject
     if missing := problems(s, entities):
         raise ValueError("; ".join(missing))
     made = {"entities": [], "subjects": [], "claims": [], "drafts": 0, "skipped": []}
@@ -144,10 +148,10 @@ def apply(s, entities, by):
                     relate(s, other, key, eid) if key == "building" else relate(s, eid, key, other)
         groups = [(None, e["claims"])]
         for sub in e["subjects"]:
-            sid = f"subject/{_slug(sub['name'])}"
+            sid = _subject_id(sub)
             if not s.get(sid):
                 pid = propose_subject(s, sub["name"], [], by, kind=sub["keys"].get("kind"),
-                                      rationale=f"From an outline imported by {by}")["proposal_id"]
+                                      rationale=f"From {via} imported by {by}")["proposal_id"]
                 accept_subject(s, pid, by)
                 made["subjects"].append(sid)
             if sub["keys"].get("uses", "").lower() in ("yes", "true"):
@@ -155,24 +159,29 @@ def apply(s, entities, by):
             groups.append((sid, sub["claims"]))
         for sid, claims in groups:
             for c in claims:
-                made_claim = _claim(s, c, eid, sid, by, made)
+                made_claim = _claim(s, c, eid, sid, by, made, via)
                 if made_claim:
                     for lens, text in c["lenses"].items():
-                        propose_face(s, made_claim, lens, text, f"outline:{by}", rationale="from the outline")
+                        propose_face(s, made_claim, lens, text, f"outline:{by}", rationale=f"from {via}")
                         made["drafts"] += 1
+    # Your words for linking. Each claim's suggestions find the claims before
+    # it, so every pair sharing a word is suggested once
+    from kg_claim_links import set_words
+    made["suggested"] = sum(set_words(s, _claim_id(c), add=_ids(c["keys"]["words"]), by=by).get("suggested", 0)
+                            for c in _claims(entities) if c["keys"].get("words"))
     # Links between claims go in last, once every claim they name exists
     from store.claim_links import WORDS, relate
     made["links"] = 0
     for c in _claims(entities):
         for word, key in WORDS.items():
             for other in _ids(c["keys"].get(key, "")):
-                if "error" in (r := relate(s, _claim_id(c), word, other, by, note="from an outline")):
+                if "error" in (r := relate(s, _claim_id(c), word, other, by, note=f"from {via}")):
                     raise ValueError(f"{c['text'][:50]!r}: {r['error']}")
                 made["links"] += 1
     return made
 
 
-def _claim(s, c, eid, sid, by, made):
+def _claim(s, c, eid, sid, by, made, via="an outline"):
     from kg_agent import create_cube
     from kg_entities import claim_link_error, link_claim
     keys = c["keys"]
@@ -185,7 +194,7 @@ def _claim(s, c, eid, sid, by, made):
     if error := claim_link_error(s, subjects=subjects, entities=[eid], evidence=evidence):
         raise ValueError(f"{c['text'][:50]!r}: {error}")
     tags = _ids(keys.get("tags", ""))
-    create_cube(s, c["text"], source=keys.get("source") or f"From an outline imported by {by}",
+    create_cube(s, c["text"], source=keys.get("source") or f"From {via} imported by {by}",
                 tags=tags, cube_id=cid)
     link_claim(s, cid, subjects=subjects, entities=[eid], evidence=evidence)
     made["claims"].append(cid)
@@ -193,30 +202,34 @@ def _claim(s, c, eid, sid, by, made):
 
 
 def cmd_import(args):
-    with open(args.path, encoding="utf-8") as f:
-        try:
-            entities = parse(f.read())
-        except ValueError as e:
-            print(f"error: {e}")
-            return
+    # utf-8-sig drops the mark Excel puts at the start of a saved CSV
+    with open(args.path, encoding="utf-8-sig") as f:
+        text = f.read()
+    is_csv = args.path.lower().endswith(".csv")
     s = Substrate()
     try:
+        if is_csv:
+            from kg_csv import parse as parse_csv
+            entities = parse_csv(s, text)
+        else:
+            entities = parse(text)
         if not args.write:
             print("\n".join(plan(s, entities) + [f"problem: {p}" for p in problems(s, entities)]))
             print("\nNothing written. Run again with --write to make these.")
             return
-        made = apply(s, entities, args.by)
+        made = apply(s, entities, args.by, via="a CSV" if is_csv else "an outline")
     except ValueError as e:
         print(f"error: {e}")
         return
     finally:
         s.close()
     print(f"made {len(made['entities'])} entities, {len(made['subjects'])} subjects, {len(made['claims'])} claims "
-          f"and {made['drafts']} lens drafts, linked {made['links']} pairs of claims; skipped {len(made['skipped'])} claims that exist")
+          f"and {made['drafts']} lens drafts, linked {made['links']} pairs of claims, suggested {made['suggested']} links "
+          f"from your words; skipped {len(made['skipped'])} claims that exist")
 
 
 def add_outline_parser(sub):
-    p = sub.add_parser("import", help="build an entity, its subjects and claims from an outline file")
+    p = sub.add_parser("import", help="build entities, subjects and claims from an outline or a .csv file")
     p.add_argument("path")
     p.add_argument("--by", default="james")
     p.add_argument("--write", action="store_true", help="make them; without it, only show what would be made")

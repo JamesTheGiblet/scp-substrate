@@ -108,5 +108,37 @@ def test_an_answer_says_how_its_claims_connect():
         s.close()
 
 
+def test_your_words_suggest_links_across_subjects():
+    from kg_agent import list_proposals
+    from kg_claim_links import set_words
+    s = _fresh_kg_substrate()
+    try:
+        a, b, pid = _pair(s)
+        from kg_agent import reject_proposal
+        reject_proposal(s, pid, "james")
+        r = set_words(s, a, add=["Brown Out", "fuse"])
+        assert r["words"] == ["brown-out", "fuse"] and r["suggested"] == 0
+        # The other claim shares a word, so a link is suggested with the word as its reason
+        assert set_words(s, b, add=["brown-out"])["suggested"] == 1
+        sug = [p for p in list_proposals(s, status="pending") if p.get("proposed_by") == "neighbour_by_words"]
+        assert len(sug) == 1 and sug[0]["rationale"] == "both have your word brown-out", sug
+        assert set_words(s, a, remove=["fuse"])["words"] == ["brown-out"]
+        assert "error" in set_words(s, "default-cube", add=["x"])
+    finally:
+        s.close()
+
+
+def test_kg_ask_matches_your_words():
+    from answer.walk_cubes import walk_what_believe
+    from kg_claim_links import set_words
+    s = _fresh_kg_substrate()
+    try:
+        a, b, _ = _pair(s)
+        set_words(s, b, add=["brownout"])
+        assert b in walk_what_believe(s, "james", "brownout")["detail"]
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())

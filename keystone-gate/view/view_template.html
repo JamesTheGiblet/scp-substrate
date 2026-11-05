@@ -47,6 +47,7 @@
     <h3>New cube</h3>
     <label>The claim<textarea name="content" rows="2" required></textarea></label>
     <label>Tags, separated by commas<input name="tags"></label>
+    <label>Your words for linking, separated by commas (stall, brownout)<input name="words"></label>
     <label>Fact<textarea name="FACT" rows="2"></textarea></label>
     <label>Counter<textarea name="COUNTER" rows="2"></textarea></label>
     <label>Opinion<textarea name="OPINION" rows="2"></textarea></label>
@@ -55,8 +56,17 @@
     <div class="actions"><button type="button" class="tool" id="newcancel">Cancel</button><button type="submit" class="tool">Send it in</button></div>
   </form>
 </dialog>
+<dialog id="importcsv">
+  <form>
+    <h3>Import claims from a CSV</h3>
+    <p>One row per claim. Columns: <b>entity</b> and <b>claim</b>, and if you like subject, uses, source, tags, words, from, also, FACT, COUNTER, OPINION, FICTION, CONTEXT and connecting words such as supports. Entities and subjects that don't exist yet are made.</p>
+    <label>CSV file<input type="file" name="file" accept=".csv,text/csv" required></label>
+    <pre id="importplan" hidden></pre>
+    <div class="actions"><button type="button" class="tool" id="importcancel">Cancel</button><button type="submit" class="tool" id="importgo" disabled>Import</button></div>
+  </form>
+</dialog>
 <main id="grid" hidden>
-  <p><button class="chip" id="tofield">Back to the field</button> <button class="chip" id="lock" hidden>Unlock to edit</button> <button class="chip" id="addcube" hidden>+ New cube</button> <button class="chip" id="fillblanks" hidden>Fill blanks</button></p>
+  <p><button class="chip" id="tofield">Back to the field</button> <button class="chip" id="lock" hidden>Unlock to edit</button> <button class="chip" id="addcube" hidden>+ New cube</button> <button class="chip" id="fillblanks" hidden>Fill blanks</button> <button class="chip" id="toimport" hidden>Import CSV</button></p>
   <h1>Data Cubes</h1>
   <p class="sub">Each side is a lens. Solid means filled, hollow means missing, and striped means accepted without being read. The bar shows all six sides at once.</p>
   <div class="stats" id="stats"></div>

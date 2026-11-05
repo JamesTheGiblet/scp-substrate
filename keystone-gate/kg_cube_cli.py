@@ -216,6 +216,8 @@ def cmd_cube_show(args):
         print(f"  contradicts: {data['contradicts']['other']} ({data['contradicts'].get('note') or 'no note'})")
     from store.claim_links import relations
     s = Substrate()
+    if words := s.get(data["cube_id"])["state"].get("words"):
+        print(f"  your words: {', '.join(words)}")
     for word, other, out in relations(s, data["cube_id"]):
         print(f"  {word} {other}" if out else f"  {other} {word} this")
     s.close()

@@ -44,6 +44,7 @@ def known_words(s):
     """Every word in the claims, their tags, and subject and entity names."""
     texts = [r[0] for r in s.conn.execute(
         "SELECT json_extract(state_json, '$.content') || ' ' || COALESCE(json_extract(state_json, '$.tags'), '') "
+        "|| ' ' || COALESCE(json_extract(state_json, '$.words'), '') "
         "FROM capsules WHERE foundation = 'foundation:cube' AND is_meta = 0")]
     for foundation in THINGS:
         texts += [f"{r['state'].get('name', '')} {r['state'].get('aliases') or ''}" for r in s.by_foundation(foundation)]

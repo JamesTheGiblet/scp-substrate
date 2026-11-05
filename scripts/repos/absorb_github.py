@@ -10,7 +10,8 @@ Usage:
   python scripts/repos/absorb_github.py owner/repo --dry-run
   python scripts/repos/absorb_github.py owner/repo --write
 
-Auth (recommended): export GITHUB_TOKEN=ghp_...
+Auth: GITHUB_TOKEN or GH_TOKEN if set, else the GitHub CLI's login (gh auth token),
+so a private repo works in any terminal once `gh auth login` has been run.
   Without token: 60 req/hour (30 repos).
   With token:    5,000 req/hour (2,500 repos).
 """
@@ -20,6 +21,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "src"))
 import argparse
 import json
 import os
+import subprocess
 import urllib.error
 import urllib.request
 from datetime import datetime, timezone
@@ -40,10 +42,22 @@ def _headers():
         "X-GitHub-Api-Version": API_VERSION,
         "User-Agent": "scp-substrate/1.0",
     }
-    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    token = _token()
     if token:
         h["Authorization"] = f"Bearer {token}"
     return h
+
+
+def _token():
+    """GITHUB_TOKEN or GH_TOKEN, else the GitHub CLI's login, else None."""
+    token = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
+    if token:
+        return token
+    try:
+        out = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return out.stdout.strip() if out.returncode == 0 and out.stdout.strip() else None
 
 
 def _get(path):
@@ -257,9 +271,9 @@ def main():
         raise SystemExit("repo must be owner/name, e.g. octocat/Hello-World")
     owner, name = args.repo.split("/", 1)
 
-    if not (os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")):
-        print("WARNING: no GITHUB_TOKEN set — 60 req/hour unauthenticated.")
-        print("  export GITHUB_TOKEN=ghp_... for 5,000 req/hour.")
+    if not _token():
+        print("WARNING: no GITHUB_TOKEN and no gh login: 60 req/hour, and no private repos.")
+        print("  Run `gh auth login` once, or set GITHUB_TOKEN.")
         print()
 
     s = Substrate()

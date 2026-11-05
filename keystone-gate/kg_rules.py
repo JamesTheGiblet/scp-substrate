@@ -221,12 +221,36 @@ def _rule_neighbour_on_subject(s, cube_state):
     } for other, (subj, shared) in best]
 
 
+# --- Rule 6: neighbour_by_words -----------------------------------------
+# James's own words for linking (kg cube words) are chosen, not incidental,
+# so one shared word is enough, across subjects.
+def _rule_neighbour_by_words(s, cube_state):
+    from store.claim_links import relations
+    cube_id = cube_state.get("_cube_id")
+    mine = set(cube_state.get("words") or [])
+    if not cube_id or not mine:
+        return []
+    linked = {other for _, other, _ in relations(s, cube_id)}
+    found = []
+    for r in s.conn.execute("SELECT id, state_json FROM capsules WHERE foundation = 'foundation:cube' AND is_meta = 0"):
+        shared = mine & set(json.loads(r["state_json"]).get("words") or [])
+        if shared and r["id"] != cube_id and r["id"] not in linked:
+            found.append((-len(shared), r["id"], shared))
+    return [{
+        "type": "neighbour",
+        "other_cube_id": other,
+        "proposed_by": "neighbour_by_words",
+        "rationale": f"both have your word{'s' if len(shared) > 1 else ''} {', '.join(sorted(shared))}",
+    } for _, other, shared in sorted(found)[:NEIGHBOURS_PER_CUBE * 2]]
+
+
 RULES = [
     {"id": "fact_from_decision",         "propose": _rule_fact_from_decision},
     {"id": "counter_from_alternatives",  "propose": _rule_counter_from_alternatives},
     {"id": "context_from_source",        "propose": _rule_context_from_source},
     {"id": "counter_from_contradicts",   "propose": _rule_counter_from_contradicts},
     {"id": "neighbour_on_subject",       "propose": _rule_neighbour_on_subject},
+    {"id": "neighbour_by_words",         "propose": _rule_neighbour_by_words},
 ]
 
 

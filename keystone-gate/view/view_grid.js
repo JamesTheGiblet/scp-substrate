@@ -197,6 +197,7 @@ function open(c) {
   const facts = [LABEL[c.status], Math.round(c.score * 100) + "% complete", "standing " + c.standing.toFixed(2)];
   if (c.source) facts.push(c.source);
   facts.push(restsOn(c));
+  if ((c.words || []).length) facts.push("Your words: " + c.words.join(", "));
   if (foundationOf(c)) facts.unshift(`Foundational ${foundationOf(c)[1].toLowerCase()}: read each face and write your own note`);
   right.append(el("p", "facts", facts.join(" · ")));
 

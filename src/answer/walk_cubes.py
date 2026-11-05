@@ -140,7 +140,8 @@ def walk_what_believe(s, entity_id, text):
     reach = _reach(s, named)
     scored = []
     for cid, st in cubes:
-        words = f"{cid} {st.get('content', '')} {' '.join(st.get('tags') or [])}"
+        # Your own words for linking count as the claim's words too
+        words = f"{cid} {st.get('content', '')} {' '.join(st.get('tags') or [])} {' '.join(st.get('words') or []).replace('-', ' ')}"
         about = _about(s, cid)
         on_things = [tid for tid, parts in reach.items() if parts & about]
         # A named thing's name is counted by the link to it, not again as a

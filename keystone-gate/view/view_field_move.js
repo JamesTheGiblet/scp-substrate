@@ -129,6 +129,7 @@
     panel.append(row("HUMAN", "HUMAN VALIDATION", v && (v.note || "Validated"), v ? (v.stale ? "stale, a face changed" : "by " + v.validator) : ""));
     if (c.source) panel.append(el("p", "facts", "Source: " + c.source));
     panel.append(el("p", "facts", restsOn(c)));
+    if ((c.words || []).length) panel.append(el("p", "facts", "Your words: " + c.words.join(", ")));
     if (c.attestation) panel.append(el("p", "facts", c.attestation.retracted
       ? "Attestation retracted: " + c.attestation.retracted
       : "Attested by " + c.attestation.source + (c.attestation.note ? ". " + c.attestation.note : "")));

@@ -25,7 +25,8 @@ from kg_overlaps import decide
 from kg_view import collect, hubs, render, things, user_name
 
 
-MAX_BODY = 64 * 1024
+# Room for a CSV import; every other field is held to MAX_TEXT
+MAX_BODY = 1024 * 1024
 MAX_TEXT = 5000
 IDLE_SECONDS = 30 * 60
 # A phone on a slow relay must not hold a request open for ever
@@ -69,7 +70,23 @@ def _new(s, data, by):
         content = _text(faces, lens, required=False)
         if content:
             fill_face(s, result["cube_id"], lens, content)
+    words = [w for w in data.get("words", []) if isinstance(w, str) and w.strip()]
+    if words:
+        from kg_claim_links import set_words
+        set_words(s, result["cube_id"], add=words[:12], by=by)
     return result
+
+
+def _import(s, data, by):
+    """A CSV of claims: what it would make, or, with write set, make it."""
+    from kg_csv import preview, summary, write
+    text = data.get("csv")
+    if not isinstance(text, str) or not text.strip():
+        raise ValueError("csv is required")
+    if data.get("write") is True:
+        return {"made": summary(write(s, text, by))}
+    lines, problems = preview(s, text)
+    return {"plan": lines, "problems": problems}
 
 
 def _proposal(s, data, by, act):
@@ -88,6 +105,7 @@ ACTIONS = {
     "validate": lambda s, d, by: validate(s, _text(d, "cube_id"), by, note=_text(d, "note")),
     "attest": lambda s, d, by: attest(s, _text(d, "cube_id"), by),
     "overlap": lambda s, d, by: decide(s, _text(d, "a"), _text(d, "b"), _text(d, "verdict"), by),
+    "import": _import,
 }
 
 
