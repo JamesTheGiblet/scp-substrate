@@ -160,8 +160,10 @@ def things(s):
                          "parts": sorted(t for kind, t, _ in out if kind == "uses" and t.startswith("subject/")),
                          "links": [{"word": kind, "other": name(o), "out": fwd} for kind, o, fwd in out + into
                                    if not (kind == "uses" and o.startswith("subject/"))]})
+    from store.kinds import IS_A
     subjects = [{"id": x["id"], "name": x.get("name", x["id"]), "kind": x.get("kind"),
-                 "used_by": sorted(name(l["source"]) for l in s.links_to(x["id"], "uses"))}
+                 "used_by": sorted(name(l["source"]) for l in s.links_to(x["id"], "uses")),
+                 "is_a": x["is_a"], "kinds": sorted(l["source"] for l in s.links_to(x["id"], IS_A))}
                 for x in list_subjects(s)]
     return {"entities": sorted(entities, key=lambda e: (not e["you"], e["name"].lower())),
             "subjects": sorted(subjects, key=lambda x: x["name"].lower())}

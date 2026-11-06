@@ -96,13 +96,16 @@ const isAbout = (c, id) => {
 };
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
+// "a kind of Servos": the broader subjects this one is a kind of
+const kindOf = t => (t.is_a || []).length ? "a kind of " + t.is_a.map(id => (thingOf(id) || {}).name || id).join(", ") : "";
+
 function thingCard(t, isEntity) {
   const button = el("button", "card thing" + (isEntity ? " entity" : ""));
   const head = el("div", "thinghead");
   head.append(el("i", "dot"), el("b", "", t.name));
   const n = CUBES.filter(c => isAbout(c, t.id)).length;
   const detail = isEntity ? [t.kind, t.parts.length && (t.you ? "uses " + plural(t.parts.length, "subject") : plural(t.parts.length, "part"))]
-    : [t.kind, t.used_by.length && "used by " + t.used_by.join(", ")];
+    : [t.kind, kindOf(t), t.used_by.length && "used by " + t.used_by.join(", ")];
   button.append(head, el("p", "", detail.filter(Boolean).join(" · ") || (isEntity ? "Entity" : "Subject")));
   const meta = el("div", "meta");
   meta.append(el("span", "", plural(n, "claim")), el("span", "", isEntity ? "Entity" : "Subject"));
@@ -121,6 +124,7 @@ function aboutHeader(root, t) {
   const facts = [isEntity ? "Entity" : "Subject", t.kind].filter(Boolean);
   if (isEntity) t.links.filter(l => !l.out).forEach(l => facts.push(`${l.other} is ${l.word === "building" ? "building it" : l.word + " it"}`));
   else if (t.used_by.length) facts.push("used by " + t.used_by.join(", "));
+  if (!isEntity && kindOf(t)) facts.push(kindOf(t));
   box.append(el("p", "facts", facts.join(" · ")));
   const hop = (label, id) => {
     const b = el("button", "chip", label);
@@ -138,6 +142,9 @@ function aboutHeader(root, t) {
     t.links.filter(l => l.out).forEach(l => chips.append(hop(`${l.word} ${l.other}`, null)));
   } else {
     (THINGS.entities || []).filter(e => e.parts.includes(t.id)).forEach(e => chips.append(hop("← " + e.name, e.id)));
+    const named = id => (thingOf(id) || {}).name || id;
+    (t.is_a || []).forEach(id => chips.append(hop("↑ " + named(id), id)));
+    (t.kinds || []).forEach(id => chips.append(hop("↓ " + named(id), id)));
   }
   if (chips.childNodes.length) box.append(chips);
   root.append(box);
