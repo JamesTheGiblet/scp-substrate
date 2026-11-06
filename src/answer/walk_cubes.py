@@ -5,6 +5,7 @@ import re
 from answer.spelling import correct
 from store.claim_links import relations
 from store.evidence import evidence_of
+from store.kinds import broader, narrower
 from store.trust import fused_trust
 
 
@@ -108,14 +109,20 @@ def _wholes_parts(s, tid):
 
 def _reach(s, named):
     """What a claim may be about to count as on a named thing: the thing, and
-    for an entity, its own parts and the parts of what it is made of. SCPBot
-    reaches its MG90S, and its chassis's legs."""
+    for an entity, its own parts and the parts of what it is made of, and the
+    broader kinds of those parts. SCPBot reaches its MG90S, servos in general,
+    and its chassis's legs. A subject reaches its narrower kinds."""
     reach = {}
     for tid in named:
         reach[tid] = {tid}
-        if not tid.startswith("subject/"):
-            for eid in _wholes_parts(s, tid):
-                reach[tid] |= {eid} | {l["target"] for l in s.links_from(eid) if l["type"] == "uses"}
+        if tid.startswith("subject/"):
+            # A question about servos finds the claims about the MG90S
+            reach[tid] |= narrower(s, tid)
+            continue
+        for eid in _wholes_parts(s, tid):
+            used = {l["target"] for l in s.links_from(eid) if l["type"] == "uses"}
+            # SCPBot uses an MG90S, so what holds for any servo holds for SCPBot
+            reach[tid] |= {eid} | used | {b for u in used for b in broader(s, u)}
     return reach
 
 

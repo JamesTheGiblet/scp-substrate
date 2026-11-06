@@ -9,6 +9,7 @@ import json
 import re
 
 from kg_cube import _now, _update_state
+from store.kinds import IS_A
 
 # Not plain `about`: trust.py reads an `about` link as marking a trust record,
 # so a cube with one would lose its trust score.
@@ -123,8 +124,23 @@ def list_subjects(s):
     out = []
     for subj in s.by_foundation("foundation:subject"):
         claims = sorted(l["source"] for l in s.links_to(subj["id"], ABOUT))
-        out.append({"id": subj["id"], **subj["state"], "claims": claims})
+        kinds = sorted(l["target"] for l in s.links_from(subj["id"]) if l["type"] == IS_A)
+        out.append({"id": subj["id"], **subj["state"], "claims": claims, "is_a": kinds})
     return sorted(out, key=lambda x: x["id"])
+
+
+def kind_of(s, subject_id, broader, by, kind=None):
+    """Say a subject is a kind of a broader one, given by id or name. A name
+    that isn't a subject yet is made into one, as an outline would."""
+    from store.kinds import is_a
+    bid = broader if broader.startswith("subject/") else f"subject/{_slug(broader)}"
+    if not s.get(bid):
+        if broader.startswith("subject/"):
+            return {"error": f"subject {bid} not found"}
+        pid = propose_subject(s, broader, [], by, kind=kind,
+                              rationale=f"Named by {by} as a broader kind of {subject_id}")["proposal_id"]
+        accept_subject(s, pid, by)
+    return is_a(s, subject_id, bid, by)
 
 
 def subjects_of(s, cube_id):

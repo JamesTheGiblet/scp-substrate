@@ -11,6 +11,7 @@ Columns, in any order and any case. Only entity and claim are needed:
     entity_kind   for a new entity: robot, project, person and so on
     subject       the part or topic it is about, by name or id
     subject_kind  for a new subject: component, topic and so on
+    subject_is_a  the broader subject it is a kind of, such as Servos; made if new
     uses          yes when the entity uses the subject
     claim         the claim, one sentence
     id            the claim's id; made from the claim's words if left out
@@ -93,7 +94,7 @@ def parse(s, text):
 
 
 # Columns that describe the row's entity or subject, not the claim
-_ROW_ONLY = {"entity", "entity_kind", "subject", "subject_kind", "uses", "claim"}
+_ROW_ONLY = {"entity", "entity_kind", "subject", "subject_kind", "subject_is_a", "uses", "claim"}
 _LISTS = {"tags", "words", "from", "also", "supports", "goes-against", "protects", "limits",
           "depends-on", "causes", "is-part-of", "is-an-example-of"}
 
@@ -128,6 +129,8 @@ def _subject(s, e, row):
         e["subjects"].append(sub)
     if row.get("uses", "").lower() in ("yes", "true", "y", "1"):
         sub["keys"]["uses"] = "yes"
+    if row.get("subject_is_a"):
+        sub["keys"]["is-a"] = _list(row["subject_is_a"])
     return sub
 
 

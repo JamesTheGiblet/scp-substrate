@@ -16,8 +16,8 @@
 
 Lines under a heading are `key: value`. Under an entity, a key from
 RELATIONS links the entity to that id; `building: james` links the other way.
-Under a subject, `uses: yes` says the entity uses it, and `kind:` names its
-kind. Under a claim, `also:` names more subjects it is about, and a
+Under a subject, `uses: yes` says the entity uses it, `kind:` names its
+kind, and `is-a: Servos` says it is a kind of a broader subject, made if new. Under a claim, `also:` names more subjects it is about, and a
 connecting word such as `supports: cube/<id>` or `depends-on: cube/<id>`
 links it to another claim, and `words:` gives your own words for linking. A claim before any subject is about the entity as a whole. A lens line
 is offered as a draft for the person to confirm, never as a filled face.
@@ -110,6 +110,8 @@ def problems(s, entities):
             out += [f"{c['text'][:40]!r}: {key} {v} is not a claim" for v in _ids(c["keys"][key])
                     if (s.get(v) or {}).get("foundation") != "foundation:cube" and v not in claims]
     for e in entities:
+        out += [f"{sub['name']}: is-a {v} not found" for sub in e["subjects"]
+                for v in _ids(sub["keys"].get("is-a", "")) if v.startswith("subject/") and not s.get(v) and v not in coming]
         for key, value in e["keys"].items():
             if key in RELATIONS:
                 out += [f"{e['name']}: {key} {v} not found" for v in _ids(value) if not s.get(v)]
@@ -131,7 +133,7 @@ def apply(s, entities, by, via="an outline"):
     where it came from, in each new claim's source and subject's reason."""
     from kg_entities import RELATIONS, add_entity, entity_id, relate
     from kg_proposals import propose_face
-    from kg_subjects import accept_subject, propose_subject
+    from kg_subjects import accept_subject, kind_of, propose_subject
     if missing := problems(s, entities):
         raise ValueError("; ".join(missing))
     made = {"entities": [], "subjects": [], "claims": [], "drafts": 0, "skipped": []}
@@ -156,6 +158,9 @@ def apply(s, entities, by, via="an outline"):
                 made["subjects"].append(sid)
             if sub["keys"].get("uses", "").lower() in ("yes", "true"):
                 relate(s, eid, "uses", sid)
+            for broader in _ids(sub["keys"].get("is-a", "")):
+                if "error" in (r := kind_of(s, sid, broader, by)):
+                    raise ValueError(f"{sub['name']}: {r['error']}")
             groups.append((sid, sub["claims"]))
         for sid, claims in groups:
             for c in claims:

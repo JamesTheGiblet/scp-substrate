@@ -58,7 +58,9 @@ Something one or more entities know about. A component, a topic, a measure.
 - **Exists once.** If James, SCPBot and the robot arm all use a PCA9685, there is one `subject/pca9685` and three links to it. Knowledge about it is written once and reused.
 - **Links:** a claim links to its subject with `about-subject`. Plain `about` is taken: `trust.py` reads it as marking a trust record. Subjects can be *part of* other subjects, and *depend on* them.
 
-**Status: partly built.** `foundation:subject`, subject proposals and `about-subject` links exist, through `kg subject` and `keystone-gate/kg_subjects.py`. Links between subjects are not built. Each subject has its own place in the grid. Tags stay as labels for filtering.
+- **Kinds:** a subject *is a* kind of a broader one, with an `is-a` link: MG90S is a Servo, a UBEC and a buck converter are Voltage regulators. A question about an entity then reaches claims about the broader kinds of what it uses, so what holds for any servo counts for SCPBot, and a question about servos finds the MG90S claims. A person says it, with `kg subject is-a`, an outline's `is-a:` or a CSV's `subject_is_a` column; nothing infers it. Built 6 November 2026, in `src/store/kinds.py`.
+
+**Status: partly built.** `foundation:subject`, subject proposals, `about-subject` and `is-a` links exist, through `kg subject` and `keystone-gate/kg_subjects.py`. Part-of and depends-on between subjects are not built. Each subject has its own place in the grid. Tags stay as labels for filtering.
 
 **Wiring.** A claim about how an entity is wired links to `subject/wiring` and lists its wires as pin-to-pin pairs. `kg wiring <entity>` traces which pins end up joined, so a common ground or a shared bus forms from the wiring rather than being stated as a claim of its own. Built in `keystone-gate/kg_wiring.py`.
 

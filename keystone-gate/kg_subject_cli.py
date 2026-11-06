@@ -56,9 +56,18 @@ def cmd_subject_list(args):
     if not rows:
         print("No subjects yet. See kg subject proposals.")
     for subj in rows:
-        print(f"\n{subj['id']}  {subj['name']}  ({len(subj['claims'])} claims)")
+        kinds = "".join(f"  is a {b}" for b in subj.get("is_a", []))
+        print(f"\n{subj['id']}  {subj['name']}  ({len(subj['claims'])} claims){kinds}")
         for c in subj["claims"]:
             print(f"    {c}")
+
+
+def cmd_subject_is_a(args):
+    from kg_subjects import kind_of
+    s = Substrate()
+    r = kind_of(s, args.subject_id, args.broader, args.by)
+    s.close()
+    print(f"error: {r['error']}" if "error" in r else f"{r['subject']} is a {r['is_a']}")
 
 
 def add_subject_parser(sub):
@@ -89,3 +98,9 @@ def add_subject_parser(sub):
 
     p = sp_sub.add_parser("list", help="list subjects and their claims")
     p.set_defaults(func=cmd_subject_list)
+
+    p = sp_sub.add_parser("is-a", help="say one subject is a kind of another: subject/mg90s subject/servos")
+    p.add_argument("subject_id")
+    p.add_argument("broader", help="the broader subject; a name makes it if it doesn't exist")
+    p.add_argument("--by", default="james")
+    p.set_defaults(func=cmd_subject_is_a)
