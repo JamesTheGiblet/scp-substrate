@@ -65,14 +65,17 @@ def _name(s, tid):
     return (row["state"].get("name") if row else None) or tid
 
 
-def spec(s, name, uses=(), brief=""):
+def spec(s, name, uses=(), brief="", picked=None):
     """{entity, exists, terms: [(term, {id: name})], known, unvalidated, safety, unknown}.
     known and unvalidated are [(claim_id, text, about, from)]; unknown is
-    [(term, question)]."""
+    [(term, question)]. picked maps a term to the ids you chose for it, when
+    it matched more than one thing or should match nothing."""
     from kg_entities import entity_id
     eid = entity_id(name, "project")
     exists = next((r["id"] for r in (s.get(eid), s.get(entity_id(name, "entity"))) if r), None)
-    terms = [(t, _match(s, t)) for t in uses if t.strip()]
+    picked = picked or {}
+    terms = [(t, {i: _name(s, i) for i in picked[t] if s.get(i)} if t in picked else _match(s, t))
+             for t in uses if t.strip()]
     named = _named(s, _stems(brief)) if brief else {}
     seen = set().union(*(m for _, m in terms)) if terms else set()
     terms += [(n["name"], {tid: n["name"]}) for tid, n in named.items() if tid not in seen]

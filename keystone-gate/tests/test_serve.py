@@ -287,5 +287,19 @@ def test_bad_input_is_refused_cleanly():
         assert srv.post({"action": "fill", "cube_id": "cube/x", "lens": "NOPE", "content": "y"})[0] == 400
 
 
+def test_the_build_check_needs_no_unlock_but_saving_does():
+    with _Server() as srv:
+        status, reply = srv.request("/api/spec", {"name": "Desk Arm", "uses": "tof, camera"})
+        assert status == 200 and reply["entity"] == "project/desk-arm", reply
+        assert [u["term"] for u in reply["unknown"]] == ["camera"]
+        assert srv.request("/api/spec", {"name": "Desk Arm"}, token=False)[0] == 403
+        body = {"action": "build", "name": "Desk Arm", "parts": [{"term": "tof", "ids": ["subject/vl53l0x"]}]}
+        assert srv.post(body, key="")[0] == 401
+        status, reply = srv.post(body)
+        assert status == 200 and reply["result"]["entity"] == "project/desk-arm", reply
+        _, page = srv.page()
+        assert 'id="tobuild"' in page and "cubeEdit.post" in page
+
+
 if __name__ == "__main__":
     run_tests(globals())

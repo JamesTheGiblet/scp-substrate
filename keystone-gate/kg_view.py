@@ -22,6 +22,7 @@ PARTS = {name: VIEW / file for name, file in {
     "/*GRID*/": "view_grid.js",
     "/*BAR*/": "view_bar.js",
     "/*EDIT*/": "view_edit.js",
+    "/*BUILD*/": "view_build.js",
 }.items()}
 FIELD = [VIEW / f"view_field_{part}.js" for part in ("world", "hubs", "draw", "form", "time", "move")]
 OUTPUT = _here.parent / "build" / "cubes.html"

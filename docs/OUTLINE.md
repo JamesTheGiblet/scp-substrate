@@ -125,3 +125,11 @@ the spec come too, under Safety, so the fuse shows up though nobody named it.
 No model is asked. `--out
 sheets/desk-arm.csv` writes the questions to a sheet; write a claim on the rows
 you can and `kg import` it. Rows left blank are skipped.
+
+The page's **Build** button does the same in the browser. Type what you're
+building and what it uses; each word shows what it matched. Green means one
+match, amber means more than one so you pick, grey means nothing, saved as a
+new part or added as another name for one that exists. The spec fills in
+below, and each "not known" question has a box for your answer. Save needs
+the page unlocked, and writes only the project, its parts and counts, and the
+claims you typed, each tagged needs-check.

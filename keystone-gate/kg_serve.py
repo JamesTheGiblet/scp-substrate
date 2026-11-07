@@ -18,6 +18,7 @@ from store.substrate import Substrate
 
 from kg_agent import (CONNECTING_WORDS, LENSES, accept_proposal, attest, create_cube, fill_face,
                       list_proposals, reject_proposal, validate)
+from kg_build import alias as build_alias, check as build_check, save as build_save
 from kg_fill import Drafter, cubes_with_blanks, draft_cube, pending_drafts
 from kg_lens_links import all_modes
 from kg_lock import matches
@@ -107,6 +108,8 @@ ACTIONS = {
     "attest": lambda s, d, by: attest(s, _text(d, "cube_id"), by),
     "overlap": lambda s, d, by: decide(s, _text(d, "a"), _text(d, "b"), _text(d, "verdict"), by),
     "import": _import,
+    "build": lambda s, d, by: build_save(s, d, by),
+    "alias": lambda s, d, by: build_alias(s, d, by),
 }
 
 
@@ -196,6 +199,19 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
             finally:
                 s.close()
 
+        def _spec(self, data):
+            """The Build panel's check. Read-only, so it needs no unlock."""
+            s = Substrate()
+            try:
+                picked = data.get("picked") if isinstance(data.get("picked"), dict) else {}
+                return self._json(200, build_check(s, _text(data, "name"), _text(data, "uses", required=False),
+                                                   {str(k): [i for i in v if isinstance(i, str)]
+                                                    for k, v in picked.items() if isinstance(v, list)}))
+            except ValueError as e:
+                return self._json(400, {"error": str(e)})
+            finally:
+                s.close()
+
         def do_GET(self):
             if not self._host_ok():
                 return self._json(403, {"error": "wrong host"})
@@ -215,7 +231,7 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
                 return self._json(403, {"error": "wrong origin"})
             if not _same(self.headers.get("X-Cube-Token", ""), token):
                 return self._json(403, {"error": "bad token"})
-            if self.path not in ("/api/do", "/api/unlock", "/api/lock", "/api/status"):
+            if self.path not in ("/api/do", "/api/unlock", "/api/lock", "/api/status", "/api/spec"):
                 return self._json(404, {"error": "not found"})
             length = int(self.headers.get("Content-Length") or 0)
             if length > MAX_BODY:
@@ -233,6 +249,8 @@ def make_handler(by, token, port, lock, drafter, writing, hosts=()):
                 return self._json(200, {"locked": True})
             if self.path == "/api/status":
                 return self._status(data)
+            if self.path == "/api/spec":
+                return self._spec(data)
             if not unlocked(self.headers.get("X-Cube-Key", "")):
                 return self._json(401, {"error": "locked"})
             s = Substrate()

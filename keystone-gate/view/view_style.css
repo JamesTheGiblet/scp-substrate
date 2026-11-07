@@ -123,16 +123,16 @@ h2 { font-size: 15px; margin: 30px 0 12px; color: var(--muted); font-weight: 600
 .tool:disabled { opacity: .45; cursor: default; }
 .tools select + .tool ~ .warn { flex-basis: 100%; color: var(--ink); font-size: 13px; }
 #toast { position: fixed; z-index: 5; left: 50%; bottom: 76px; transform: translateX(-50%); background: rgba(8, 11, 19, .94); color: #e6eaf3; border: 1px solid #333c52; border-radius: 8px; padding: 7px 14px; font-size: 14px; }
-#toast[hidden], #addcube[hidden], #fillblanks[hidden], #toimport[hidden], #importplan[hidden], #checkdrafts[hidden], #lock[hidden], #unlockwrong[hidden] { display: none; }
-#newcube, #unlock, #importcsv { --ink: #e6eaf3; --line: #333c52; --muted: #9fb4d8; background: #10131d; color: #e6eaf3; border-color: #2c3448; width: min(560px, calc(100vw - 32px)); padding: 20px; }
+#toast[hidden], #tobuild[hidden], #tobuild2[hidden], #addcube[hidden], #fillblanks[hidden], #toimport[hidden], #importplan[hidden], #checkdrafts[hidden], #lock[hidden], #unlockwrong[hidden] { display: none; }
+#newcube, #unlock, #importcsv, #build { --ink: #e6eaf3; --line: #333c52; --muted: #9fb4d8; background: #10131d; color: #e6eaf3; border-color: #2c3448; width: min(560px, calc(100vw - 32px)); padding: 20px; }
 #unlock { width: min(360px, calc(100vw - 32px)); }
 #unlockwrong { color: #f0b23a; font-size: 13px; margin: 0; }
 #importcsv p { font-size: 13px; color: #9fb4d8; margin: 0 0 12px; line-height: 1.45; }
 #importplan { max-height: 40vh; overflow: auto; background: #0b0e17; border: 1px solid #333c52; border-radius: 6px; padding: 8px 10px; font-size: 12px; white-space: pre-wrap; margin: 0; }
-#newcube h3, #unlock h3, #importcsv h3 { margin: 0 0 12px; font-size: 18px; }
-#newcube label, #unlock label, #importcsv label { display: block; font-size: 12px; color: #98a5bd; margin-bottom: 9px; }
-#newcube textarea, #newcube input, #unlock input, #importcsv input { display: block; width: 100%; margin-top: 3px; background: #0b0e17; color: #e6eaf3; border: 1px solid #333c52; border-radius: 6px; padding: 6px 8px; font-size: 14px; }
-#newcube .actions, #unlock .actions, #importcsv .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+#newcube h3, #unlock h3, #importcsv h3, #build h3 { margin: 0 0 12px; font-size: 18px; }
+#newcube label, #unlock label, #importcsv label, #build label { display: block; font-size: 12px; color: #98a5bd; margin-bottom: 9px; }
+#newcube textarea, #newcube input, #unlock input, #importcsv input, #build input, #build textarea, #build select { display: block; width: 100%; margin-top: 3px; background: #0b0e17; color: #e6eaf3; border: 1px solid #333c52; border-radius: 6px; padding: 6px 8px; font-size: 14px; }
+#newcube .actions, #unlock .actions, #importcsv .actions, #build .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
 #timebar { position: absolute; left: 16px; right: 16px; bottom: 36px; display: flex; gap: 10px; align-items: center; max-width: 760px; font-size: 13px; color: #c3cbdb; }
 #timerange { flex: 1; min-width: 0; accent-color: #f2be46; }
 #timelabel { white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -192,3 +192,23 @@ dialog::backdrop { background: rgba(10, 12, 16, .6); }
   .cube { transition: none; }
   .card:hover .cube, .card:focus-visible .cube { --ry: -38deg; }
 }
+#build { width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; }
+#build > p { font-size: 13px; color: #9fb4d8; margin: 0 0 12px; line-height: 1.45; }
+.bpart { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; margin-top: 8px; border: 1px solid #333c52; border-left: 4px solid var(--human); border-radius: 6px; }
+.bpart[data-state="pick"] { border-left-color: var(--opinion); }
+.bpart[data-state="new"] { border-left-color: #6b7488; }
+.bpart b { margin-right: 4px; }
+.bpart .chip { font-size: 12px; padding: 2px 10px; color: #c3cbdb; border-color: #333c52; }
+.bpart .chip[aria-pressed="true"] { background: #e6eaf3; color: #0a0d15; border-color: #e6eaf3; }
+#build .bpart input { width: 96px; display: inline-block; margin: 0 0 0 auto; padding: 2px 6px; font-size: 12px; }
+#build .balias { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+#build .balias select { width: auto; max-width: 260px; display: inline-block; margin: 0; padding: 2px 6px; font-size: 12px; }
+.bnote { color: #9fb4d8; font-size: 12px; }
+#bspec section { margin-top: 14px; }
+#bspec h4 { margin: 0 0 6px; font-size: 14px; }
+#bspec ul { margin: 0; padding-left: 18px; }
+#bspec li { margin-bottom: 6px; font-size: 13px; line-height: 1.4; }
+#bspec .bnote { display: block; }
+.blink { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; text-decoration: underline; text-decoration-color: #333c52; }
+.blink:hover { text-decoration-color: currentColor; }
+#bspec .bq textarea { margin-top: 4px; }

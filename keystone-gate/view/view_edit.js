@@ -268,5 +268,6 @@
     if (reply) say(reply.result.made);
   });
 
-  window.cubeEdit = { decorate };
+  const askUnlock = () => { wrong.hidden = true; unlock.showModal(); };
+  window.cubeEdit = { decorate, post, act, say, askUnlock, unlocked: () => !!key };
 })();
