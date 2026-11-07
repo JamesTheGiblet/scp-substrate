@@ -7,7 +7,8 @@ subjects and entities by name or alias. A match reaches what an ask would:
 a subject's narrower and broader kinds, an entity's parts and what it uses.
 The claims on those come back in two groups, validated and not yet, each
 saying which other project it came from. Anything with no claims behind it
-is a question, never an answer. No model is asked, so nothing is made up.
+is a question, never an answer. Claims that protect or limit one in the
+spec come too, under Safety, though nothing named them. No model is asked, so nothing is made up.
 
 With --out, the questions go on a sheet: write a claim on a row and import
 it, and the project and its subjects are made. A row left blank is skipped.
@@ -18,6 +19,7 @@ import re
 
 from answer.walk_cubes import _about, _named, _reach, _stem, _stems, _status
 from kg_cube import LENSES
+from store.claim_links import relations
 from store.kinds import broader
 
 SHEET = ["entity", "entity_kind", "subject", "uses", "question", "claim", "tags", *LENSES]
@@ -64,7 +66,7 @@ def _name(s, tid):
 
 
 def spec(s, name, uses=(), brief=""):
-    """{entity, exists, terms: [(term, {id: name})], known, unvalidated, unknown}.
+    """{entity, exists, terms: [(term, {id: name})], known, unvalidated, safety, unknown}.
     known and unvalidated are [(claim_id, text, about, from)]; unknown is
     [(term, question)]."""
     from kg_entities import entity_id
@@ -112,7 +114,27 @@ def spec(s, name, uses=(), brief=""):
             names = ", ".join(matched.values())
             out["unknown"].append((term, f"{term}: the store has {names}, but no claims on it yet. "
                                          f"What do you know about it?"))
+    out["safety"] = _safety(s, taken)
     return out
+
+
+SAFETY = ("protects", "limits")
+
+
+def _safety(s, taken):
+    """Claims that protect or limit one already in the spec, and those that
+    protect or limit them, though no word named them: a fuse on the pack,
+    the wire gauge on the servo leads. [(claim_id, text, word, other, validated)]."""
+    found, todo = [], sorted(taken)
+    while todo:
+        cid = todo.pop(0)
+        for word, other, outward in relations(s, cid):
+            if word in SAFETY and not outward and other not in taken:
+                taken.add(other)
+                todo.append(other)
+                done = _status(s, other).startswith(("validated", "attested"))
+                found.append((other, s.get(other)["state"].get("content"), word, cid, done))
+    return found
 
 
 def render(result, brief=""):
@@ -127,6 +149,9 @@ def render(result, brief=""):
         for cid, text, on, others in result[group]:
             where = f" (from {', '.join(others)})" if others else " (general)"
             lines.append(f"  - {text}{where}\n      {cid}, on {', '.join(on)}")
+    lines.append(f"\nSafety, what protects or limits the above: {len(result['safety'])}")
+    for cid, text, word, other, done in result["safety"]:
+        lines.append(f"  - {text}{'' if done else ' (not validated yet)'}\n      {cid} {word} {other}")
     lines.append(f"\nNot known: {len(result['unknown'])}")
     lines += [f"  - {q}" for _, q in result["unknown"]]
     return "\n".join(lines)

@@ -120,6 +120,8 @@ One row per claim: `claim_id, entity, subject, claim, missing, tags`, then a col
 `kg spec "Desk Arm" --uses "servos, m5stick, camera" --brief "..."` matches each
 word to subjects and entities, and lists the claims on them: validated, then
 not yet validated, each saying which project it came from. Anything with no
-claims behind it is listed as a question. No model is asked. `--out
+claims behind it is listed as a question. Claims that protect or limit one in
+the spec come too, under Safety, so the fuse shows up though nobody named it.
+No model is asked. `--out
 sheets/desk-arm.csv` writes the questions to a sheet; write a claim on the rows
 you can and `kg import` it. Rows left blank are skipped.

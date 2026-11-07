@@ -31,6 +31,25 @@ def test_a_spec_gives_what_is_known_and_asks_about_the_rest():
         s.close()
 
 
+def test_what_protects_a_claim_in_the_spec_comes_under_safety():
+    from kg_csv import write
+    from kg_spec import spec
+    from store.claim_links import relate
+    s = _store()
+    try:
+        write(s, "entity,subject,uses,claim,id\n"
+                 "Rigbot,UBEC,yes,Rigbot's UBEC feeds the servos.,cube/ubec-feeds\n"
+                 "Parts,Fuses,,A fuse stops a short becoming a fire.,cube/fuse\n"
+                 "Parts,Fuses,,A fuse must be rated under the wire's limit.,cube/fuse-rating\n", "james")
+        relate(s, "cube/fuse", "protects", "cube/ubec-feeds", "james")
+        relate(s, "cube/fuse-rating", "limits", "cube/fuse", "james")
+        r = spec(s, "Desk Arm", ["ubec"])
+        assert [(c, w, o) for c, _, w, o, _ in r["safety"]] == [
+            ("cube/fuse", "protects", "cube/ubec-feeds"), ("cube/fuse-rating", "limits", "cube/fuse")], r["safety"]
+    finally:
+        s.close()
+
+
 def test_the_question_sheet_imports_only_the_rows_with_a_claim():
     from kg_csv import write
     from kg_spec import sheet, spec
