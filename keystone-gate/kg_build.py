@@ -9,7 +9,7 @@ another name to a subject or entity, so the same words find it next time.
 """
 import re
 
-from kg_spec import _match, _name, spec
+from kg_spec import _name, matches, spec
 
 MAX_ALIAS = 60
 
@@ -22,7 +22,8 @@ def check(s, name, uses, picked=None):
     """What the words match and what the store knows, as JSON for the page."""
     terms = _terms(uses)
     r = spec(s, name, terms, picked=picked)
-    every = {t: _match(s, t) for t in terms}
+    every = {t: {i: n for i, (n, _) in matches(s, t).items()} for t in terms}
+    text = lambda cid: (s.get(cid) or {"state": {}})["state"].get("content") or cid
     return {
         "entity": r["entity"], "exists": r["exists"],
         "parts": [{"term": term, "picked": sorted(matched),
@@ -30,8 +31,8 @@ def check(s, name, uses, picked=None):
                   for term, matched in r["terms"]],
         "known": [_claim(c) for c in r["known"]],
         "unvalidated": [_claim(c) for c in r["unvalidated"]],
-        "safety": [{"id": cid, "text": text, "word": word, "other": other, "validated": done}
-                   for cid, text, word, other, done in r["safety"]],
+        "safety": [{"id": cid, "text": said, "word": word, "other": text(other), "validated": done}
+                   for cid, said, word, other, done in r["safety"]],
         "unknown": [{"term": t, "question": q} for t, q in r["unknown"]],
     }
 

@@ -28,8 +28,10 @@
   const soon = () => { clearTimeout(timer); timer = setTimeout(check, 400); };
 
   function chip(term, m, on) {
-    const b = el("button", "chip", m.name);
+    // A tick when it's in, a plus when it's only offered, so a click says what it does
+    const b = el("button", "chip", (on ? "✓ " : "+ ") + m.name);
     b.type = "button";
+    b.title = on ? "In. Click to leave it out" : "Offered. Click to add it";
     b.setAttribute("aria-pressed", on);
     b.addEventListener("click", () => {
       const now = new Set(picked[term] || last.parts.find(p => p.term === term).picked);
@@ -63,12 +65,17 @@
     parts.replaceChildren();
     last.parts.forEach(p => {
       const row = el("div", "bpart");
-      const state = !p.picked.length ? "new" : p.matches.length > 1 ? "pick" : "ok";
+      const offered = p.matches.length > p.picked.length;
+      const state = !p.picked.length ? "new" : offered ? "pick" : "ok";
       row.dataset.state = state;
       row.append(el("b", "", p.term));
       p.matches.forEach(m => row.append(chip(p.term, m, p.picked.includes(m.id))));
-      if (state === "new") row.append(el("span", "bnote", "nothing in the store: saved as a new part"), alias(p.term));
-      if (state === "pick") row.append(el("span", "bnote", "matches more than one, so pick"));
+      if (state === "new") {
+        row.append(el("span", "bnote", p.matches.length ? "none picked, so it's saved as a new part"
+                                                         : "nothing in the store, so it's saved as a new part"));
+        if (!p.matches.length) row.append(alias(p.term));
+      }
+      if (state === "pick") row.append(el("span", "bnote", "could also mean the + ones"));
       const n = el("input");
       Object.assign(n, { type: "number", min: 1, placeholder: "how many", value: counts[p.term] || "" });
       n.setAttribute("aria-label", `How many ${p.term}`);
@@ -103,7 +110,7 @@
     section("Known, validated", last.known, c => claim(c, where(c)));
     section("Known, not validated yet", last.unvalidated, c => claim(c, where(c)));
     section("Safety: protects or limits the above", last.safety,
-            c => claim(c, `${c.word} ${c.other}${c.validated ? "" : " · not validated yet"}`));
+            c => claim(c, `${c.word}: ${c.other}${c.validated ? "" : " · not validated yet"}`));
     section("Not known", last.unknown, q => {
       const li = el("li", "bq");
       const box = el("textarea");

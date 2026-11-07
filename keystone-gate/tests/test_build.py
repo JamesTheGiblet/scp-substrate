@@ -22,6 +22,8 @@ def test_a_word_that_matches_two_things_waits_for_a_pick():
         r = check(s, "Desk Arm", "servo, camera")
         servo = next(p for p in r["parts"] if p["term"] == "servo")
         assert {m["id"] for m in servo["matches"]} == {"subject/servos", "subject/servo-power"}, servo
+        # Servos is the close match; Servo power only holds the word, so it's offered
+        assert servo["picked"] == ["subject/servos"], servo
         picked = check(s, "Desk Arm", "servo, camera", {"servo": ["subject/servo-power"]})
         servo = next(p for p in picked["parts"] if p["term"] == "servo")
         # The other match is still offered, just not picked

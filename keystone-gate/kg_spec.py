@@ -31,7 +31,7 @@ def _key(word):
 
 
 def _words(text):
-    return {_key(w) for w in re.findall(r"[a-z][a-z0-9]+", text.lower()) if len(w) > 1}
+    return {_key(w) for w in re.findall(r"[a-z0-9][a-z0-9]+", text.lower())}
 
 
 def _near(a, b):
@@ -43,21 +43,29 @@ def _covers(these, those):
     return all(any(_near(a, b) for b in those) for a in these)
 
 
-def _match(s, term):
-    """The subjects and entities a term names: all its words are in a name, or
-    all of a name's words are in it."""
+def matches(s, term):
+    """Every subject and entity a term could mean, as {id: (name, close)}.
+    close means every word of a name or alias is in the term, so "servo"
+    is close to Servos; the others only hold the term's words, as "servo
+    driver" does, and are worth offering but not choosing for you."""
     from answer.walk_cubes import THINGS, _names
     words, found = _words(term), {}
     for foundation in THINGS:
         for row in s.by_foundation(foundation):
             if row["id"] == "person":
                 continue
-            for name in _names(row["state"]):
-                have = _words(name)
-                if words and have and (_covers(words, have) or _covers(have, words)):
-                    found[row["id"]] = row["state"].get("name", row["id"])
-                    break
+            fits = [(_covers(have, words), _covers(words, have))
+                    for have in map(_words, _names(row["state"])) if words and have]
+            if any(close or loose for close, loose in fits):
+                found[row["id"]] = (row["state"].get("name", row["id"]), any(c for c, _ in fits))
     return found
+
+
+def _match(s, term):
+    """What a term names: the close matches if there are any, else every match."""
+    found = matches(s, term)
+    close = {i: n for i, (n, c) in found.items() if c}
+    return close or {i: n for i, (n, _) in found.items()}
 
 
 def _name(s, tid):
