@@ -289,9 +289,9 @@ def test_bad_input_is_refused_cleanly():
 
 def test_the_build_check_needs_no_unlock_but_saving_does():
     with _Server() as srv:
-        status, reply = srv.request("/api/spec", {"name": "Desk Arm", "uses": "tof, camera"})
+        status, reply = srv.request("/api/spec", {"name": "Desk Arm", "uses": "tof, periscope"})
         assert status == 200 and reply["entity"] == "project/desk-arm", reply
-        assert [u["term"] for u in reply["unknown"]] == ["camera"]
+        assert [u["term"] for u in reply["unknown"]] == ["periscope"]
         assert srv.request("/api/spec", {"name": "Desk Arm"}, token=False)[0] == 403
         body = {"action": "build", "name": "Desk Arm", "parts": [{"term": "tof", "ids": ["subject/vl53l0x"]}]}
         assert srv.post(body, key="")[0] == 401

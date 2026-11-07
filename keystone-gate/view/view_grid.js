@@ -87,11 +87,19 @@ function card(c) {
   return button;
 }
 
-// A claim is about an entity directly, or through one of the entity's parts
+// A claim is about an entity directly, or through one of the entity's parts,
+// and about a subject directly or through its narrower kinds, as an ask is:
+// Camera's page shows what holds for the ESP32-CAM
 const thingOf = id => (THINGS.entities || []).find(e => e.id === id) || (THINGS.subjects || []).find(x => x.id === id);
+const narrowerOf = id => {
+  const found = new Set([id]), todo = [id];
+  while (todo.length) ((thingOf(todo.pop()) || {}).kinds || []).forEach(k => { if (!found.has(k)) { found.add(k); todo.push(k); } });
+  return found;
+};
 const isAbout = (c, id) => {
   const e = (THINGS.entities || []).find(x => x.id === id);
-  return (c.entities || []).includes(id) || (c.subjects || []).includes(id)
+  const kinds = e ? new Set([id]) : narrowerOf(id);
+  return (c.entities || []).includes(id) || (c.subjects || []).some(s => kinds.has(s))
     || Boolean(e && e.parts.some(p => (c.subjects || []).includes(p)));
 };
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
