@@ -24,6 +24,11 @@ def test_a_kind_reaches_up_and_down_and_refuses_a_loop():
         assert narrower(s, "subject/actuators") == {"subject/servos", "subject/mg90s"}
         assert "already a kind of" in kind_of(s, "subject/actuators", "subject/mg90s", "james")["error"]
         assert "not found" in kind_of(s, "subject/mg90s", "subject/nothing", "james")["error"]
+        assert "not found" in kind_of(s, "subject/nothing", "Servos", "james")["error"]
+        # Named, not given by id, either side is made if new
+        kind_of(s, "ESP32-CAM", "Servos", "james")
+        kind_of(s, "ESP32-CAM", "Camera", "james")
+        assert broader(s, "subject/esp32-cam") == {"subject/servos", "subject/actuators", "subject/camera"}
     finally:
         s.close()
 

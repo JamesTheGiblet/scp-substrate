@@ -129,18 +129,29 @@ def list_subjects(s):
     return sorted(out, key=lambda x: x["id"])
 
 
-def kind_of(s, subject_id, broader, by, kind=None):
-    """Say a subject is a kind of a broader one, given by id or name. A name
-    that isn't a subject yet is made into one, as an outline would."""
-    from store.kinds import is_a
-    bid = broader if broader.startswith("subject/") else f"subject/{_slug(broader)}"
-    if not s.get(bid):
-        if broader.startswith("subject/"):
-            return {"error": f"subject {bid} not found"}
-        pid = propose_subject(s, broader, [], by, kind=kind,
-                              rationale=f"Named by {by} as a broader kind of {subject_id}")["proposal_id"]
+def _named(s, value, by, rationale, kind=None):
+    """A subject id for an id or a name. A name that isn't a subject yet is
+    made into one, as an outline would; an id must exist."""
+    sid = value if value.startswith("subject/") else f"subject/{_slug(value)}"
+    if not s.get(sid):
+        if value.startswith("subject/"):
+            return None, {"error": f"subject {sid} not found"}
+        pid = propose_subject(s, value, [], by, kind=kind, rationale=rationale)["proposal_id"]
         accept_subject(s, pid, by)
-    return is_a(s, subject_id, bid, by)
+    return sid, None
+
+
+def kind_of(s, subject_id, broader, by, kind=None):
+    """Say a subject is a kind of a broader one. Either can be given by id or
+    by name, and a name that isn't a subject yet is made into one."""
+    from store.kinds import is_a
+    sid, error = _named(s, subject_id, by, f"Named by {by} as a kind of {broader}")
+    if error:
+        return error
+    bid, error = _named(s, broader, by, f"Named by {by} as a broader kind of {sid}", kind)
+    if error:
+        return error
+    return is_a(s, sid, bid, by)
 
 
 def subjects_of(s, cube_id):
