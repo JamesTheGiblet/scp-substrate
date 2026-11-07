@@ -114,3 +114,12 @@ python keystone-gate/kg cube gaps --out sheets/gaps.csv   # the same claims as a
 ```
 
 One row per claim: `claim_id, entity, subject, claim, missing, tags`, then a column per lens. Write the lenses, add tags if you want, and import the file with `kg import` or **Import CSV**. Each lens goes in as a draft to confirm, replacing the model's draft for that lens; filled faces are left alone. New tags are added to the claim.
+
+## Specing a new project
+
+`kg spec "Desk Arm" --uses "servos, m5stick, camera" --brief "..."` matches each
+word to subjects and entities, and lists the claims on them: validated, then
+not yet validated, each saying which project it came from. Anything with no
+claims behind it is listed as a question. No model is asked. `--out
+sheets/desk-arm.csv` writes the questions to a sheet; write a claim on the rows
+you can and `kg import` it. Rows left blank are skipped.

@@ -17,6 +17,7 @@ Columns, in any order and any case. Only entity and claim are needed:
     id            the claim's id; made from the claim's words if left out
     source        where it comes from, in words
     tags          labels, such as needs-check
+    question      a question from kg spec; the row is skipped while claim is blank
     words         your own words for linking claims; claims sharing one get a suggested link
     from          evidence ids it is derived from
     also          more subject ids it is about
@@ -76,7 +77,8 @@ def parse(s, text):
             if k is None:
                 raise ValueError(f"row {n}: more cells than columns; put a cell with commas in quotes")
             row[k.upper() if k.upper() in LENSES else k.lower()] = (v or "").strip()
-        if not any(row.values()):
+        # A spec question nobody has answered yet (kg spec --out)
+        if not any(row.values()) or (row.get("question") and not row.get("claim")):
             continue
         if not row.get("entity") or not row.get("claim"):
             raise ValueError(f"row {n}: needs both an entity and a claim")
@@ -94,7 +96,7 @@ def parse(s, text):
 
 
 # Columns that describe the row's entity or subject, not the claim
-_ROW_ONLY = {"entity", "entity_kind", "subject", "subject_kind", "subject_is_a", "uses", "claim"}
+_ROW_ONLY = {"entity", "entity_kind", "subject", "subject_kind", "subject_is_a", "uses", "claim", "question"}
 _LISTS = {"tags", "words", "from", "also", "supports", "goes-against", "protects", "limits",
           "depends-on", "causes", "is-part-of", "is-an-example-of"}
 
