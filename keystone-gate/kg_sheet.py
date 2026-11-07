@@ -15,6 +15,7 @@ rejects the draft. Every row is checked before anything is written.
 import csv
 import io
 
+from kg_cube import LENSES
 from kg_agent import accept_proposal, fill_face, list_proposals, reject_proposal
 
 COLUMNS = ["proposal_id", "claim_id", "claim", "lens", "draft", "decision", "your_text", "words"]
@@ -66,6 +67,9 @@ def preview(s, text):
             problems.append(f"row {n}: decision must be accept, reject or edit, not {r['decision']!r}")
         elif decision and (not p or p["state"].get("status") != "pending"):
             problems.append(f"row {n}: {r.get('proposal_id') or 'no proposal_id'} is not a waiting draft")
+        elif decision in ("accept", "edit") and p["state"].get("lens") not in LENSES:
+            problems.append(f"row {n}: {p['state'].get('lens')!r} is not a lens, so {r['proposal_id']} "
+                            f"can't fill a face; reject it, or validate the claim with kg cube validate")
         elif decision == "edit" and not r.get("your_text"):
             problems.append(f"row {n}: edit needs your_text")
         elif decision:
@@ -79,11 +83,13 @@ def write(s, text, by):
     from kg_claim_links import set_words
     if problems := preview(s, text)[1]:
         raise ValueError("; ".join(problems))
-    done = {"accept": 0, "reject": 0, "edit": 0, "worded": set()}
+    done, failed = {"accept": 0, "reject": 0, "edit": 0, "worded": set()}, []
     for _, r in _rows(text):
         decision = r.get("decision", "").lower()
-        if decision == "accept":
-            accept_proposal(s, r["proposal_id"], accepted_by=by)
+        if decision == "accept" and "error" in (got := accept_proposal(s, r["proposal_id"], accepted_by=by)):
+            # Counted as failed, not accepted
+            failed.append(f"{r['proposal_id']}: {got['error']}")
+            decision = ""
         elif decision == "reject":
             reject_proposal(s, r["proposal_id"], rejected_by=by, reason="rejected on a review sheet")
         elif decision == "edit":
@@ -96,7 +102,8 @@ def write(s, text, by):
             set_words(s, r["claim_id"], add=r["words"].replace(";", ",").split(","), by=by)
             done["worded"].add(r["claim_id"])
     return (f"accepted {done['accept']}, rejected {done['reject']} and rewrote {done['edit']} drafts; "
-            f"set words on {len(done['worded'])} claims")
+            f"set words on {len(done['worded'])} claims"
+            + (f"; could not accept {len(failed)}: {'; '.join(failed)}" if failed else ""))
 
 
 def cmd_cube_sheet(args):

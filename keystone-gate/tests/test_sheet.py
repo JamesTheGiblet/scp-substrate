@@ -72,5 +72,22 @@ def test_a_bad_row_stops_the_sheet():
         s.close()
 
 
+def test_a_draft_that_is_not_a_lens_is_a_problem_not_an_accept():
+    from kg_sheet import export, preview
+    s = _store()
+    try:
+        # Written straight to the store, as a tool outside kg might
+        s.write({"id": "cube/claim-0/proposal/9", "foundation": "foundation:knowledge", "state": {
+            "kind": "cube-proposal", "proposal_type": "face", "cube_id": "cube/claim-0",
+            "lens": "HUMAN_VALIDATION", "content": "Holds.", "status": "pending"}})
+        text, _ = export(s, limit=50)
+        rows = list(csv.DictReader(io.StringIO(text.lstrip("﻿"))))
+        decisions = [("accept", "", "")] * len(rows)
+        _, problems = preview(s, _filled(text, decisions))
+        assert len(problems) == 1 and "'HUMAN_VALIDATION' is not a lens" in problems[0], problems
+    finally:
+        s.close()
+
+
 if __name__ == "__main__":
     run_tests(globals())
