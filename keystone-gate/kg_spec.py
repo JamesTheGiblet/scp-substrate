@@ -62,10 +62,13 @@ def matches(s, term):
 
 
 def _match(s, term):
-    """What a term names: the close matches if there are any, else every match."""
+    """What a term names: the close matches if there are any, else every match,
+    without one that is a broader kind of another, since the narrower one
+    reaches it: esp32-cam is the ESP32-CAM, not the ESP32 as well."""
     found = matches(s, term)
-    close = {i: n for i, (n, c) in found.items() if c}
-    return close or {i: n for i, (n, _) in found.items()}
+    close = {i: n for i, (n, c) in found.items() if c} or {i: n for i, (n, _) in found.items()}
+    wider = set().union(*(broader(s, i) for i in close)) if close else set()
+    return {i: n for i, n in close.items() if i not in wider}
 
 
 def _name(s, tid):
