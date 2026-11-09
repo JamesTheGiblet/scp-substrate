@@ -247,7 +247,9 @@ def test_new_cube_returns_fresh_clusters():
         cid = reply["result"]["cube_id"]
         cube = next(c for c in reply["cubes"] if c["id"] == cid)
         assert cube["tags"] == ["servo"] and cube["faces"]["COUNTER"]["filled_by"] == "human"
-        assert any(cid in g["members"] for g in reply["modes"]["ALL"]["clusters"])
+        # Every grouping the field shows has the new cube in it, and none is by shared words
+        assert "ALL" not in reply["modes"] and reply["modes"], reply["modes"].keys()
+        assert all(any(cid in g["members"] for g in m["clusters"]) for m in reply["modes"].values())
 
 
 def test_filling_a_face_replaces_its_draft():

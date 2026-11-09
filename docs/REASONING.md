@@ -189,7 +189,7 @@ What it doesn't do. It records that a person agreed, not how good their reasonin
 
 Question it answers: "Which cubes say related things on the same lens?"
 
-How: kg_lens_links.py compares each lens only with the same lens on other cubes, using TF-IDF and cosine similarity. Cubes that share a subject or entity need at least two shared terms and a similarity of at least 0.10; cubes with nothing in common need three terms and 0.20. Being about the store's owner doesn't count as sharing anything. Pronouns, the owner's name, the store's own words and any term on more than a quarter of a lens's faces are left out. Each cube keeps its strongest three links. Clusters come from label propagation over the links. Pending drafts are included.
+Removed 2026-11-09: the field no longer clusters by shared words, which measured vocabulary, not meaning. How it worked: kg_lens_links.py compared each lens only with the same lens on other cubes, using TF-IDF and cosine similarity. Cubes that share a subject or entity need at least two shared terms and a similarity of at least 0.10; cubes with nothing in common need three terms and 0.20. Being about the store's owner doesn't count as sharing anything. Pronouns, the owner's name, the store's own words and any term on more than a quarter of a lens's faces are left out. Each cube keeps its strongest three links. Clusters come from label propagation over the links. Pending drafts are included.
 
 What it doesn't do. It compares vocabulary, not meaning. Two cubes can share words by coincidence, and two cubes making the same point in different words will not link.
 

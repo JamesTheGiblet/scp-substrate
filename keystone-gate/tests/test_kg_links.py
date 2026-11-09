@@ -69,9 +69,29 @@ def test_the_word_is_the_link_in_the_store():
     s = _fresh_kg_substrate()
     try:
         a, b, pid = _pair(s)
+        # The older word still works, and goes in as the one that replaced it
         accept_proposal(s, pid, "james", word="depends on", reverse=True)
         links = [(l["type"], l["target"]) for l in s.links_from(b)]
-        assert ("depends-on", a) in links and ("neighbour", a) not in links, links
+        assert ("needs", a) in links and ("neighbour", a) not in links, links
+    finally:
+        s.close()
+
+
+def test_an_old_word_is_read_as_the_new_one_and_a_link_comes_off():
+    from kg_agent import create_cube
+    from store.claim_links import relate, relations, unrelate, word_of
+    s = _fresh_kg_substrate()
+    try:
+        assert word_of("depends-on") == "needs" and word_of("is an example of") == "is a case of"
+        assert word_of("is part of") is None
+        a = create_cube(s, "The arm needs a supply.")["cube_id"]
+        b = create_cube(s, "The supply gives 5V.")["cube_id"]
+        relate(s, a, "depends on", b, "james")
+        assert relations(s, a) == [("needs", b, True)]
+        assert unrelate(s, a, "needs", b, "james", reason="wrong")["removed"]
+        assert relations(s, a) == [] and "error" in unrelate(s, a, "needs", b, "james")
+        last = s.conn.execute("SELECT event_type, payload FROM events ORDER BY seq DESC LIMIT 1").fetchone()
+        assert last[0] == "link.removed" and '"reason": "wrong"' in last[1], last
     finally:
         s.close()
 

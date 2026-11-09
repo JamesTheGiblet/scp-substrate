@@ -8,7 +8,7 @@ link, whatever their subjects, and kg ask matches the words too.
 """
 import re
 
-from store.claim_links import relate
+from store.claim_links import relate, unrelate
 
 
 def _word(w):
@@ -57,8 +57,11 @@ def cmd_cube_contradicts(args):
 def cmd_cube_relate(args):
     from store.substrate import Substrate
     s = Substrate()
-    result = relate(s, args.cube_id, args.word, args.other_id, args.by, note=args.note)
+    if args.remove:
+        result = unrelate(s, args.cube_id, args.word, args.other_id, args.by, reason=args.note)
+    else:
+        result = relate(s, args.cube_id, args.word, args.other_id, args.by, note=args.note)
     s.close()
     if "error" in result:
         raise SystemExit(f"error: {result['error']}")
-    print(f"{result['from']} {result['word']} {result['to']}")
+    print(("removed: " if result.get("removed") else "") + f"{result['from']} {result['word']} {result['to']}")

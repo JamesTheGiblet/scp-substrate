@@ -50,6 +50,28 @@ def test_what_protects_a_claim_in_the_spec_comes_under_safety():
         s.close()
 
 
+def test_safety_follows_what_risks_a_claim_and_what_solves_that():
+    from kg_csv import write
+    from kg_spec import spec
+    from store.claim_links import relate
+    s = _store()
+    try:
+        write(s, "entity,subject,uses,claim,id\n"
+                 "Rigbot,Camera,yes,The camera needs a solid 5V.,cube/cam\n"
+                 "Parts,Servos,,Servo stalls pull the supply down.,cube/stall\n"
+                 "Rigbot,Supply,,A separate servo supply keeps stalls off the camera.,cube/apart\n"
+                 "Rigbot,Camera,,The camera needs 4V.,cube/cam-old\n", "james")
+        relate(s, "cube/stall", "risks", "cube/cam", "james")
+        relate(s, "cube/apart", "solves", "cube/stall", "james")
+        relate(s, "cube/cam", "replaces", "cube/cam-old", "james")
+        r = spec(s, "Desk Arm", ["camera"])
+        assert [(c, w) for c, _, w, _, _ in r["safety"]] == [("cube/stall", "risks"), ("cube/apart", "solves")], r["safety"]
+        # The old claim is out of date, so only the newer one is listed
+        assert [c for c, *_ in r["unvalidated"]] == ["cube/cam"], r["unvalidated"]
+    finally:
+        s.close()
+
+
 def test_the_question_sheet_imports_only_the_rows_with_a_claim():
     from kg_csv import write
     from kg_spec import sheet, spec

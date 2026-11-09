@@ -18,7 +18,7 @@ Lines under a heading are `key: value`. Under an entity, a key from
 RELATIONS links the entity to that id; `building: james` links the other way.
 Under a subject, `uses: yes` says the entity uses it, `kind:` names its
 kind, and `is-a: Servos` says it is a kind of a broader subject, made if new. Under a claim, `also:` names more subjects it is about, and a
-connecting word such as `supports: cube/<id>` or `depends-on: cube/<id>`
+connecting word such as `supports: cube/<id>` or `needs: cube/<id>`
 links it to another claim, and `words:` gives your own words for linking. A claim before any subject is about the entity as a whole. A lens line
 is offered as a draft for the person to confirm, never as a filled face.
 Imported by kg. See docs/VOCABULARY.md.
@@ -100,13 +100,13 @@ def _claims(entities):
 def problems(s, entities):
     """Every id the outline points at that isn't in the store, checked before
     anything is written, so an outline goes in whole or not at all."""
-    from store.claim_links import WORDS
+    from store.claim_links import KEYS
     from kg_entities import RELATIONS
     out = []
     coming = {_subject_id(sub) for e in entities for sub in e["subjects"]}
     claims = {_claim_id(c) for c in _claims(entities)}
     for c in _claims(entities):
-        for key in set(c["keys"]) & set(WORDS.values()):
+        for key in set(c["keys"]) & set(KEYS):
             out += [f"{c['text'][:40]!r}: {key} {v} is not a claim" for v in _ids(c["keys"][key])
                     if (s.get(v) or {}).get("foundation") != "foundation:cube" and v not in claims]
     for e in entities:
@@ -175,10 +175,10 @@ def apply(s, entities, by, via="an outline"):
     made["suggested"] = sum(set_words(s, _claim_id(c), add=_ids(c["keys"]["words"]), by=by).get("suggested", 0)
                             for c in _claims(entities) if c["keys"].get("words"))
     # Links between claims go in last, once every claim they name exists
-    from store.claim_links import WORDS, relate
+    from store.claim_links import KEYS, relate
     made["links"] = 0
     for c in _claims(entities):
-        for word, key in WORDS.items():
+        for key, word in KEYS.items():
             for other in _ids(c["keys"].get(key, "")):
                 if "error" in (r := relate(s, _claim_id(c), word, other, by, note=f"from {via}")):
                     raise ValueError(f"{c['text'][:50]!r}: {r['error']}")

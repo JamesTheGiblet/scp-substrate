@@ -203,7 +203,6 @@ The index is a snapshot. Re-run `--write --prune` after files move, or `where is
 - **Canonicalisation:** a local convention, not RFC 8785. Other tools would need the same rules to verify a signature.
 - **Importers:** `import_scp.py` handles giblets-scp v1.x only.
 - **Trust scores:** there is one materialised score, evidence is scored by hand, and nothing has been checked against outcomes, so scores are not calibrated. Attestation adds a fixed amount, however good the reasoning behind it.
-- **Lens clusters:** they measure shared words, not shared meaning. Some links are coincidences.
 
 ## Known issues
 

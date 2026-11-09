@@ -237,7 +237,7 @@ kg cube view                        write and open the read-only page
 kg cube snapshot                    write the public copy, without private cubes or drafts
 kg cube password                    set the password that unlocks editing
 kg cube serve --by <name>           run the editable page (--port, --no-open)
-kg cube relate <id> <word> <other>  link two claims: <id> supports <other>, depends-on and so on (--note)
+kg cube relate <id> <word> <other>  link two claims: <id> supports <other>, needs, solves and so on (--note, --remove)
 kg cube words <id> [words...]       your words for linking (--remove); claims sharing one get a suggested link
 kg cube sheet                       write about 50 waiting drafts to a CSV to review (--limit, --out); kg import applies it
 kg cube contradicts <id> <other>    flag a contradiction; the link is goes-against
@@ -305,7 +305,7 @@ The modules sit at the top of `keystone-gate/`, with folders for tests and the p
 | `kg_sheet.py` | `kg cube sheet`: drafts out to a CSV, and your accept, reject or edit back in |
 | `kg_csv.py` | `kg import <file>.csv` and the page's **Import CSV**: one row per claim, with entities and subjects made if needed |
 | `kg_wiring.py` | `kg wiring`: nets traced from wiring claims, such as a common ground |
-| `kg_lens_links.py` | Lens links and clusters, and the Cluster by modes |
+| `kg_lens_links.py` | The Cluster by modes, and the word scoring overlaps use |
 | `kg_overlaps.py` | Overlaps valued by Leighton weight |
 | `kg_repos.py` | Claim cubes from a repo's README |
 | `kg_view.py` | Builds the page from `view/` |

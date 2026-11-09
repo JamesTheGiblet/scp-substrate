@@ -173,49 +173,6 @@ def test_view_has_a_screenshot_button():
     assert "snapshot()" in page.split("window.cubeField")[1]
 
 
-def _lens_cube(cid, **faces):
-    return {"id": cid, "faces": {k: {"content": v} for k, v in faces.items()}}
-
-
-def test_shared_counter_links_cubes_across_topics():
-    from kg_lens_links import cluster
-    cubes = [_lens_cube("a", COUNTER="voltage sag under stall load"),
-             _lens_cube("b", COUNTER="stall voltage sag at the far joint"),
-             _lens_cube("c", COUNTER="keys leaked through backups")]
-    result = cluster(cubes, ("COUNTER",))
-    assert [(l["a"], l["b"], l["lens"]) for l in result["links"]] == [("a", "b", "COUNTER")]
-    names = {tuple(g["members"]) for g in result["clusters"]}
-    assert ("a", "b") in names and ("c",) in names, names
-
-
-def test_clustering_is_repeatable_across_runs():
-    import subprocess
-    code = (
-        "import sys, json\n"
-        "sys.path[:0] = [r'%s', r'%s']\n"
-        "from kg_lens_links import cluster\n"
-        "cubes = [{'id': c, 'faces': {'COUNTER': {'content': 'voltage sag stall wiring supply ' + c}}} for c in 'abcdef']\n"
-        "print(json.dumps(cluster(cubes, ('COUNTER',)), sort_keys=True))\n"
-    ) % (str(_here.parent / "src"), str(_here))
-    runs = {subprocess.run([sys.executable, "-c", code], capture_output=True, text=True,
-                           env={**os.environ, "PYTHONHASHSEED": seed}).stdout for seed in ("1", "2", "3")}
-    assert len(runs) == 1 and runs != {""}, runs
-
-
-def test_cluster_names_are_real_words():
-    from kg_lens_links import cluster
-    cubes = [_lens_cube("a", COUNTER="wiring refused supplies"), _lens_cube("b", COUNTER="wiring refused supplies")]
-    name = cluster(cubes, ("COUNTER",))["clusters"][0]["name"]
-    assert "wir " not in name + " " and "refus " not in name + " ", name
-
-
-def test_same_word_on_different_lenses_does_not_link():
-    from kg_lens_links import cluster
-    cubes = [_lens_cube("a", FACT="voltage sag under stall load"),
-             _lens_cube("b", COUNTER="voltage sag under stall load")]
-    assert cluster(cubes, ("FACT", "COUNTER"))["links"] == []
-
-
 def test_every_cube_lands_in_exactly_one_cluster():
     from kg_lens_links import all_modes
     from kg_view import collect

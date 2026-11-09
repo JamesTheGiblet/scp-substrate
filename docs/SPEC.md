@@ -561,7 +561,7 @@ Cubes belong to Keystone Gate and use no new tables. `keystone-gate/README.md` d
 | `<cube>/attestation` | `foundation:observation` | `attestation` | `score`, `source`, `note`, optional `retracted_because` |
 | `source/<name>` | `foundation:knowledge` | `source-document` | Where a set of cubes came from |
 
-Links: `has-face`, `about`, `classified-by`, `neighbour`, the connecting words in `src/store/claim_links.py` (`supports`, `goes-against`, `depends-on` and the others), `observes` (attestation to cube), `derived-from` (cube to source).
+Links: `has-face`, `about`, `classified-by`, `neighbour`, the connecting words in `src/store/claim_links.py` (`supports`, `needs`, `risks`, `solves` and the others), `observes` (attestation to cube), `derived-from` (cube to source).
 
 ### Completeness
 

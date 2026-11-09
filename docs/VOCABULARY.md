@@ -16,7 +16,7 @@ Five kinds of thing, joined by named links:
 | **Subject** | Something an entity knows about | PCA9685, ESP32, Li-ion packs, sleep |
 | **Claim** | A statement about a subject, examined through five lenses | "The PCA9685 drives 16 PWM channels" |
 | **Evidence** | Why a claim exists | A datasheet, a test log, an observation |
-| **Relationship** | A named link between two of the above | servo current *depends on* battery capacity |
+| **Relationship** | A named link between two of the above | a separate servo supply *solves* a stall brownout |
 
 A claim is what the page draws as a **cube**. The two words mean the same thing: *claim* in the model, *cube* on the page and in the code.
 
@@ -126,16 +126,21 @@ A link between two capsules, read as a sentence: *from* — *word* — *to*.
 
 Between claims, the word comes from a fixed list, so each one means the same every time:
 
-| Word | Reads as |
-|---|---|
-| supports | a test log result *supports* the datasheet's figure |
-| goes against | a measured current *goes against* the advertised rating |
-| protects | fuse near the pack *protects* the wiring |
-| limits | the 3.3 V logic level *limits* which sensors fit |
-| depends on | servo current *depends on* battery capacity |
-| causes | a reversed battery *causes* a failed board |
-| is part of | first power-on checks *is part of* safe bring-up |
-| is an example of | a Li-ion fire *is an example of* an internal fault |
+| Word | Means | Example |
+|---|---|---|
+| supports | more reason to believe it | a test log result *supports* the datasheet's figure |
+| goes against | less reason to believe it | a measured current *goes against* the advertised rating |
+| needs | won't work without it | the M5-to-PCA wiring *needs* I2C pull-ups |
+| protects | stops it failing | an inline fuse *protects* the UBEC feed |
+| limits | sets a ceiling on it | wire gauge *limits* the servo headers |
+| causes | makes it happen | a reversed battery *causes* a failed board |
+| risks | could make it fail | servo stalls *risk* an ESP32-CAM brownout |
+| solves | is the fix for it | a separate servo supply *solves* stall brownouts |
+| works with | the two are halves of one design | the buck feed to the M5Stick *works with* the servos' UBEC |
+| replaces | is newer, so the other is out of date | "two packs" *replaces* "one pack" |
+| is a case of | one case of a general rule | SCPBot's 5V UBEC *is a case of* a UBEC stepping down for servos |
+
+Supports and goes against move trust. Protects, limits, risks and solves are what a project's spec follows into its Safety section. A claim another one replaces is left out of a spec. The older words still read: *depends on* as needs, *is an example of* as is a case of. *Is part of* is gone, since claims are not parts of each other; entities have their own part-of.
 
 Between entities and subjects, the link types already used in the store carry the meaning:
 
@@ -186,7 +191,7 @@ Claims form subjects, subjects form entities, and entities form worlds.
 
 When a dense cluster of claims looks like a subject, or a group of subjects looks like an entity, it arrives as a **proposal**: a suggested name and the members it would gather. James accepts, renames or rejects it. Nothing becomes a subject or an entity on its own.
 
-This matters because clusters come from shared words, not shared meaning. Before the archive, 413 threads were word matches on words such as "never" and "answer".
+This matters because clusters from shared words are not shared meaning. Before the archive, 413 threads were word matches on words such as "never" and "answer", so the field no longer clusters by words at all: it groups by entity and subject, tag, repo and overlap, and its threads are links someone made.
 
 **Status: not built.**
 

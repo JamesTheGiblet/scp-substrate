@@ -1,12 +1,11 @@
-"""Cluster cubes by what they say on the same lens.
+"""The field's Cluster by modes, and the word scoring kg_overlaps uses.
 
-Two cubes link when one lens on each shares unusual words: two will do for
-cubes on the same subject or entity, but cubes with nothing else in common need
-three and a closer match. Lenses are compared only with themselves, so a shared
-COUNTER means two cubes share a weakness, not merely a topic. Pronouns, the
-store's own words and any word on more than a quarter of a lens's faces don't
-count, since seeded faces repeat stock phrases. This measures shared
-vocabulary, not agreement in meaning.
+The field once clustered cubes by words their lenses shared. Those links
+measured vocabulary, not meaning, and named clusters after words such as
+"harder", so they are gone: the field groups by entity and subject, tag,
+repo and overlap, and its threads are the links you made. The scoring below
+is kept for kg_overlaps and kg_rules, which compare one lens with itself
+and show their match for you to confirm.
 """
 import math
 import re
@@ -14,12 +13,8 @@ from collections import Counter, defaultdict
 
 
 LENSES = ("FACT", "COUNTER", "OPINION", "FICTION", "CONTEXT")
-THRESHOLD = 0.10
-# Cubes that share no subject or entity need more before a word links them
-APART_THRESHOLD, APART_TERMS = 0.20, 3
 # A word on more than this share of a lens's faces is boilerplate, once a lens has enough faces
 MAX_SHARE, MIN_FACES = 0.25, 8
-LINKS_PER_CUBE = 3
 
 _STOP = set("""about above after again against also because been before being
 below between both but can cannot could does doing down each even every from
@@ -95,99 +90,6 @@ def _similar(a, b, terms=2):
     return sum(a[t] * b[t] for t in shared) / size, max(sorted(shared), key=lambda t: a[t] * b[t])
 
 
-def _ties(cubes):
-    """What each cube is about. The store's owner, whom every cube about you is
-    about, and any tie on more than a third of the cubes are too broad to count
-    as having something in common."""
-    ties = {c["id"]: set(c.get("subjects") or []) | set(c.get("entities") or []) for c in cubes}
-    seen = Counter(t for tie in ties.values() for t in tie)
-    broad = {t for t, n in seen.items() if len(cubes) >= MIN_FACES and n > len(cubes) / 3}
-    yours = [ties[c["id"]] for c in cubes if c.get("about_you")]
-    broad |= set.intersection(*yours) if yours else set()
-    return {cid: tie - broad for cid, tie in ties.items()}
-
-
-def _links(cubes, lenses):
-    """Strongest lens per pair, keeping each cube's best few."""
-    pairs = {}
-    ties = _ties(cubes)
-    for lens in lenses:
-        vectors = _vectors(cubes, lens)
-        ids = sorted(vectors)
-        for i, a in enumerate(ids):
-            for b in ids[i + 1:]:
-                near = bool(ties[a] & ties[b])
-                weight, term = _similar(vectors[a], vectors[b], 2 if near else APART_TERMS)
-                if weight < (THRESHOLD if near else APART_THRESHOLD):
-                    continue
-                if weight > pairs.get((a, b), {"weight": 0})["weight"]:
-                    pairs[(a, b)] = {"a": a, "b": b, "lens": lens, "term": term, "word": _word(term),
-                                     "weight": round(weight, 3)}
-    per_cube = defaultdict(list)
-    for link in pairs.values():
-        per_cube[link["a"]].append(link)
-        per_cube[link["b"]].append(link)
-    kept = {}
-    for links in per_cube.values():
-        for link in sorted(links, key=lambda l: (-l["weight"], l["a"], l["b"]))[:LINKS_PER_CUBE]:
-            kept[(link["a"], link["b"])] = link
-    return sorted(kept.values(), key=lambda l: (l["a"], l["b"]))
-
-
-def _plain(links):
-    """Labels for the page: the written word, not the stem."""
-    return [{"a": l["a"], "b": l["b"], "lens": l["lens"], "term": l["word"], "weight": l["weight"]}
-            for l in links]
-
-
-def _communities(ids, links):
-    """Label propagation: each cube takes the label its links weigh most."""
-    label = {cid: cid for cid in ids}
-    around = defaultdict(list)
-    for l in links:
-        around[l["a"]].append((l["b"], l["weight"]))
-        around[l["b"]].append((l["a"], l["weight"]))
-    for _ in range(12):
-        changed = False
-        for cid in ids:
-            votes = Counter()
-            for other, weight in around[cid]:
-                votes[label[other]] += weight
-            if votes:
-                best = min(votes, key=lambda k: (-votes[k], k))
-                if votes[best] > votes.get(label[cid], 0) and best != label[cid]:
-                    label[cid] = best
-                    changed = True
-        if not changed:
-            break
-    groups = defaultdict(list)
-    for cid in ids:
-        groups[label[cid]].append(cid)
-    return list(groups.values())
-
-
-def _name(members, links):
-    inside = set(members)
-    terms = Counter()
-    for l in links:
-        if l["a"] in inside and l["b"] in inside:
-            terms[l["term"]] += l["weight"]
-    top = sorted(terms, key=lambda t: (-terms[t], t))[:2]
-    return " + ".join(_word(t) for t in top) if top else "unlinked"
-
-
-def cluster(cubes, lenses):
-    ids = sorted(c["id"] for c in cubes)
-    links = _links(cubes, lenses)
-    named, loners = [], []
-    for members in _communities(ids, links):
-        (named if len(members) > 1 else loners).append(members)
-    groups = [{"name": _name(m, links), "members": m} for m in named]
-    if loners:
-        groups.append({"name": "no shared lens", "members": [m[0] for m in loners]})
-    return {"clusters": sorted(groups, key=lambda g: g["name"]), "links": _plain(links)}
-
-
 def by_repo(cubes):
     """One box per repo, and one for every cube that belongs to none."""
     boxes = defaultdict(list)
@@ -207,8 +109,8 @@ def by_place(cubes):
 
 
 def all_modes(cubes):
-    """One clustering for all lenses together, one per lens that has links, and one per repo."""
-    modes = {"ALL": cluster(cubes, LENSES)}
+    """One box per entity and subject, and per repo and overlap where there are any."""
+    modes = {}
     if any(c.get("place") for c in cubes):
         modes["PLACES"] = by_place(cubes)
     if any(c.get("repo") for c in cubes):
@@ -216,8 +118,4 @@ def all_modes(cubes):
     if any(c.get("overlaps") for c in cubes):
         from kg_overlaps import by_overlap
         modes["OVERLAPS"] = by_overlap(cubes)
-    for lens in LENSES:
-        result = cluster(cubes, (lens,))
-        if result["links"]:
-            modes[lens] = result
     return modes

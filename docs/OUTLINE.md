@@ -82,7 +82,7 @@ python keystone-gate/kg import claims.csv --write   # makes it
 | `id`, `source`, `tags`, `from`, `also` | as in an outline |
 | `words` | your words for linking; claims sharing one get a suggested link |
 | `FACT`, `COUNTER`, `OPINION`, `FICTION`, `CONTEXT` | drafts you confirm later |
-| `supports`, `goes-against`, `depends-on` and the other connecting words | claim ids this one links to |
+| `supports`, `needs`, `protects`, `solves` and the other connecting words | claim ids this one links to |
 
 Names are matched against existing entities, subjects and their aliases, ignoring case. A cell can hold several values separated by commas or semicolons; a cell containing a comma needs quotes, which Excel adds when it saves.
 

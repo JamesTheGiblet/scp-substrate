@@ -317,7 +317,8 @@
   };
 
   panelReady = true;
-  applyMode(MODES.ALL ? "ALL" : "TAGS");
+  // Grouped by entity and subject first: the links you made, not shared words
+  applyMode(MODES.PLACES ? "PLACES" : "TAGS");
   cam.dist = cam.toDist * 1.25;
   const hashText = decodeURIComponent(location.hash).slice(1);
   if (hashText.startsWith("mode:") && MODES[hashText.slice(5)]) applyMode(hashText.slice(5));

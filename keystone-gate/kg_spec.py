@@ -7,8 +7,10 @@ subjects and entities by name or alias. A match reaches what an ask would:
 a subject's narrower and broader kinds, an entity's parts and what it uses.
 The claims on those come back in two groups, validated and not yet, each
 saying which other project it came from. Anything with no claims behind it
-is a question, never an answer. Claims that protect or limit one in the
-spec come too, under Safety, though nothing named them. No model is asked, so nothing is made up.
+is a question, never an answer. Claims that protect, limit, risk or solve
+one in the spec come too, under Safety, though nothing named them, and a
+claim a newer one replaces is left out. No model is asked, so nothing is
+made up.
 
 With --out, the questions go on a sheet: write a claim on a row and import
 it, and the project and its subjects are made. A row left blank is skipped.
@@ -116,7 +118,7 @@ def spec(s, name, uses=(), brief="", picked=None):
             if not on:
                 continue
             hits += 1
-            if cid in taken:
+            if cid in taken or _replaced(s, cid):
                 continue
             taken.add(cid)
             others = sorted(_name(s, a) for a in about
@@ -132,22 +134,34 @@ def spec(s, name, uses=(), brief="", picked=None):
     return out
 
 
-SAFETY = ("protects", "limits")
+# What could break a claim in the spec, and what stops or fixes that
+def _replaced(s, cid):
+    """A newer claim replaces this one, so the spec leaves it out."""
+    return any(word == "replaces" and not outward for word, _, outward in relations(s, cid))
+
+
+SAFETY = ("protects", "limits", "risks", "solves")
 
 
 def _safety(s, taken):
-    """Claims that protect or limit one already in the spec, and those that
-    protect or limit them, though no word named them: a fuse on the pack,
-    the wire gauge on the servo leads. [(claim_id, text, word, other, validated)]."""
-    found, todo = [], sorted(taken)
+    """Claims that protect, limit, risk or solve one already in the spec, and
+    those that do the same to them, though no word named them: a fuse on the
+    pack, servo stalls that risk a brownout and the supply that solves it.
+    [(claim_id, text, word, other, validated)]."""
+    found, todo, said = [], sorted(taken), set()
     while todo:
         cid = todo.pop(0)
         for word, other, outward in relations(s, cid):
-            if word in SAFETY and not outward and other not in taken:
+            if word not in SAFETY or outward or (other, word, cid) in said:
+                continue
+            # A risk or fix between two claims already listed is still worth
+            # saying: that the servo stalls risk the camera is the point
+            said.add((other, word, cid))
+            if other not in taken:
                 taken.add(other)
                 todo.append(other)
-                done = _status(s, other).startswith(("validated", "attested"))
-                found.append((other, s.get(other)["state"].get("content"), word, cid, done))
+            done = _status(s, other).startswith(("validated", "attested"))
+            found.append((other, s.get(other)["state"].get("content"), word, cid, done))
     return found
 
 
@@ -163,7 +177,7 @@ def render(result, brief=""):
         for cid, text, on, others in result[group]:
             where = f" (from {', '.join(others)})" if others else " (general)"
             lines.append(f"  - {text}{where}\n      {cid}, on {', '.join(on)}")
-    lines.append(f"\nSafety, what protects or limits the above: {len(result['safety'])}")
+    lines.append(f"\nSafety, what could break the above and what stops or fixes it: {len(result['safety'])}")
     for cid, text, word, other, done in result["safety"]:
         lines.append(f"  - {text}{'' if done else ' (not validated yet)'}\n      {cid} {word} {other}")
     lines.append(f"\nNot known: {len(result['unknown'])}")

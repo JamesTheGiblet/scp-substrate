@@ -284,10 +284,11 @@ def main():
 
     sp_rel = sp_sub.add_parser("relate", help="link one claim to another with a connecting word")
     sp_rel.add_argument("cube_id")
-    sp_rel.add_argument("word", help="supports, goes-against, protects, limits, depends-on, causes, is-part-of or is-an-example-of")
+    sp_rel.add_argument("word", help="supports, goes-against, needs, protects, limits, causes, risks, solves, works-with, replaces or is-a-case-of")
     sp_rel.add_argument("other_id")
     sp_rel.add_argument("--by", default="james")
-    sp_rel.add_argument("--note", default=None)
+    sp_rel.add_argument("--note", default=None, help="why; with --remove, why it comes off")
+    sp_rel.add_argument("--remove", action="store_true", help="take the link off instead")
     sp_rel.set_defaults(func=cmd_cube_relate)
 
     sp_words = sp_sub.add_parser("words", help="your words on a claim for linking; shows them, adds any given")

@@ -109,7 +109,7 @@
     const where = c => (c.from.length ? `from ${c.from.join(", ")}` : "general") + ` · on ${c.on.join(", ")}`;
     section("Known, validated", last.known, c => claim(c, where(c)));
     section("Known, not validated yet", last.unvalidated, c => claim(c, where(c)));
-    section("Safety: protects or limits the above", last.safety,
+    section("Safety: what could break the above, and what stops or fixes it", last.safety,
             c => claim(c, `${c.word}: ${c.other}${c.validated ? "" : " · not validated yet"}`));
     section("Not known", last.unknown, q => {
       const li = el("li", "bq");

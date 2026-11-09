@@ -22,7 +22,7 @@ Columns, in any order and any case. Only entity and claim are needed:
     from          evidence ids it is derived from
     also          more subject ids it is about
     FACT, COUNTER, OPINION, FICTION, CONTEXT   drafts to confirm later
-    supports, goes-against, depends-on and the other connecting words
+    supports, needs, protects, solves and the other connecting words
                   claim ids this one links to
 
 Names are matched against existing entities and subjects, and their aliases,
@@ -33,6 +33,7 @@ import csv
 import io
 
 from kg_outline import apply, plan, problems
+from store.claim_links import KEYS
 
 ENTITIES = ("foundation:entity", "foundation:project", "foundation:person")
 
@@ -97,8 +98,7 @@ def parse(s, text):
 
 # Columns that describe the row's entity or subject, not the claim
 _ROW_ONLY = {"entity", "entity_kind", "subject", "subject_kind", "subject_is_a", "uses", "claim", "question"}
-_LISTS = {"tags", "words", "from", "also", "supports", "goes-against", "protects", "limits",
-          "depends-on", "causes", "is-part-of", "is-an-example-of"}
+_LISTS = {"tags", "words", "from", "also", *KEYS}
 
 
 def _entity(s, entities, row, n):

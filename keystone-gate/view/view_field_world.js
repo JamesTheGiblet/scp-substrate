@@ -308,7 +308,7 @@
     tagClusters.forEach(shell);
     relate(tagLinks);
     loadMoments();
-    applyMode(MODES[mode] || mode === "TAGS" ? mode : "ALL", true);
+    applyMode(MODES[mode] || mode === "TAGS" ? mode : MODES.PLACES ? "PLACES" : "TAGS", true);
     if (byId[flyId]) { byId[flyId].fresh = 7; byId[flyId].trail = byId[flyId].trail || []; }
     draw();
     renderStats();

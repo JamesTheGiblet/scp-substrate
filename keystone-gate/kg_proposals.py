@@ -1,7 +1,7 @@
 """Proposals. Rules and drafts suggest changes to cubes; humans decide."""
 import json
 
-from store.claim_links import WORDS, relate
+from store.claim_links import WORDS, relate, word_of
 from kg_cube import LENSES, _now, _update_state, fill_face, link_neighbour
 
 
@@ -201,6 +201,8 @@ def accept_proposal(s, proposal_id, accepted_by, word=None, reverse=False):
         return {"error": f"proposal status is {st.get('status')!r}, not pending"}
 
     ptype = st.get("proposal_type")
+    # An older word, such as depends on, is read as the one that replaced it
+    word = word_of(word) or word if word is not None else None
     if word is not None and (ptype != "neighbour" or word not in CONNECTING_WORDS):
         return {"error": f"connecting word must be one of: {', '.join(CONNECTING_WORDS)}"}
 

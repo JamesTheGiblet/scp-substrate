@@ -26,7 +26,7 @@
   document.getElementById("fsearch").addEventListener("input", e => cubeField.setQuery(e.target.value.trim().toLowerCase()));
   const modeBar = document.getElementById("modes");
   modeBar.append(el("span", "", "Cluster by"));
-  const names = { ALL: "All lenses", TAGS: "Tags", REPOS: "Repos", OVERLAPS: "Overlaps", PLACES: "Entities" };
+  const names = { TAGS: "Tags", REPOS: "Repos", OVERLAPS: "Overlaps", PLACES: "Entities" };
   const modes = [...Object.keys(MODES), "TAGS"];
   const modeChips = modes.map(mode => {
     const chip = el("button", "chip", names[mode] || mode[0] + mode.slice(1).toLowerCase());
