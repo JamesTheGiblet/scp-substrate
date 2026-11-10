@@ -10,6 +10,7 @@ The model is defined in [concepts/MODEL.md](concepts/MODEL.md). A claim is rende
 | Doc | For |
 |---|---|
 | [concepts/MODEL.md](concepts/MODEL.md) | Entity, subject, claim, evidence, and relationship: the schema of the system |
+| [concepts/MCP.md](concepts/MCP.md) | The Master Control Program: using Substrate to orchestrate bots, repos, and live telemetry. |
 | [concepts/REASONING.md](concepts/REASONING.md) | The six kinds of work the substrate does, from firing rules to answering questions |
 | [concepts/FAQ.md](concepts/FAQ.md) | Questions a visitor to the public page might ask |
 
