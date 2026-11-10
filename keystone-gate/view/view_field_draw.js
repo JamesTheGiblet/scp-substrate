@@ -86,9 +86,18 @@
 
   const dust = Array.from({ length: 170 }, (_, i) => [
     (rand(i, 1) - .5) * 4800, (rand(i, 2) - .5) * 4800, (rand(i, 3) - .5) * 4800]);
+  const normalize_time = s => String(s || "").replace("T", " ").replace("Z", "").substring(0, 19);
+
   const faceMap = n => {
     const out = {};
-    LENSES.forEach(l => { const f = n.c.faces[l]; if (f && !f.pending) out[l] = f.unread ? "unread" : "read"; });
+    const cutoff = normalize_time(view.time);
+    LENSES.forEach(l => {
+      const f = n.c.faces[l];
+      if (!f || f.pending) return;
+      const filled = normalize_time(f.filled_at);
+      if (cutoff && filled && filled > cutoff) return;
+      out[l] = f.unread ? "unread" : "read";
+    });
     if (n.c.validation && !n.c.validation.stale) out.HUMAN = "read";
     return out;
   };

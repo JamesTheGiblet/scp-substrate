@@ -62,7 +62,10 @@ class Substrate:
             self.conn.execute("""
                 INSERT INTO events (event_type, capsule_id, payload)
                 VALUES ('capsule.written', ?, ?)
-            """, (capsule["id"], json.dumps({"foundation": capsule["foundation"]})))
+            """, (capsule["id"], json.dumps({
+                "foundation": capsule["foundation"],
+                "state": capsule.get("state", {})
+            })))
 
     def link(self, source, type_, target):
         with self.conn:

@@ -25,6 +25,44 @@ FIELD = [VIEW / f"view_field_{part}.js" for part in ("world", "hubs", "draw", "f
 OUTPUT = _here.parent / "build" / "cubes.html"
 
 
+
+def _get_history(s, cube_id):
+    """Extract all versions of a cube's state from the event log."""
+    rows = s.conn.execute("""
+        SELECT occurred_at, payload FROM events 
+        WHERE capsule_id = ? AND event_type IN ('capsule.written', 'capsule.created')
+        ORDER BY occurred_at ASC
+    """, (cube_id,)).fetchall()
+    
+    history = []
+    for i, r in enumerate(rows):
+        try:
+            payload = json.loads(r["payload"])
+            state = payload.get("state")
+            
+            # If this is an old event without state, skip it (we can't reconstruct it)
+            if not state:
+                continue
+                
+            valid_from = r["occurred_at"]
+            # Look for the next valid event to set valid_to
+            valid_to = None
+            for j in range(i+1, len(rows)):
+                next_payload = json.loads(rows[j]["payload"])
+                if next_payload.get("state"):
+                    valid_to = rows[j]["occurred_at"]
+                    break
+            
+            history.append({
+                "valid_from": valid_from,
+                "valid_to": valid_to,
+                "state": state
+            })
+        except Exception:
+            pass
+            
+    return history
+
 def _status(cube):
     attestation = cube["attestation"]
     if attestation and not attestation.get("retracted_because"):
@@ -207,6 +245,7 @@ def collect(s):
         cubes.append({
             "id": cube["cube_id"],
             "created_at": cube.get("created_at", ""),
+            "history": _get_history(s, cube["cube_id"]),
             "content": cube["content"],
             "created": s.get(cube["cube_id"])["state"].get("created_at"),
             "source": cube["source"],
