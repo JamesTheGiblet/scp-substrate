@@ -162,6 +162,59 @@ def cmd_gate_test(args):
     return 0 if failed == 0 else 1
 
 
+
+def cmd_evidence_add(args):
+    from kg_evidence import add_evidence
+    s = Substrate()
+    r = add_evidence(s, args.title, kind=args.kind, url=args.url, path=args.path)
+    s.close()
+    if "error" in r:
+        print(f"error: {r['error']}")
+        return
+    print(f"Created: {r['evidence_id']}")
+
+def cmd_evidence_link(args):
+    from kg_evidence import link_evidence
+    s = Substrate()
+    r = link_evidence(s, args.claim_id, args.evidence_id)
+    s.close()
+    if "error" in r:
+        print(f"error: {r['error']}")
+        return
+    if r.get("status") == "skipped":
+        print(f"  {r['reason']}")
+    else:
+        print(f"Linked: {r['link']}")
+
+def cmd_evidence_show(args):
+    s = Substrate()
+    ev = s.get(args.evidence_id)
+    if not ev:
+        print(f"error: {args.evidence_id} not found")
+        s.close()
+        return
+    
+    st = ev["state"]
+    print(f"{ev['id']}")
+    print(f"  title: {st.get('title')}")
+    print(f"  kind:  {st.get('evidence_kind')}")
+    if st.get("url"): print(f"  url:   {st.get('url')}")
+    if st.get("path"): print(f"  path:  {st.get('path')}")
+    
+    # Find claims that link TO this evidence
+    claims = s.conn.execute(
+        "SELECT source FROM links WHERE target=? AND type='derived-from'",
+        (args.evidence_id,)
+    ).fetchall()
+    
+    if claims:
+        print("\nClaims supported by this evidence:")
+        for c in claims:
+            print(f"  {c['source']}")
+    else:
+        print("\nNo claims link to this evidence yet.")
+    s.close()
+
 def main():
     ap = argparse.ArgumentParser(prog="kg", description="Keystone Gate CLI")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -299,6 +352,25 @@ def main():
     sp_c_tick = sp_sub.add_parser("tick", help="run rules against cubes")
     sp_c_tick.add_argument("cube_id", nargs="?", default=None)
     sp_c_tick.set_defaults(func=cmd_cube_tick)
+
+    sp = sub.add_parser("evidence", help="evidence operations")
+    sp_sub = sp.add_subparsers(dest="evidence_cmd", required=True)
+
+    sp_ev_add = sp_sub.add_parser("add", help="add a new evidence capsule")
+    sp_ev_add.add_argument("title")
+    sp_ev_add.add_argument("--kind", default="guide", choices=["datasheet", "guide", "test-log", "observation", "paper"])
+    sp_ev_add.add_argument("--url", default=None)
+    sp_ev_add.add_argument("--path", default=None)
+    sp_ev_add.set_defaults(func=cmd_evidence_add)
+
+    sp_ev_link = sp_sub.add_parser("link", help="link a claim to evidence")
+    sp_ev_link.add_argument("claim_id")
+    sp_ev_link.add_argument("evidence_id")
+    sp_ev_link.set_defaults(func=cmd_evidence_link)
+
+    sp_ev_show = sp_sub.add_parser("show", help="show evidence and what it supports")
+    sp_ev_show.add_argument("evidence_id")
+    sp_ev_show.set_defaults(func=cmd_evidence_show)
 
     sp = sub.add_parser("neighbour", help="neighbour operations")
     sp_sub = sp.add_subparsers(dest="neighbour_cmd", required=True)

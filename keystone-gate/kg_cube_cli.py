@@ -200,7 +200,6 @@ def cmd_cube_show(args):
     from kg_agent import show_cube, LENSES
     s = Substrate()
     data = show_cube(s, args.cube_id)
-    s.close()
     if "error" in data:
         print(f"error: {data['error']}")
         return
@@ -215,6 +214,15 @@ def cmd_cube_show(args):
     if data.get("contradicts"):
         print(f"  contradicts: {data['contradicts']['other']} ({data['contradicts'].get('note') or 'no note'})")
     print()
+
+    # Show evidence if linked
+    from kg_evidence import get_evidence_for_claim
+    ev_list = get_evidence_for_claim(s, args.cube_id)
+    if ev_list:
+        print("  Evidence:")
+        for ev in ev_list:
+            print(f"    [{ev['state'].get('evidence_kind')}] {ev['state'].get('title')} ({ev['id']})")
+        print()
 
     print("  Faces:")
     for lens in LENSES:
@@ -253,6 +261,7 @@ def cmd_cube_show(args):
     if comp["missing_lenses"]:
         print(f"  Missing lenses: {', '.join(comp['missing_lenses'])}")
     print(f"  Attestation eligible: {'YES' if comp['complete'] else 'NO'}")
+    s.close()
 
 
 def cmd_cube_list(args):
