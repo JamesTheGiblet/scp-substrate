@@ -255,7 +255,7 @@ def cmd_cube_show(args):
     if a:
         state = "RETRACTED, was attested" if a.get("retracted_because") else "Attested"
         print(f"  {state} by {a.get('source')} at {a.get('attested_at')}")
-    comp = data["completeness"]
+    comp = data["inspection_status"]
     print(f"  Completeness: {comp['score']:.2f} ({len(comp['filled_lenses'])}/5 lenses"
           f"{' + validated' if comp['validated'] else ''})")
     if comp["missing_lenses"]:
@@ -395,7 +395,7 @@ def cmd_cube_tick(args):
         total_skipped += len(skipped)
         if not (created or updated or errored):
             continue
-        print(f"{c['id']} (completeness {c['score']:.2f})")
+        print(f"{c['id']} (inspection_status {c['score']:.2f})")
         for r in created:
             print(f"  [new] {r.get('rule','?')} -> {r.get('lens') or r.get('other_cube_id')}")
         for r in updated:

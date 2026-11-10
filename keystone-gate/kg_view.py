@@ -72,7 +72,7 @@ def _status(cube):
     validation = cube["validation"]
     if validation and validation.get("stale"):
         return "stale"
-    if cube["completeness"]["complete"]:
+    if cube["inspection_status"]["complete"]:
         return "validated"
     return "draft"
 
@@ -257,7 +257,7 @@ def collect(s):
             "entities": _links(s, cube["cube_id"], "about-entity"),
             "group": _group(s, cube["cube_id"]),
             "repo": _repo(s, cube["cube_id"]),
-            "score": cube["completeness"]["score"],
+            "score": cube["inspection_status"]["score"],
             "status": _status(cube),
             "standing": round(fused_trust(s, cube["cube_id"]).get("posterior", 0.5), 2),
             "faces": _faces(s, cube),
