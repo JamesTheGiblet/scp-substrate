@@ -257,3 +257,17 @@ The repo index, SymLM's language data, the foundations and `person/james-gilbert
 - Whether a claim can be about more than one subject, or must pick one.
 - What the page shows for subjects and entities: clusters, boxes or something else.
 - Whether a Rejected claim is hidden or shown dimmed.
+
+### The Gate and the Dream Space (UNKNOWN)
+
+The `UNKNOWN` face is the hypothesis space. It is where the LLM can propose claims that are not yet validated. It is the system's capacity to dream.
+
+However, the gate enforces a strict rule: **the `UNKNOWN` face is policed by its siblings.** 
+
+An LLM cannot place a claim into `UNKNOWN` if it contradicts the `FACT`, `COUNTER`, or `CONTEXT` faces of the same cube. The dream must be logically consistent with what is already known. 
+
+For example:
+- A dream that "the PCA9685 drives 32 channels without extra hardware" is rejected because it violates the `FACT` sibling (which states it drives 16).
+- A dream that "the PCA9685 could drive 32 channels using a multiplexer" is allowed because it does not violate the `FACT` sibling.
+
+The gate does not judge whether the dream is *true*, only whether it is *possible* given the other five faces. Once the dream is accepted into `UNKNOWN`, Leighton Weight takes over, tracking its validity over time until human validation promotes it to `FACT` or demotes it to `FICTION`.
