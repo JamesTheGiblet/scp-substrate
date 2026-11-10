@@ -214,12 +214,76 @@ def _rule_neighbour_by_tag(s, cube_state):
     return proposals
 
 
+
+def _rule_cluster_to_subject(s, cube_state):
+    """If multiple cubes share a tag, propose creating a Subject and linking them."""
+    cube_tags = _cube_tags(cube_state)
+    if not cube_tags:
+        return []
+    
+    cube_id = cube_state.get("_cube_id")
+    if not cube_id:
+        return []
+
+    best_tag = None
+    best_count = 0
+    best_rows = []
+
+    # Find the single most common tag for this cube
+    for tag in cube_tags:
+        if tag in ("general", "misc", "temp"):
+            continue
+            
+        rows = s.conn.execute("""
+            SELECT id FROM capsules 
+            WHERE foundation = 'foundation:cube' 
+              AND json_extract(state_json, '$.tags') LIKE ?
+        """, (f'%"{tag}"%',)).fetchall()
+        
+        count = len(rows)
+        if count > best_count and count >= 3:
+            best_count = count
+            best_tag = tag
+
+    proposals = []
+    if best_tag:
+        subject_id = f"subject/{best_tag}"
+        subject_exists = s.get(subject_id) is not None
+        
+        # 1. Propose the subject if it doesn't exist
+        if not subject_exists:
+            proposals.append({
+                "type": "new_subject",
+                "subject_id": subject_id,
+                "name": best_tag,
+                "proposed_by": "cluster_to_subject",
+                "rationale": f"{best_count} claims share this tag",
+            })
+        
+        # 2. Propose linking this cube to the subject
+        existing_link = s.conn.execute(
+            "SELECT 1 FROM links WHERE source=? AND type='about-subject' AND target=?",
+            (cube_id, subject_id)
+        ).fetchone()
+        
+        if not existing_link:
+            proposals.append({
+                "type": "link_subject",
+                "cube_id": cube_id,
+                "subject_id": subject_id,
+                "proposed_by": "cluster_to_subject",
+                "rationale": f"cube is tagged #{best_tag}",
+            })
+            
+    return proposals
+
 RULES = [
     {"id": "fact_from_decision",         "propose": _rule_fact_from_decision},
     {"id": "counter_from_alternatives",  "propose": _rule_counter_from_alternatives},
     {"id": "context_from_source",        "propose": _rule_context_from_source},
     {"id": "counter_from_contradicts",   "propose": _rule_counter_from_contradicts},
     {"id": "neighbour_by_tag",           "propose": _rule_neighbour_by_tag},
+    {"id": "cluster_to_subject",         "propose": _rule_cluster_to_subject},
 ]
 
 
@@ -259,6 +323,26 @@ def run_rules(s, cube_id, only_rules=None):
                     proposed_by=p["proposed_by"],
                     rationale=p.get("rationale"),
                 )
+            elif p.get("type") == "new_subject":
+                if not s.get(p["subject_id"]):
+                    s.write({
+                        "id": p["subject_id"],
+                        "foundation": "foundation:subject",
+                        "state": {"kind": "subject", "name": p["name"]}
+                    })
+                    r = {"status": "created", "subject": p["subject_id"]}
+                else:
+                    r = {"status": "skipped", "reason": "subject already exists"}
+            elif p.get("type") == "link_subject":
+                existing = s.conn.execute(
+                    "SELECT 1 FROM links WHERE source=? AND type='about-subject' AND target=?",
+                    (p["cube_id"], p["subject_id"])
+                ).fetchone()
+                if not existing:
+                    s.link(p["cube_id"], "about-subject", p["subject_id"])
+                    r = {"status": "created", "link": f"{p['cube_id']} -> {p['subject_id']}"}
+                else:
+                    r = {"status": "skipped", "reason": "link already exists"}
             else:
                 continue
             r["rule"] = rule["id"]
