@@ -1,5 +1,7 @@
 # Docs
 
+- [FORGE_STACK_ARCHITECTURE.md](../FORGE_STACK_ARCHITECTURE.md): The 6-layer vertical architecture and v1.2.0 version matrix.
+
 The Substrate stores knowledge as **Entities** (James, SCPBot), the **Subjects** they know about (PCA9685, wiring, sleep), and the **Claims** about those subjects, each backed by evidence. 
 
 The most important principle in the system is this: **A subject exists once and is reused.** When you build a new robot, it does not need new notes on the PCA9685; it just links to `subject/pca9685` and inherits all the accumulated knowledge and trust.
@@ -25,6 +27,7 @@ The model is defined in [concepts/MODEL.md](concepts/MODEL.md). A claim is rende
 | Doc | For |
 |---|---|
 | [architecture/SPEC.md](architecture/SPEC.md) | The substrate underneath: capsules, links, events, trust, the gate |
+| [architecture/TOPOLOGY.md](architecture/TOPOLOGY.md) | The physical hardware: the air-gapped Ryzen Vault and the Pi Gatekeeper |
 | [architecture/STRUCTURE.md](architecture/STRUCTURE.md) | What's in the repo and how the layers fit together |
 
 ## SCP documents
